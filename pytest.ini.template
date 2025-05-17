@@ -1,0 +1,5 @@
+[sql_testing]
+adapter = bigquery
+project_id = ${GCP_PROJECT_ID}
+dataset_id = sqltesting
+credentials_path = ${GOOGLE_APPLICATION_CREDENTIALS}
