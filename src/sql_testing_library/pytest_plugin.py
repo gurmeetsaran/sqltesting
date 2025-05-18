@@ -1,18 +1,18 @@
 """Pytest plugin for SQL testing."""
 
-import functools
 import configparser
+import functools
 import os
 import sys
-from typing import Type, TypeVar, List, Callable, Any
-from pathlib import Path
+from typing import Callable, List, Type, TypeVar
 
 import pytest
 
 from .core import SQLTestFramework, TestCase
 from .mock_table import BaseMockTable
 
-T = TypeVar('T')
+
+T = TypeVar("T")
 
 
 class SQLTestDecorator:
@@ -33,28 +33,30 @@ class SQLTestDecorator:
         """Create framework instance from configuration file."""
         config = self._load_config()
 
-        adapter_type = config.get('adapter', 'bigquery')
+        adapter_type = config.get("adapter", "bigquery")
 
-        if adapter_type == 'bigquery':
+        if adapter_type == "bigquery":
             from .adapters.bigquery import BigQueryAdapter
 
-            project_id = config.get('project_id')
-            dataset_id = config.get('dataset_id')
-            credentials_path = config.get('credentials_path')
+            project_id = config.get("project_id")
+            dataset_id = config.get("dataset_id")
+            credentials_path = config.get("credentials_path")
 
             # Handle relative paths for credentials by converting to absolute
             if credentials_path and not os.path.isabs(credentials_path):
-                credentials_path = os.path.join(self._get_project_root(), credentials_path)
+                project_root = self._get_project_root()
+                credentials_path = os.path.join(project_root, credentials_path)
 
             if not project_id or not dataset_id:
                 raise ValueError(
-                    "BigQuery adapter requires 'project_id' and 'dataset_id' in configuration"
+                    "BigQuery adapter requires 'project_id' and 'dataset_id' "
+                    "in configuration"
                 )
 
             adapter = BigQueryAdapter(
                 project_id=project_id,
                 dataset_id=dataset_id,
-                credentials_path=credentials_path
+                credentials_path=credentials_path,
             )
         else:
             raise ValueError(f"Unsupported adapter type: {adapter_type}")
@@ -65,31 +67,34 @@ class SQLTestDecorator:
         """Get the project root directory."""
         if self._project_root is not None:
             return self._project_root
-            
+
         # First, check if SQL_TESTING_PROJECT_ROOT environment variable is set
-        project_root = os.environ.get('SQL_TESTING_PROJECT_ROOT')
+        project_root = os.environ.get("SQL_TESTING_PROJECT_ROOT")
         if project_root and os.path.isdir(project_root):
             self._project_root = project_root
             return project_root
-            
+
         # Second, check if pyproject.toml exists in any parent directory
         current_dir = os.getcwd()
-        while current_dir != os.path.dirname(current_dir):  # Until we reach the filesystem root
+        # Until we reach the filesystem root
+        while current_dir != os.path.dirname(current_dir):
             # Look for strong project root indicators
-            if os.path.exists(os.path.join(current_dir, 'pyproject.toml')) or \
-               os.path.exists(os.path.join(current_dir, 'setup.py')) or \
-               os.path.exists(os.path.join(current_dir, '.git')):
+            if (
+                os.path.exists(os.path.join(current_dir, "pyproject.toml"))
+                or os.path.exists(os.path.join(current_dir, "setup.py"))
+                or os.path.exists(os.path.join(current_dir, ".git"))
+            ):
                 self._project_root = current_dir
                 return current_dir
-                
+
             # Look for .sql_testing_root marker file (could be created manually)
-            if os.path.exists(os.path.join(current_dir, '.sql_testing_root')):
+            if os.path.exists(os.path.join(current_dir, ".sql_testing_root")):
                 self._project_root = current_dir
                 return current_dir
-                
+
             # Move up one directory
             current_dir = os.path.dirname(current_dir)
-            
+
         # If no project root marker found, use current directory
         self._project_root = os.getcwd()
         return self._project_root
@@ -102,40 +107,39 @@ class SQLTestDecorator:
         # Make sure we're in the project root or switch to it
         project_root = self._get_project_root()
         original_dir = os.getcwd()
-        
+
         # Change to project root if needed and add to sys.path
         if original_dir != project_root:
             os.chdir(project_root)
             if project_root not in sys.path:
                 sys.path.insert(0, project_root)
-                
+
         config = configparser.ConfigParser()
-        
+
         # Search for config files in the project root
-        config_files = ['pytest.ini', 'setup.cfg', 'tox.ini']
-        config_found = False
-        
+        config_files = ["pytest.ini", "setup.cfg", "tox.ini"]
+
         for config_file in config_files:
             if os.path.exists(config_file):
                 config.read(config_file)
-                config_found = True
                 break
-        
+
         # If we changed directories, change back to original
         # For PyCharm compatibility, we don't want to disturb its working directory
         if original_dir != project_root:
             os.chdir(original_dir)
 
         # Extract sql_testing configuration
-        if 'sql_testing' in config:
-            self._config = dict(config['sql_testing'])
+        if "sql_testing" in config:
+            self._config = dict(config["sql_testing"])
         else:
             # Try to create default config or exit with error
-            raise ValueError(
+            msg = (
                 "No [sql_testing] section found in pytest.ini, setup.cfg, or tox.ini. "
-                "Please configure the SQL testing library or set the SQL_TESTING_PROJECT_ROOT "
-                "environment variable to point to your project root."
+                "Please configure the SQL testing library or set the "
+                "SQL_TESTING_PROJECT_ROOT environment variable."
             )
+            raise ValueError(msg)
 
         return self._config
 
@@ -145,9 +149,9 @@ _sql_test_decorator = SQLTestDecorator()
 
 
 def sql_test(
-        mock_tables: List[BaseMockTable] = None,
-        result_class: Type[T] = None,
-        use_physical_tables: bool = None
+    mock_tables: List[BaseMockTable] = None,
+    result_class: Type[T] = None,
+    use_physical_tables: bool = None,
 ):
     """
     Decorator to mark a function as a SQL test.
@@ -167,7 +171,7 @@ def sql_test(
 
     def decorator(func: Callable[[], TestCase]):
         # Check for multiple sql_test decorators
-        if hasattr(func, '_sql_test_decorated'):
+        if hasattr(func, "_sql_test_decorated"):
             raise ValueError(
                 f"Function {func.__name__} has multiple @sql_test decorators. "
                 "Only one @sql_test decorator is allowed per function."
@@ -186,13 +190,13 @@ def sql_test(
                 )
 
             # Apply decorator values only if provided
-            # If the test case has its own values and decorator has None, keep original values
+            # If decorator value is not None, override the TestCase value
             if mock_tables is not None:
                 test_case.mock_tables = mock_tables
-            
+
             if result_class is not None:
                 test_case.result_class = result_class
-            
+
             if use_physical_tables is not None:
                 test_case.use_physical_tables = use_physical_tables
 
@@ -217,7 +221,7 @@ def pytest_collection_modifyitems(config, items):
 
     for item in items:
         # Check if this is a SQL test
-        if hasattr(item.function, '_sql_test_decorated'):
+        if hasattr(item.function, "_sql_test_decorated"):
             # Mark as SQL test for potential special handling
             item.add_marker(pytest.mark.sql_test)
             sql_test_items.append(item)
@@ -228,14 +232,12 @@ def pytest_collection_modifyitems(config, items):
 
 def pytest_configure(config):
     """Register custom markers."""
-    config.addinivalue_line(
-        "markers", "sql_test: mark test as a SQL test"
-    )
+    config.addinivalue_line("markers", "sql_test: mark test as a SQL test")
 
 
 def pytest_runtest_call(item):
     """Custom test execution for SQL tests."""
-    if hasattr(item.function, '_sql_test_decorated'):
+    if hasattr(item.function, "_sql_test_decorated"):
         # Execute SQL test
         try:
             results = item.function()
