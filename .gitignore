@@ -177,3 +177,6 @@ poetry.lock
 .DS_Store
 .idea/
 pytest.ini
+
+# Local development markers
+.sql_testing_root
