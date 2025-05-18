@@ -64,7 +64,7 @@ class TestSQLParsingFunctions(unittest.TestCase):
         query3 = (
             "SELECT * "
             "FROM analytics_db.users AS u JOIN analytics_db.orders o"
-            "ON u.user_id = o.user_id"
+            " ON u.user_id = o.user_id"
         )
         tables3 = self.framework._parse_sql_tables(query3)
         self.assertEqual(len(tables3), 2)
