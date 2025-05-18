@@ -27,8 +27,9 @@ pip install sql-testing-library[all]
 ```ini
 [sql_testing]
 adapter = bigquery
-project_id = my-test-project
-dataset_id = test_dataset
+project_id = <my-test-project>
+dataset_id = <test_dataset>
+credentials_path = <path to credentials json>
 ```
 
 2. **Write a test** using one of the flexible patterns:
