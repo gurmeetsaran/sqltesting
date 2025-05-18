@@ -3,6 +3,7 @@
 import functools
 import configparser
 import os
+import sys
 from typing import Type, TypeVar, List, Callable, Any
 from pathlib import Path
 
@@ -20,6 +21,7 @@ class SQLTestDecorator:
     def __init__(self):
         self._framework = None
         self._config = None
+        self._project_root = None
 
     def get_framework(self) -> SQLTestFramework:
         """Get or create SQL test framework from configuration."""
@@ -40,6 +42,10 @@ class SQLTestDecorator:
             dataset_id = config.get('dataset_id')
             credentials_path = config.get('credentials_path')
 
+            # Handle relative paths for credentials by converting to absolute
+            if credentials_path and not os.path.isabs(credentials_path):
+                credentials_path = os.path.join(self._get_project_root(), credentials_path)
+
             if not project_id or not dataset_id:
                 raise ValueError(
                     "BigQuery adapter requires 'project_id' and 'dataset_id' in configuration"
@@ -55,26 +61,80 @@ class SQLTestDecorator:
 
         return SQLTestFramework(adapter)
 
+    def _get_project_root(self):
+        """Get the project root directory."""
+        if self._project_root is not None:
+            return self._project_root
+            
+        # First, check if SQL_TESTING_PROJECT_ROOT environment variable is set
+        project_root = os.environ.get('SQL_TESTING_PROJECT_ROOT')
+        if project_root and os.path.isdir(project_root):
+            self._project_root = project_root
+            return project_root
+            
+        # Second, check if pyproject.toml exists in any parent directory
+        current_dir = os.getcwd()
+        while current_dir != os.path.dirname(current_dir):  # Until we reach the filesystem root
+            # Look for strong project root indicators
+            if os.path.exists(os.path.join(current_dir, 'pyproject.toml')) or \
+               os.path.exists(os.path.join(current_dir, 'setup.py')) or \
+               os.path.exists(os.path.join(current_dir, '.git')):
+                self._project_root = current_dir
+                return current_dir
+                
+            # Look for .sql_testing_root marker file (could be created manually)
+            if os.path.exists(os.path.join(current_dir, '.sql_testing_root')):
+                self._project_root = current_dir
+                return current_dir
+                
+            # Move up one directory
+            current_dir = os.path.dirname(current_dir)
+            
+        # If no project root marker found, use current directory
+        self._project_root = os.getcwd()
+        return self._project_root
+
     def _load_config(self) -> dict:
         """Load configuration from pytest.ini or setup.cfg."""
         if self._config is not None:
             return self._config
 
+        # Make sure we're in the project root or switch to it
+        project_root = self._get_project_root()
+        original_dir = os.getcwd()
+        
+        # Change to project root if needed and add to sys.path
+        if original_dir != project_root:
+            os.chdir(project_root)
+            if project_root not in sys.path:
+                sys.path.insert(0, project_root)
+                
         config = configparser.ConfigParser()
-
-        # Look for pytest.ini or setup.cfg
-        for config_file in ['pytest.ini', 'setup.cfg', 'tox.ini']:
+        
+        # Search for config files in the project root
+        config_files = ['pytest.ini', 'setup.cfg', 'tox.ini']
+        config_found = False
+        
+        for config_file in config_files:
             if os.path.exists(config_file):
                 config.read(config_file)
+                config_found = True
                 break
+        
+        # If we changed directories, change back to original
+        # For PyCharm compatibility, we don't want to disturb its working directory
+        if original_dir != project_root:
+            os.chdir(original_dir)
 
         # Extract sql_testing configuration
         if 'sql_testing' in config:
             self._config = dict(config['sql_testing'])
         else:
+            # Try to create default config or exit with error
             raise ValueError(
                 "No [sql_testing] section found in pytest.ini, setup.cfg, or tox.ini. "
-                "Please configure the SQL testing library."
+                "Please configure the SQL testing library or set the SQL_TESTING_PROJECT_ROOT "
+                "environment variable to point to your project root."
             )
 
         return self._config

@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from datetime import date
 from decimal import Decimal
 from typing import Optional
+import unittest
 
 from pydantic import BaseModel
 
@@ -69,105 +70,106 @@ test_orders = [
 ]
 
 
-def test_pattern_1_decorator_only():
-    """Pattern 1: Providing all settings in the decorator."""
-    
-    @sql_test(
-        mock_tables=[
-            UsersMockTable(test_users),
-            OrdersMockTable(test_orders)
-        ],
-        result_class=UserOrderSummary
-    )
-    def execute_test():
-        return TestCase(
-            query="""
-                SELECT
-                    u.user_id,
-                    u.name,
-                    COUNT(o.order_id) as total_orders,
-                    SUM(o.amount) as total_amount
-                FROM bigquery-public-data.analytics_db.users u
-                LEFT JOIN bigquery-public-data.analytics_db.orders o ON u.user_id = o.user_id
-                GROUP BY u.user_id, u.name
-                ORDER BY u.user_id
-            """,
-            execution_database="analytics_db"
-        )
-    
-    results = execute_test()
-    # Assertions
-    assert len(results) == 3
-    assert results[0].user_id == 1
-    assert results[0].total_orders == 2
-    assert results[0].total_amount == Decimal("250.00")
+class TestImprovedPatterns(unittest.TestCase):
+    """Test class demonstrating different usage patterns for SQL tests."""
 
-
-def test_pattern_2_testcase_only():
-    """Pattern 2: Providing all settings in the TestCase (require empty decorator)."""
-
-    @sql_test()  # Empty decorator
-    def execute_test():
-        return TestCase(
-            query="""
-                SELECT
-                    u.user_id,
-                    u.name,
-                    COUNT(o.order_id) as total_orders,
-                    SUM(o.amount) as total_amount
-                FROM bigquery-public-data.analytics_db.users u
-                LEFT JOIN bigquery-public-data.analytics_db.orders o ON u.user_id = o.user_id
-                GROUP BY u.user_id, u.name
-                ORDER BY u.user_id
-            """,
-            execution_database="analytics_db",
+    def test_pattern_1_decorator_only(self):
+        """Pattern 1: Providing all settings in the decorator."""
+        
+        @sql_test(
             mock_tables=[
                 UsersMockTable(test_users),
                 OrdersMockTable(test_orders)
             ],
             result_class=UserOrderSummary
         )
+        def execute_test():
+            return TestCase(
+                query="""
+                    SELECT
+                        u.user_id,
+                        u.name,
+                        COUNT(o.order_id) as total_orders,
+                        SUM(o.amount) as total_amount
+                    FROM bigquery-public-data.analytics_db.users u
+                    LEFT JOIN bigquery-public-data.analytics_db.orders o ON u.user_id = o.user_id
+                    GROUP BY u.user_id, u.name
+                    ORDER BY u.user_id
+                """,
+                execution_database="analytics_db"
+            )
+        
+        results = execute_test()
+        # Assertions
+        self.assertEqual(len(results), 3)
+        self.assertEqual(results[0].user_id, 1)
+        self.assertEqual(results[0].total_orders, 2)
+        self.assertEqual(results[0].total_amount, Decimal("250.00"))
 
-    results = execute_test()
+    def test_pattern_2_testcase_only(self):
+        """Pattern 2: Providing all settings in the TestCase (require empty decorator)."""
 
-    # Assertions
-    assert len(results) == 3
-    assert results[0].user_id == 1
-    assert results[0].total_orders == 2
-    assert results[0].total_amount == Decimal("250.00")
+        @sql_test()  # Empty decorator
+        def execute_test():
+            return TestCase(
+                query="""
+                    SELECT
+                        u.user_id,
+                        u.name,
+                        COUNT(o.order_id) as total_orders,
+                        SUM(o.amount) as total_amount
+                    FROM bigquery-public-data.analytics_db.users u
+                    LEFT JOIN bigquery-public-data.analytics_db.orders o ON u.user_id = o.user_id
+                    GROUP BY u.user_id, u.name
+                    ORDER BY u.user_id
+                """,
+                execution_database="analytics_db",
+                mock_tables=[
+                    UsersMockTable(test_users),
+                    OrdersMockTable(test_orders)
+                ],
+                result_class=UserOrderSummary
+            )
 
+        results = execute_test()
 
-def test_pattern_3_mix_and_match():
-    """Pattern 3: Mix and match decorator and TestCase values."""
+        # Assertions
+        self.assertEqual(len(results), 3)
+        self.assertEqual(results[0].user_id, 1)
+        self.assertEqual(results[0].total_orders, 2)
+        self.assertEqual(results[0].total_amount, Decimal("250.00"))
 
-    @sql_test(
-        mock_tables=[
-            UsersMockTable(test_users),
-            OrdersMockTable(test_orders)
-        ]
-    )
-    def execute_test():
-        return TestCase(
-            query="""
-                SELECT
-                    u.user_id,
-                    u.name,
-                    COUNT(o.order_id) as total_orders,
-                    SUM(o.amount) as total_amount
-                FROM bigquery-public-data.analytics_db.users u
-                LEFT JOIN bigquery-public-data.analytics_db.orders o ON u.user_id = o.user_id
-                GROUP BY u.user_id, u.name
-                ORDER BY u.user_id
-            """,
-            execution_database="analytics_db",
-            # We define result_class here instead of in decorator
-            result_class=UserOrderSummary
+    def test_pattern_3_mix_and_match(self):
+        """Pattern 3: Mix and match decorator and TestCase values."""
+
+        @sql_test(
+            mock_tables=[
+                UsersMockTable(test_users),
+                OrdersMockTable(test_orders)
+            ]
         )
+        def execute_test():
+            return TestCase(
+                query="""
+                    SELECT
+                        u.user_id,
+                        u.name,
+                        COUNT(o.order_id) as total_orders,
+                        SUM(o.amount) as total_amount
+                    FROM bigquery-public-data.analytics_db.users u
+                    LEFT JOIN bigquery-public-data.analytics_db.orders o ON u.user_id = o.user_id
+                    GROUP BY u.user_id, u.name
+                    ORDER BY u.user_id
+                """,
+                execution_database="analytics_db",
+                # We define result_class here instead of in decorator
+                result_class=UserOrderSummary
+            )
 
-    results = execute_test()
+        results = execute_test()
 
-    # Assertions
-    assert len(results) == 3
-    assert results[0].user_id == 1
-    assert results[0].total_orders == 2
-    assert results[0].total_amount == Decimal("250.00")
+        # Assertions
+        self.assertEqual(len(results), 3)
+        self.assertEqual(results[0].user_id, 1)
+        self.assertEqual(results[0].total_orders, 2)
+        self.assertEqual(results[0].total_amount, Decimal("250.00"))

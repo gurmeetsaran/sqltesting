@@ -93,7 +93,6 @@ class SQLTestFramework:
                         )
 
             # Execute query
-            print(final_query)
             result_df = self.adapter.execute_query(final_query)
 
             # Convert results to typed objects
@@ -197,7 +196,6 @@ class SQLTestFramework:
             replacement_mapping[original_name] = cte_alias
 
         # Replace table names in original query
-        print(replacement_mapping)
         modified_query = self._replace_table_names_in_query(query, replacement_mapping)
 
         # Combine CTEs with original query
