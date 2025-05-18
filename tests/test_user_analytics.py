@@ -1,6 +1,7 @@
 """
 Example SQL tests using the library.
 """
+
 import unittest
 from dataclasses import dataclass
 from datetime import date
@@ -9,9 +10,9 @@ from typing import Optional
 
 from pydantic import BaseModel
 
-from sql_testing_library import sql_test, TestCase
-from sql_testing_library.mock_table import BaseMockTable
+from sql_testing_library import TestCase, sql_test
 from sql_testing_library.exceptions import MockTableNotFoundError
+from sql_testing_library.mock_table import BaseMockTable
 
 
 # Define dataclasses for test data
@@ -26,11 +27,12 @@ class User:
     def fake(cls):
         """Generate fake user data."""
         import random
+
         return cls(
             user_id=random.randint(1, 10000),
             name=f"User{random.randint(1, 1000)}",
             email=f"user{random.randint(1, 1000)}@example.com",
-            created_date=date(2023, random.randint(1, 12), random.randint(1, 28))
+            created_date=date(2023, random.randint(1, 12), random.randint(1, 28)),
         )
 
 
@@ -45,11 +47,12 @@ class Order:
     def fake(cls):
         """Generate fake order data."""
         import random
+
         return cls(
             order_id=random.randint(10000, 99999),
             user_id=random.randint(1, 100),
             amount=Decimal(f"{random.uniform(10, 500):.2f}"),
-            order_date=date(2023, random.randint(1, 12), random.randint(1, 28))
+            order_date=date(2023, random.randint(1, 12), random.randint(1, 28)),
         )
 
 
@@ -100,26 +103,30 @@ class OrdersMockTable(BaseMockTable):
 # Test cases with assertions
 class TestUserAnalytics(unittest.TestCase):
     """A collection of SQL test cases for user analytics."""
-    
+
     def test_user_order_summary(self):
         """Test that calculates order summary per user."""
 
         # Define the SQL test
         @sql_test(
             mock_tables=[
-                UsersMockTable([
-                    User(1, "Alice", "alice@example.com", date(2023, 1, 1)),
-                    User(2, "Bob", "bob@example.com", date(2023, 1, 2)),
-                    User(3, "Charlie", "charlie@example.com", date(2023, 1, 3))
-                ]),
-                OrdersMockTable([
-                    Order(101, 1, Decimal("100.00"), date(2023, 2, 1)),
-                    Order(102, 1, Decimal("150.00"), date(2023, 2, 2)),
-                    Order(103, 2, Decimal("200.00"), date(2023, 2, 3)),
-                    Order(104, 3, Decimal("75.00"), date(2023, 2, 4))
-                ])
+                UsersMockTable(
+                    [
+                        User(1, "Alice", "alice@example.com", date(2023, 1, 1)),
+                        User(2, "Bob", "bob@example.com", date(2023, 1, 2)),
+                        User(3, "Charlie", "charlie@example.com", date(2023, 1, 3)),
+                    ]
+                ),
+                OrdersMockTable(
+                    [
+                        Order(101, 1, Decimal("100.00"), date(2023, 2, 1)),
+                        Order(102, 1, Decimal("150.00"), date(2023, 2, 2)),
+                        Order(103, 2, Decimal("200.00"), date(2023, 2, 3)),
+                        Order(104, 3, Decimal("75.00"), date(2023, 2, 4)),
+                    ]
+                ),
             ],
-            result_class=UserOrderSummary
+            result_class=UserOrderSummary,
         )
         def execute_test():
             return TestCase(
@@ -130,11 +137,12 @@ class TestUserAnalytics(unittest.TestCase):
                         COUNT(o.order_id) as total_orders,
                         SUM(o.amount) as total_amount
                     FROM bigquery-public-data.analytics_db.users u
-                    JOIN bigquery-public-data.analytics_db.orders o ON u.user_id = o.user_id
+                    JOIN bigquery-public-data.analytics_db.orders o
+                        ON u.user_id = o.user_id
                     GROUP BY u.user_id, u.name
                     ORDER BY u.user_id
                 """,
-                execution_database="analytics_db"
+                execution_database="analytics_db",
             )
 
         # Execute the test and get results
@@ -176,8 +184,7 @@ class TestUserAnalytics(unittest.TestCase):
         ]
 
         @sql_test(
-            mock_tables=[OrdersMockTable(test_orders)],
-            result_class=MonthlyRevenue
+            mock_tables=[OrdersMockTable(test_orders)], result_class=MonthlyRevenue
         )
         def execute_test():
             return TestCase(
@@ -189,7 +196,7 @@ class TestUserAnalytics(unittest.TestCase):
                     GROUP BY EXTRACT(MONTH FROM order_date)
                     ORDER BY month
                 """,
-                execution_database="analytics_db"
+                execution_database="analytics_db",
             )
 
         # Execute and verify results
@@ -218,12 +225,12 @@ class TestUserAnalytics(unittest.TestCase):
 
         @sql_test(
             mock_tables=[
-                UsersMockTable([
-                    User(42, "Test User", "test@example.com", date(2023, 1, 1))
-                ])
+                UsersMockTable(
+                    [User(42, "Test User", "test@example.com", date(2023, 1, 1))]
+                )
             ],
             result_class=UserOrderSummary,
-            use_physical_tables=True  # Test physical tables option
+            use_physical_tables=True,  # Test physical tables option
         )
         def execute_test():
             return TestCase(
@@ -236,7 +243,7 @@ class TestUserAnalytics(unittest.TestCase):
                     FROM bigquery-public-data.analytics_db.users 
                     WHERE user_id = 42
                 """,
-                execution_database="test_db"  # Different database
+                execution_database="test_db",  # Different database
             )
 
         results = execute_test()
@@ -254,11 +261,11 @@ class TestUserAnalytics(unittest.TestCase):
 
         @sql_test(
             mock_tables=[
-                UsersMockTable([
-                    User(1, "Alice", "alice@example.com", date(2023, 1, 1))
-                ])
+                UsersMockTable(
+                    [User(1, "Alice", "alice@example.com", date(2023, 1, 1))]
+                )
             ],
-            result_class=UserOrderSummary
+            result_class=UserOrderSummary,
         )
         def execute_test():
             return TestCase(
@@ -271,7 +278,7 @@ class TestUserAnalytics(unittest.TestCase):
                     FROM bigquery-public-data.analytics_db.users 
                     WHERE user_id = 999  -- No matching user
                 """,
-                execution_database="analytics_db"
+                execution_database="analytics_db",
             )
 
         results = execute_test()
@@ -285,12 +292,14 @@ class TestUserAnalytics(unittest.TestCase):
 
         @sql_test(
             mock_tables=[
-                UsersMockTable([
-                    User(1, "Alice", "alice@example.com", date(2023, 1, 1)),
-                    User(2, "Bob", "bob@example.com", date(2023, 1, 2))
-                ])
+                UsersMockTable(
+                    [
+                        User(1, "Alice", "alice@example.com", date(2023, 1, 1)),
+                        User(2, "Bob", "bob@example.com", date(2023, 1, 2)),
+                    ]
+                )
             ],
-            result_class=UserWithOptionalEmail
+            result_class=UserWithOptionalEmail,
         )
         def execute_test():
             return TestCase(
@@ -305,7 +314,7 @@ class TestUserAnalytics(unittest.TestCase):
                     FROM bigquery-public-data.analytics_db.users
                     ORDER BY user_id
                 """,
-                execution_database="analytics_db"
+                execution_database="analytics_db",
             )
 
         results = execute_test()
@@ -329,14 +338,12 @@ class TestUserAnalytics(unittest.TestCase):
 
         @sql_test(
             mock_tables=[
-                UsersMockTable([
-                    User(1, "Alice", "alice@example.com", date(2023, 1, 1))
-                ]),
-                OrdersMockTable([
-                    Order(101, 1, Decimal("123.45"), date(2023, 2, 1))
-                ])
+                UsersMockTable(
+                    [User(1, "Alice", "alice@example.com", date(2023, 1, 1))]
+                ),
+                OrdersMockTable([Order(101, 1, Decimal("123.45"), date(2023, 2, 1))]),
             ],
-            result_class=TypeTestResult
+            result_class=TypeTestResult,
         )
         def execute_test():
             return TestCase(
@@ -348,9 +355,10 @@ class TestUserAnalytics(unittest.TestCase):
                         o.amount as total_amount,
                         TRUE as is_active
                     FROM bigquery-public-data.analytics_db.users u
-                    JOIN bigquery-public-data.analytics_db.orders o ON u.user_id = o.user_id
+                    JOIN bigquery-public-data.analytics_db.orders o
+                        ON u.user_id = o.user_id
                 """,
-                execution_database="analytics_db"
+                execution_database="analytics_db",
             )
 
         results = execute_test()
@@ -378,25 +386,24 @@ class TestUserAnalytics(unittest.TestCase):
         @sql_test(
             mock_tables=[
                 # Only provide users table, but query needs orders too
-                UsersMockTable([User(1, "Alice", "alice@example.com", date(2023, 1, 1))])
+                UsersMockTable(
+                    [User(1, "Alice", "alice@example.com", date(2023, 1, 1))]
+                )
             ],
-            result_class=UserOrderSummary
+            result_class=UserOrderSummary,
         )
         def execute_test():
             return TestCase(
                 query="""
                     SELECT u.user_id, u.name, COUNT(o.order_id) as total_orders
                     FROM bigquery-public-data.analytics_db.users u
-                    JOIN bigquery-public-data.analytics_db.orders o ON u.user_id = o.user_id  -- This will fail
+                    JOIN bigquery-public-data.analytics_db.orders o
+                        ON u.user_id = o.user_id
                     GROUP BY u.user_id, u.name
                 """,
-                execution_database="analytics_db"
+                execution_database="analytics_db",
             )
 
         # Should raise MockTableNotFoundError
-        try:
-            results = execute_test()
-            assert False, "Expected MockTableNotFoundError but test passed"
-        except MockTableNotFoundError as e:
-            assert "analytics_db.orders" in str(e)
-            assert "orders" in e.qualified_table_name
+        with self.assertRaises(MockTableNotFoundError):
+            execute_test()

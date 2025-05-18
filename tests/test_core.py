@@ -1,11 +1,9 @@
 """
 Tests for the core SQL testing framework.
 """
+
 import unittest
-from unittest.mock import MagicMock, patch
-import pytest
-import sqlglot
-from typing import List, Dict
+from unittest.mock import MagicMock
 
 from sql_testing_library.core import SQLTestFramework
 from sql_testing_library.exceptions import SQLParseError
@@ -24,7 +22,7 @@ class TestSQLParsingFunctions(unittest.TestCase):
         """Test parsing simple query with single table."""
         query = "SELECT * FROM my_database.users"
         tables = self.framework._parse_sql_tables(query)
-        
+
         self.assertEqual(len(tables), 1)
         self.assertEqual(tables[0], "my_database.users")
 
@@ -42,12 +40,12 @@ class TestSQLParsingFunctions(unittest.TestCase):
         WHERE u.user_id > 10
         """
         tables = self.framework._parse_sql_tables(query)
-        
+
         self.assertEqual(len(tables), 3)
         self.assertIn("users", tables)
         self.assertIn("orders", tables)
         self.assertIn("order_items", tables)
-        
+
     def test_parse_sql_tables_with_aliases(self):
         """Test parsing queries with different styles of table aliases."""
         # Test with space alias
@@ -55,15 +53,19 @@ class TestSQLParsingFunctions(unittest.TestCase):
         tables1 = self.framework._parse_sql_tables(query1)
         self.assertEqual(len(tables1), 1)
         self.assertIn("users", tables1)
-        
+
         # Test with AS keyword
         query2 = "SELECT * FROM users AS u WHERE u.active = TRUE"
         tables2 = self.framework._parse_sql_tables(query2)
         self.assertEqual(len(tables2), 1)
         self.assertIn("users", tables2)
-        
+
         # Test with fully qualified name and alias
-        query3 = "SELECT * FROM analytics_db.users AS u JOIN analytics_db.orders o ON u.user_id = o.user_id"
+        query3 = (
+            "SELECT * "
+            "FROM analytics_db.users AS u JOIN analytics_db.orders o"
+            "ON u.user_id = o.user_id"
+        )
         tables3 = self.framework._parse_sql_tables(query3)
         self.assertEqual(len(tables3), 2)
         self.assertIn("analytics_db.users", tables3)
@@ -79,7 +81,7 @@ class TestSQLParsingFunctions(unittest.TestCase):
         JOIN inventory_db.products p ON u.preferred_product = p.product_id
         """
         tables = self.framework._parse_sql_tables(query)
-        
+
         self.assertEqual(len(tables), 2)
         self.assertIn("analytics_db.users", tables)
         self.assertIn("inventory_db.products", tables)
@@ -91,7 +93,7 @@ class TestSQLParsingFunctions(unittest.TestCase):
         JOIN bigquery-public-data.analytics_db.orders ON users.user_id = orders.user_id
         """
         tables = self.framework._parse_sql_tables(query)
-        
+
         self.assertEqual(len(tables), 2)
         self.assertIn("bigquery-public-data.analytics_db.users", tables)
         self.assertIn("bigquery-public-data.analytics_db.orders", tables)
@@ -105,7 +107,7 @@ class TestSQLParsingFunctions(unittest.TestCase):
         JOIN orders ON active_users.user_id = orders.user_id
         """
         tables = self.framework._parse_sql_tables(query)
-        
+
         self.assertEqual(len(tables), 2)
         self.assertIn("users", tables)
         self.assertIn("orders", tables)
@@ -127,13 +129,13 @@ class TestSQLParsingFunctions(unittest.TestCase):
         JOIN recent_orders o ON u.user_id = o.user_id
         """
         tables = self.framework._parse_sql_tables(query)
-        
+
         # Print tables for debugging
         print(f"CTE test found tables: {tables}")
-        
+
         # We should only have the base tables, not the CTE names
         self.assertEqual(sorted(tables), sorted(["users", "orders"]))
-        
+
         # Individual assertions for clarity
         self.assertIn("users", tables)
         self.assertIn("orders", tables)
@@ -150,7 +152,7 @@ class TestSQLParsingFunctions(unittest.TestCase):
         JOIN orders o ON u.user_id = o.user_id
         """
         tables = self.framework._parse_sql_tables(query)
-        
+
         # Should have unique tables even though orders is referenced twice
         self.assertEqual(len(tables), 2)
         self.assertIn("users", tables)
@@ -159,7 +161,7 @@ class TestSQLParsingFunctions(unittest.TestCase):
     def test_parse_sql_tables_invalid_sql(self):
         """Test parsing invalid SQL raises SQLParseError."""
         query = "SELECT * FROM users WHERE (missing closing parenthesis"
-        
+
         with self.assertRaises(SQLParseError):
             self.framework._parse_sql_tables(query)
 
@@ -167,19 +169,19 @@ class TestSQLParsingFunctions(unittest.TestCase):
         """Test parsing with different SQL dialects."""
         # Change dialect to PostgreSQL
         self.mock_adapter.get_sqlglot_dialect.return_value = "postgres"
-        
+
         # PostgreSQL specific array syntax
         query = "SELECT * FROM users WHERE tags && ARRAY['active', 'premium']"
         tables = self.framework._parse_sql_tables(query)
-        
+
         self.assertEqual(len(tables), 1)
         self.assertEqual(tables[0], "users")
-        
+
         # Change back to BigQuery for UNNEST
         self.mock_adapter.get_sqlglot_dialect.return_value = "bigquery"
         query = "SELECT * FROM users CROSS JOIN UNNEST(tags) as t"
         tables = self.framework._parse_sql_tables(query)
-        
+
         self.assertEqual(len(tables), 1)
         self.assertEqual(tables[0], "users")
 
@@ -197,10 +199,12 @@ class TestReplaceTableNamesInQuery(unittest.TestCase):
         """Test replacing a simple table name with a CTE alias."""
         query = "SELECT * FROM users"
         replacement_mapping = {"users": "user_cte"}
-        
-        result = self.framework._replace_table_names_in_query(query, replacement_mapping)
+
+        result = self.framework._replace_table_names_in_query(
+            query, replacement_mapping
+        )
         print(f"Simple table test result: {result}")
-        
+
         # With our implementation, we should see the replacement
         self.assertIn("FROM user_cte", result)
         self.assertNotIn("FROM users", result)
@@ -209,10 +213,12 @@ class TestReplaceTableNamesInQuery(unittest.TestCase):
         """Test replacing a qualified table name with a CTE alias."""
         query = "SELECT * FROM analytics_db.users"
         replacement_mapping = {"analytics_db.users": "user_cte"}
-        
-        result = self.framework._replace_table_names_in_query(query, replacement_mapping)
+
+        result = self.framework._replace_table_names_in_query(
+            query, replacement_mapping
+        )
         print(f"Qualified table test result: {result}")
-        
+
         # With our implementation, we should see the replacement
         self.assertIn("FROM user_cte", result)
         self.assertNotIn("FROM analytics_db.users", result)
@@ -221,10 +227,12 @@ class TestReplaceTableNamesInQuery(unittest.TestCase):
         """Test replacing a multi-level qualified table name with a CTE alias."""
         query = "SELECT * FROM bigquery-public-data.analytics_db.users"
         replacement_mapping = {"bigquery-public-data.analytics_db.users": "user_cte"}
-        
-        result = self.framework._replace_table_names_in_query(query, replacement_mapping)
+
+        result = self.framework._replace_table_names_in_query(
+            query, replacement_mapping
+        )
         print(f"Multi-level qualified table test result: {result}")
-        
+
         # With our implementation, we should see the replacement
         self.assertIn("FROM user_cte", result)
         self.assertNotIn("FROM bigquery-public-data.analytics_db.users", result)
@@ -232,20 +240,22 @@ class TestReplaceTableNamesInQuery(unittest.TestCase):
     def test_replace_aliased_table(self):
         """Test replacing a table with an alias in the query."""
         query = "SELECT u.user_id, u.name FROM users u"
-        
+
         # Modify the test to use the exact table reference as seen in core.py
         replacement_mapping = {"users": "user_cte"}
-        
-        result = self.framework._replace_table_names_in_query(query, replacement_mapping)
-        
+
+        result = self.framework._replace_table_names_in_query(
+            query, replacement_mapping
+        )
+
         # Print the result for debugging
         print(f"Aliased table test result: {result}")
-        
+
         # Update our assertions to match the actual output format
         self.assertNotIn("FROM users", result)
         # Check that users was replaced with user_cte, regardless of exact format
         self.assertTrue("user_cte" in result and "FROM" in result)
-        
+
     def test_replace_multiple_tables(self):
         """Test replacing multiple tables in a query."""
         query = """
@@ -257,16 +267,15 @@ class TestReplaceTableNamesInQuery(unittest.TestCase):
         FROM users u
         JOIN orders o ON u.user_id = o.user_id
         """
-        replacement_mapping = {
-            "users": "user_cte",
-            "orders": "order_cte"
-        }
-        
-        result = self.framework._replace_table_names_in_query(query, replacement_mapping)
-        
+        replacement_mapping = {"users": "user_cte", "orders": "order_cte"}
+
+        result = self.framework._replace_table_names_in_query(
+            query, replacement_mapping
+        )
+
         # Print the result for debugging
         print(f"Multiple tables test result: {result}")
-        
+
         # Modified assertions to match actual output format
         self.assertNotIn("FROM users", result)
         self.assertNotIn("JOIN orders", result)
@@ -282,16 +291,15 @@ class TestReplaceTableNamesInQuery(unittest.TestCase):
             (SELECT COUNT(*) FROM orders WHERE user_id = u.user_id) as order_count
         FROM users u
         """
-        replacement_mapping = {
-            "users": "user_cte",
-            "orders": "order_cte"
-        }
-        
-        result = self.framework._replace_table_names_in_query(query, replacement_mapping)
-        
+        replacement_mapping = {"users": "user_cte", "orders": "order_cte"}
+
+        result = self.framework._replace_table_names_in_query(
+            query, replacement_mapping
+        )
+
         # Print the result for debugging
         print(f"Subquery test result: {result}")
-        
+
         # Modified assertions to match actual output format
         self.assertNotIn("FROM users", result)
         self.assertNotIn("FROM orders", result)
@@ -322,26 +330,28 @@ class TestReplaceTableNamesInQuery(unittest.TestCase):
             "users": "user_cte",
             "orders": "order_cte",
             "order_items": "order_items_cte",
-            "products": "product_cte"
+            "products": "product_cte",
         }
-        
-        result = self.framework._replace_table_names_in_query(query, replacement_mapping)
-        
+
+        result = self.framework._replace_table_names_in_query(
+            query, replacement_mapping
+        )
+
         # Print the result for debugging
         print(f"Complex query test result: {result}")
-        
+
         # Check for exact table name replacements
         self.assertIn("FROM user_cte", result)
         self.assertIn("JOIN order_cte", result)
         self.assertIn("JOIN order_items_cte", result)
         self.assertIn("JOIN product_cte", result)
-        
+
         # Check original table names were replaced (if possible)
-        # These might match partially in qualified names or with spaces, 
+        # These might match partially in qualified names or with spaces,
         # so we only check for exact matches
         self.assertNotIn("FROM users ", result)
         self.assertNotIn("JOIN orders ", result)
-        
+
         # Verify all replacements were made
         self.assertTrue("user_cte" in result)
         self.assertTrue("order_cte" in result)
@@ -364,13 +374,12 @@ class TestReplaceTableNamesInQuery(unittest.TestCase):
         FROM active_users u
         JOIN recent_orders o ON u.user_id = o.user_id
         """
-        replacement_mapping = {
-            "users": "user_cte",
-            "orders": "order_cte"
-        }
-        
-        result = self.framework._replace_table_names_in_query(query, replacement_mapping)
-        
+        replacement_mapping = {"users": "user_cte", "orders": "order_cte"}
+
+        result = self.framework._replace_table_names_in_query(
+            query, replacement_mapping
+        )
+
         self.assertIn("SELECT user_id, name FROM user_cte", result)
         self.assertIn("SELECT order_id, user_id FROM order_cte", result)
         self.assertNotIn("SELECT user_id, name FROM users", result)
@@ -380,9 +389,11 @@ class TestReplaceTableNamesInQuery(unittest.TestCase):
         """Test when no replacements are needed."""
         query = "SELECT * FROM users"
         replacement_mapping = {"customers": "customer_cte"}
-        
-        result = self.framework._replace_table_names_in_query(query, replacement_mapping)
-        
+
+        result = self.framework._replace_table_names_in_query(
+            query, replacement_mapping
+        )
+
         # The query should remain unchanged
         self.assertEqual(result.strip(), "SELECT * FROM users")
 
@@ -391,10 +402,10 @@ class TestReplaceTableNamesInQuery(unittest.TestCase):
         # Invalid SQL should raise SQLParseError
         query = "SELECT * FROM users WHERE (missing closing parenthesis"
         replacement_mapping = {"users": "user_cte"}
-        
+
         with self.assertRaises(SQLParseError):
             self.framework._replace_table_names_in_query(query, replacement_mapping)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

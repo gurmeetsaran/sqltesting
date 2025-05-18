@@ -52,10 +52,6 @@ Ruff configuration is defined in the `pyproject.toml` file under the `[tool.ruff
   - Import sorting (I)
   - Bugbear checks (B)
 
-## Pre-commit Integration
-
-It's recommended to run the linter and formatter before committing changes. You can do this manually or set up a pre-commit hook.
-
 ## IDE Integration
 
 Ruff has extensions available for various IDEs:
@@ -64,15 +60,3 @@ Ruff has extensions available for various IDEs:
 - PyCharm: [Ruff Plugin](https://plugins.jetbrains.com/plugin/20574-ruff)
 
 These extensions will highlight linting issues directly in your editor and can apply automatic formatting on save.
-
-## Continuous Integration
-
-Consider adding a step in your CI pipeline to validate that all code passes linting and formatting checks:
-
-```yaml
-- name: Run linter
-  run: poetry run ruff check src tests
-  
-- name: Check formatting
-  run: poetry run ruff format --check src tests
-```
