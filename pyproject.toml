@@ -1,0 +1,55 @@
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry]
+name = "sql-testing-library"
+version = "0.1.0"
+description = "A Python library for testing SQL queries with mock data injection"
+authors = ["Gurmeet Saran <gurmeetx@gmail.com>"]
+readme = "README.md"
+packages = [{include = "sql_testing_library", from = "src"}]
+
+[tool.poetry.dependencies]
+python = ">=3.9"
+sqlglot = ">=18.0.0,<19.0.0"
+pydantic = ">=2.0.0"
+pandas = ">=1.0.0"
+typing-extensions = {version = ">=4.5.0", python = "<3.10"}
+docutils = ">=0.21.2,<0.22.0"
+db-dtypes = "^1.4.3"
+
+[tool.poetry.group.bigquery.dependencies]
+google-cloud-bigquery = ">=3.0.0"
+
+[tool.poetry.group.athena.dependencies]
+boto3 = ">=1.26.0"
+
+[tool.poetry.group.redshift.dependencies]
+psycopg2-binary = ">=2.9.0"
+
+[tool.poetry.group.dev.dependencies]
+pytest = ">=7.0.0"
+pytest-asyncio = ">=0.21.0"
+pytest-mock = ">=3.10.0"
+pytest-cov = ">=4.1.0"
+black = ">=22.0.0"
+flake8 = ">=4.0.0"
+mypy = ">=0.991"
+tox = ">=4.0.0"
+build = ">=1.0.0"
+twine = ">=4.0.0"
+
+[tool.poetry.plugins.pytest11]
+sql_testing = "sql_testing_library.pytest_plugin"
+
+[tool.mypy]
+python_version = "3.8"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
+disallow_untyped_decorators = true
+no_implicit_optional = true
+strict_optional = true
