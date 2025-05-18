@@ -6,7 +6,7 @@ A Python library for testing SQL queries with mock data injection across Athena,
 ## Features
 
 - **Multi-Database Support**: Test SQL across BigQuery, Athena, and Redshift
-- **Mock Data Injection**: Use Python dataclasses for type-safe test data  
+- **Mock Data Injection**: Use Python dataclasses for type-safe test data
 - **CTE or Physical Tables**: Automatic fallback for query size limits
 - **Type-Safe Results**: Deserialize results to Pydantic models
 - **Pytest Integration**: Seamless testing with `@sql_test` decorator
@@ -17,7 +17,7 @@ A Python library for testing SQL queries with mock data injection across Athena,
 # Install with BigQuery support
 pip install sql-testing-library[bigquery]
 
-# Or install with all database adapters  
+# Or install with all database adapters
 pip install sql-testing-library[all]
 ```
 
@@ -47,7 +47,7 @@ class User:
     user_id: int
     name: str
     email: str
-    
+
 class UserResult(BaseModel):
     user_id: int
     name: str
@@ -55,7 +55,7 @@ class UserResult(BaseModel):
 class UsersMockTable(BaseMockTable):
     def get_database_name(self) -> str:
         return "analytics_db"
-    
+
     def get_table_name(self) -> str:
         return "users"
 
@@ -64,7 +64,7 @@ class UsersMockTable(BaseMockTable):
     mock_tables=[
         UsersMockTable([
             User(1, "Alice", "alice@example.com"),
-            User(2, "Bob", "bob@example.com")  
+            User(2, "Bob", "bob@example.com")
         ])
     ],
     result_class=UserResult
@@ -84,7 +84,7 @@ def test_pattern_2():
         mock_tables=[
             UsersMockTable([
                 User(1, "Alice", "alice@example.com"),
-                User(2, "Bob", "bob@example.com")  
+                User(2, "Bob", "bob@example.com")
             ])
         ],
         result_class=UserResult
@@ -95,7 +95,7 @@ def test_pattern_2():
     mock_tables=[
         UsersMockTable([
             User(1, "Alice", "alice@example.com"),
-            User(2, "Bob", "bob@example.com")  
+            User(2, "Bob", "bob@example.com")
         ])
     ]
 )
@@ -131,6 +131,26 @@ The library supports flexible ways to configure your tests:
 **Important notes**:
 - Parameters provided in the decorator take precedence over those in TestCase
 - Either the decorator or TestCase must provide mock_tables and result_class
+
+## Development Setup
+
+### Code Quality
+
+The project uses [Ruff](https://github.com/astral-sh/ruff) for linting and formatting along with pre-commit hooks:
+
+1. Install development dependencies:
+   ```bash
+   poetry install --with dev
+   ```
+
+2. Set up pre-commit hooks:
+   ```bash
+   ./scripts/setup-hooks.sh
+   ```
+
+This ensures code is automatically formatted and checked on commit.
+
+For more information on linting and coding standards, see [docs/linting.md](docs/linting.md).
 
 ## Documentation
 

@@ -131,7 +131,7 @@ class TestUserAnalytics(unittest.TestCase):
         def execute_test():
             return TestCase(
                 query="""
-                    SELECT 
+                    SELECT
                         u.user_id,
                         u.name,
                         COUNT(o.order_id) as total_orders,
@@ -189,7 +189,7 @@ class TestUserAnalytics(unittest.TestCase):
         def execute_test():
             return TestCase(
                 query="""
-                    SELECT 
+                    SELECT
                         EXTRACT(MONTH FROM order_date) as month,
                         SUM(amount) as revenue
                     FROM bigquery-public-data.analytics_db.orders
@@ -235,12 +235,12 @@ class TestUserAnalytics(unittest.TestCase):
         def execute_test():
             return TestCase(
                 query="""
-                    SELECT 
-                        user_id, 
-                        name, 
-                        0 as total_orders, 
-                        0 as total_amount 
-                    FROM bigquery-public-data.analytics_db.users 
+                    SELECT
+                        user_id,
+                        name,
+                        0 as total_orders,
+                        0 as total_amount
+                    FROM bigquery-public-data.analytics_db.users
                     WHERE user_id = 42
                 """,
                 execution_database="test_db",  # Different database
@@ -270,12 +270,12 @@ class TestUserAnalytics(unittest.TestCase):
         def execute_test():
             return TestCase(
                 query="""
-                    SELECT 
-                        user_id, 
-                        name, 
-                        0 as total_orders, 
-                        0 as total_amount 
-                    FROM bigquery-public-data.analytics_db.users 
+                    SELECT
+                        user_id,
+                        name,
+                        0 as total_orders,
+                        0 as total_amount
+                    FROM bigquery-public-data.analytics_db.users
                     WHERE user_id = 999  -- No matching user
                 """,
                 execution_database="analytics_db",
@@ -304,12 +304,12 @@ class TestUserAnalytics(unittest.TestCase):
         def execute_test():
             return TestCase(
                 query="""
-                    SELECT 
+                    SELECT
                         user_id,
                         name,
-                        CASE 
-                            WHEN user_id = 1 THEN email 
-                            ELSE NULL 
+                        CASE
+                            WHEN user_id = 1 THEN email
+                            ELSE NULL
                         END as email
                     FROM bigquery-public-data.analytics_db.users
                     ORDER BY user_id
@@ -348,7 +348,7 @@ class TestUserAnalytics(unittest.TestCase):
         def execute_test():
             return TestCase(
                 query="""
-                    SELECT 
+                    SELECT
                         u.user_id,
                         u.name,
                         EXTRACT(YEAR FROM u.created_date) as created_year,

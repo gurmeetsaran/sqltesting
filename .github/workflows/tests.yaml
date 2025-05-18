@@ -3,32 +3,8 @@ name: Tests
 on: [push, pull_request]
 
 jobs:
-  linting:
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v4
-    
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: "3.10"
-    
-    - name: Install dependencies
-      run: |
-        python -m pip install -U pip poetry
-        poetry install --with dev
-    
-    - name: Check formatting with Ruff
-      run: |
-        poetry run ruff format --check src tests
-    
-    - name: Run linting with Ruff
-      run: |
-        poetry run ruff check src tests
-
   test:
     runs-on: ubuntu-latest
-    needs: linting
 
     steps:
     - uses: actions/checkout@v4
@@ -51,14 +27,14 @@ jobs:
         # Set up GCP credentials file
         echo "$GCP_SA_KEY" > gcp-key.json
         export GOOGLE_APPLICATION_CREDENTIALS=$(pwd)/gcp-key.json
-        
+
         # Generate pytest.ini file programmatically
         echo "[sql_testing]" > pytest.ini
         echo "adapter = bigquery" >> pytest.ini
         echo "project_id = ${GCP_PROJECT_ID}" >> pytest.ini
         echo "dataset_id = sqltesting" >> pytest.ini
         echo "credentials_path = ${GOOGLE_APPLICATION_CREDENTIALS}" >> pytest.ini
-        
+
         # Set environment variables for the workflow
         echo "GOOGLE_APPLICATION_CREDENTIALS=${GOOGLE_APPLICATION_CREDENTIALS}" >> $GITHUB_ENV
         echo "GCP_PROJECT_ID=${GCP_PROJECT_ID}" >> $GITHUB_ENV

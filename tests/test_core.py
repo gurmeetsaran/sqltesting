@@ -29,10 +29,10 @@ class TestSQLParsingFunctions(unittest.TestCase):
     def test_parse_sql_tables_complex_query(self):
         """Test parsing complex query with multiple tables."""
         query = """
-        SELECT 
-            u.user_id, 
-            u.name, 
-            o.order_id, 
+        SELECT
+            u.user_id,
+            u.name,
+            o.order_id,
             o.amount
         FROM users u
         JOIN orders o ON u.user_id = o.user_id
@@ -74,8 +74,8 @@ class TestSQLParsingFunctions(unittest.TestCase):
     def test_parse_sql_tables_fully_qualified_names(self):
         """Test parsing query with fully qualified table names."""
         query = """
-        SELECT 
-            u.user_id, 
+        SELECT
+            u.user_id,
             p.product_name
         FROM analytics_db.users u
         JOIN inventory_db.products p ON u.preferred_product = p.product_id
@@ -121,10 +121,10 @@ class TestSQLParsingFunctions(unittest.TestCase):
         recent_orders AS (
             SELECT order_id, user_id FROM orders WHERE order_date > '2023-01-01'
         )
-        SELECT 
-            u.user_id, 
-            u.name, 
-            o.order_id 
+        SELECT
+            u.user_id,
+            u.name,
+            o.order_id
         FROM active_users u
         JOIN recent_orders o ON u.user_id = o.user_id
         """
@@ -145,8 +145,8 @@ class TestSQLParsingFunctions(unittest.TestCase):
     def test_parse_sql_tables_removes_duplicates(self):
         """Test that duplicate table references are removed."""
         query = """
-        SELECT 
-            u.user_id, 
+        SELECT
+            u.user_id,
             (SELECT COUNT(*) FROM orders WHERE user_id = u.user_id) as order_count
         FROM users u
         JOIN orders o ON u.user_id = o.user_id
@@ -259,10 +259,10 @@ class TestReplaceTableNamesInQuery(unittest.TestCase):
     def test_replace_multiple_tables(self):
         """Test replacing multiple tables in a query."""
         query = """
-        SELECT 
-            u.user_id, 
-            u.name, 
-            o.order_id, 
+        SELECT
+            u.user_id,
+            u.name,
+            o.order_id,
             o.amount
         FROM users u
         JOIN orders o ON u.user_id = o.user_id
@@ -285,9 +285,9 @@ class TestReplaceTableNamesInQuery(unittest.TestCase):
     def test_replace_tables_in_subquery(self):
         """Test replacing tables in a subquery."""
         query = """
-        SELECT 
-            u.user_id, 
-            u.name, 
+        SELECT
+            u.user_id,
+            u.name,
             (SELECT COUNT(*) FROM orders WHERE user_id = u.user_id) as order_count
         FROM users u
         """
@@ -309,8 +309,8 @@ class TestReplaceTableNamesInQuery(unittest.TestCase):
     def test_replace_tables_with_complex_query(self):
         """Test replacing tables in a complex query with joins, where clauses, etc."""
         query = """
-        SELECT 
-            u.user_id, 
+        SELECT
+            u.user_id,
             u.name,
             o.order_id,
             oi.product_id,
@@ -319,8 +319,8 @@ class TestReplaceTableNamesInQuery(unittest.TestCase):
         JOIN orders o ON u.user_id = o.user_id
         JOIN order_items oi ON o.order_id = oi.order_id
         JOIN products p ON oi.product_id = p.product_id
-        WHERE 
-            u.active = TRUE 
+        WHERE
+            u.active = TRUE
             AND o.order_date > '2023-01-01'
         GROUP BY u.user_id, u.name, o.order_id, oi.product_id, p.name
         HAVING COUNT(oi.item_id) > 2
@@ -367,10 +367,10 @@ class TestReplaceTableNamesInQuery(unittest.TestCase):
         recent_orders AS (
             SELECT order_id, user_id FROM orders WHERE order_date > '2023-01-01'
         )
-        SELECT 
-            u.user_id, 
-            u.name, 
-            o.order_id 
+        SELECT
+            u.user_id,
+            u.name,
+            o.order_id
         FROM active_users u
         JOIN recent_orders o ON u.user_id = o.user_id
         """
