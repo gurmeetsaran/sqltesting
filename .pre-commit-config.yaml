@@ -15,3 +15,14 @@ repos:
     -   id: check-toml
     -   id: check-added-large-files
     -   id: debug-statements
+
+-   repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.8.0
+    hooks:
+    -   id: mypy
+        additional_dependencies:
+          - pydantic>=2.0.0
+          - types-requests
+          - types-setuptools
+        args: ["--ignore-missing-imports", "--disallow-untyped-defs", "--disallow-incomplete-defs"]
+        exclude: ^tests/

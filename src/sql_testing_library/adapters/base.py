@@ -1,7 +1,7 @@
 """Base database adapter interface."""
 
 from abc import ABC, abstractmethod
-from typing import Any, Optional
+from typing import Any, List, Optional
 
 import pandas as pd
 
@@ -28,7 +28,7 @@ class DatabaseAdapter(ABC):
         pass
 
     @abstractmethod
-    def cleanup_temp_tables(self, table_names: list[str]):
+    def cleanup_temp_tables(self, table_names: List[str]) -> None:
         """Clean up temporary tables."""
         pass
 

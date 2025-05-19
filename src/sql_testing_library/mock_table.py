@@ -10,7 +10,7 @@ import pandas as pd
 class BaseMockTable(ABC):
     """Base class for mock table implementations."""
 
-    def __init__(self, data: List[Any]):
+    def __init__(self, data: List[Any]) -> None:
         """
         Initialize mock table with data.
 
@@ -31,11 +31,12 @@ class BaseMockTable(ABC):
     def _dataclass_to_dict(self, obj: Any) -> Dict[str, Any]:
         """Convert dataclass instance to dictionary."""
         if is_dataclass(obj):
-            return {
+            result: Dict[str, Any] = {
                 field.name: getattr(obj, field.name)
                 for field in obj.__dataclass_fields__.values()
             }
-        return obj
+            return result
+        return obj  # type: ignore  # This should be a dict already
 
     @abstractmethod
     def get_database_name(self) -> str:
