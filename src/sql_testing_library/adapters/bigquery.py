@@ -2,28 +2,33 @@
 
 from datetime import date, datetime
 from decimal import Decimal
-from typing import Any, Optional, Union
+from typing import Any, List, Optional, Type, Union, get_args
 
 import pandas as pd
-
-
-try:
-    from google.cloud import bigquery
-
-    HAS_BIGQUERY = True
-except ImportError:
-    HAS_BIGQUERY = False
-    bigquery = None
+from google.cloud import bigquery
 
 from ..mock_table import BaseMockTable
 from ..types import BaseTypeConverter
 from .base import DatabaseAdapter
 
 
+HAS_BIGQUERY = True
+
+# The duplicate import is intentional
+# First import is to get the types, second is to actually import the module
+# If the second fails, we set HAS_BIGQUERY to False to handle it gracefully
+try:
+    # This is a separate import to keep the module type
+    # for type checking, even if the module fails to import
+    import google.cloud.bigquery as _bigquery_module  # noqa: F401
+except ImportError:
+    HAS_BIGQUERY = False
+
+
 class BigQueryTypeConverter(BaseTypeConverter):
     """BigQuery-specific type converter."""
 
-    def convert(self, value: Any, target_type: type) -> Any:
+    def convert(self, value: Any, target_type: Type) -> Any:
         """Convert BigQuery result value to target type."""
         # BigQuery typically returns proper Python types, so use base converter
         return super().convert(value, target_type)
@@ -34,7 +39,7 @@ class BigQueryAdapter(DatabaseAdapter):
 
     def __init__(
         self, project_id: str, dataset_id: str, credentials_path: Optional[str] = None
-    ):
+    ) -> None:
         if not HAS_BIGQUERY:
             raise ImportError(
                 "BigQuery adapter requires google-cloud-bigquery. "
@@ -85,7 +90,7 @@ class BigQueryAdapter(DatabaseAdapter):
 
         return table_id
 
-    def cleanup_temp_tables(self, table_names: list[str]):
+    def cleanup_temp_tables(self, table_names: List[str]) -> None:
         """Delete temporary tables."""
         for table_name in table_names:
             try:
@@ -122,7 +127,7 @@ class BigQueryAdapter(DatabaseAdapter):
 
     def _get_bigquery_schema(
         self, mock_table: BaseMockTable
-    ):  # -> list[bigquery.schema.SchemaField]:
+    ) -> List[bigquery.SchemaField]:
         """Convert mock table schema to BigQuery schema."""
         column_types = mock_table.get_column_types()
 
@@ -143,7 +148,7 @@ class BigQueryAdapter(DatabaseAdapter):
             if hasattr(col_type, "__origin__") and col_type.__origin__ is Union:
                 # Extract the non-None type from Optional[T]
                 non_none_types = [
-                    arg for arg in col_type.__args__ if arg is not type(None)
+                    arg for arg in get_args(col_type) if arg is not type(None)
                 ]
                 if non_none_types:
                     col_type = non_none_types[0]

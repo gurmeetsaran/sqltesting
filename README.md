@@ -136,7 +136,13 @@ The library supports flexible ways to configure your tests:
 
 ### Code Quality
 
-The project uses [Ruff](https://github.com/astral-sh/ruff) for linting and formatting along with pre-commit hooks:
+The project uses comprehensive tools to ensure code quality:
+
+1. **Ruff** for linting and formatting
+2. **Mypy** for static type checking
+3. **Pre-commit hooks** for automated checks
+
+To set up the development environment:
 
 1. Install development dependencies:
    ```bash
@@ -148,9 +154,9 @@ The project uses [Ruff](https://github.com/astral-sh/ruff) for linting and forma
    ./scripts/setup-hooks.sh
    ```
 
-This ensures code is automatically formatted and checked on commit.
+This ensures code is automatically formatted, linted, and type-checked on commit.
 
-For more information on linting and coding standards, see [docs/linting.md](docs/linting.md).
+For more information on code quality standards, see [docs/linting.md](docs/linting.md).
 
 ## Documentation
 
@@ -164,7 +170,7 @@ For detailed usage and configuration options, see the example files included.
 
 ## Requirements
 
-- Python >= 3.8
+- Python >= 3.9
 - sqlglot >= 18.0.0
 - pydantic >= 2.0.0
 - Database-specific clients (google-cloud-bigquery, boto3, psycopg2-binary)

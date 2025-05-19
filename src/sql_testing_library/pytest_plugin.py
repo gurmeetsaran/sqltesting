@@ -4,9 +4,10 @@ import configparser
 import functools
 import os
 import sys
-from typing import Callable, List, Type, TypeVar
+from typing import Any, Callable, Dict, List, Optional, Type, TypeVar, cast
 
 import pytest
+from _pytest.nodes import Item
 
 from .core import SQLTestFramework, TestCase
 from .mock_table import BaseMockTable
@@ -18,10 +19,10 @@ T = TypeVar("T")
 class SQLTestDecorator:
     """Manages SQL test decoration and execution."""
 
-    def __init__(self):
-        self._framework = None
-        self._config = None
-        self._project_root = None
+    def __init__(self) -> None:
+        self._framework: Optional[SQLTestFramework] = None
+        self._config: Optional[Dict[str, str]] = None
+        self._project_root: Optional[str] = None
 
     def get_framework(self) -> SQLTestFramework:
         """Get or create SQL test framework from configuration."""
@@ -63,7 +64,7 @@ class SQLTestDecorator:
 
         return SQLTestFramework(adapter)
 
-    def _get_project_root(self):
+    def _get_project_root(self) -> str:
         """Get the project root directory."""
         if self._project_root is not None:
             return self._project_root
@@ -99,7 +100,7 @@ class SQLTestDecorator:
         self._project_root = os.getcwd()
         return self._project_root
 
-    def _load_config(self) -> dict:
+    def _load_config(self) -> Dict[str, str]:
         """Load configuration from pytest.ini or setup.cfg."""
         if self._config is not None:
             return self._config
@@ -132,6 +133,7 @@ class SQLTestDecorator:
         # Extract sql_testing configuration
         if "sql_testing" in config:
             self._config = dict(config["sql_testing"])
+            return self._config
         else:
             # Try to create default config or exit with error
             msg = (
@@ -141,18 +143,16 @@ class SQLTestDecorator:
             )
             raise ValueError(msg)
 
-        return self._config
-
 
 # Global instance
 _sql_test_decorator = SQLTestDecorator()
 
 
 def sql_test(
-    mock_tables: List[BaseMockTable] = None,
-    result_class: Type[T] = None,
-    use_physical_tables: bool = None,
-):
+    mock_tables: Optional[List[BaseMockTable]] = None,
+    result_class: Optional[Type[T]] = None,
+    use_physical_tables: Optional[bool] = None,
+) -> Callable[[Callable[[], TestCase[T]]], Callable[[], List[T]]]:
     """
     Decorator to mark a function as a SQL test.
 
@@ -169,7 +169,7 @@ def sql_test(
                             If provided, overrides use_physical_tables in TestCase.
     """
 
-    def decorator(func: Callable[[], TestCase]):
+    def decorator(func: Callable[[], TestCase[T]]) -> Callable[[], List[T]]:
         # Check for multiple sql_test decorators
         if hasattr(func, "_sql_test_decorated"):
             raise ValueError(
@@ -178,7 +178,7 @@ def sql_test(
             )
 
         @functools.wraps(func)
-        def wrapper():
+        def wrapper() -> List[T]:
             # Execute the test function to get the TestCase
             test_case = func()
 
@@ -202,26 +202,26 @@ def sql_test(
 
             # Get framework and execute test
             framework = _sql_test_decorator.get_framework()
-            results = framework.run_test(test_case)
+            results: List[T] = framework.run_test(test_case)
 
             return results
 
         # Mark function as SQL test
-        wrapper._sql_test_decorated = True
-        wrapper._original_func = func
+        wrapper._sql_test_decorated = True  # type: ignore
+        wrapper._original_func = func  # type: ignore
 
         return wrapper
 
     return decorator
 
 
-def pytest_collection_modifyitems(config, items):
+def pytest_collection_modifyitems(config: pytest.Config, items: List[Item]) -> None:
     """Pytest hook to discover and modify SQL test items."""
     sql_test_items = []
 
     for item in items:
         # Check if this is a SQL test
-        if hasattr(item.function, "_sql_test_decorated"):
+        if hasattr(getattr(item, "function", None), "_sql_test_decorated"):
             # Mark as SQL test for potential special handling
             item.add_marker(pytest.mark.sql_test)
             sql_test_items.append(item)
@@ -230,17 +230,19 @@ def pytest_collection_modifyitems(config, items):
     # e.g., grouping, ordering, etc.
 
 
-def pytest_configure(config):
+def pytest_configure(config: pytest.Config) -> None:
     """Register custom markers."""
     config.addinivalue_line("markers", "sql_test: mark test as a SQL test")
 
 
-def pytest_runtest_call(item):
+def pytest_runtest_call(item: Item) -> None:
     """Custom test execution for SQL tests."""
-    if hasattr(item.function, "_sql_test_decorated"):
+    item_function = getattr(item, "function", None)
+    if item_function and hasattr(item_function, "_sql_test_decorated"):
         # Execute SQL test
         try:
-            results = item.function()
+            function = cast(Callable[[], List[Any]], item_function)
+            results = function()
             # Store results for potential inspection
             item._sql_test_results = results
         except Exception as e:

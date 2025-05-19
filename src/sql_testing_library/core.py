@@ -1,7 +1,16 @@
 """Core SQL testing framework."""
 
 from dataclasses import dataclass
-from typing import Dict, List, Optional, Type, TypeVar, get_type_hints
+from typing import (
+    Any,
+    Dict,
+    Generic,
+    List,
+    Optional,
+    Type,
+    TypeVar,
+    get_type_hints,
+)
 
 import pandas as pd
 import sqlglot
@@ -21,26 +30,26 @@ T = TypeVar("T")
 
 
 @dataclass
-class TestCase:
+class TestCase(Generic[T]):
     """Represents a SQL test case."""
 
     query: str
     execution_database: str
     mock_tables: Optional[List[BaseMockTable]] = None
     result_class: Optional[Type[T]] = None
-    use_physical_tables: Optional[bool] = False
+    use_physical_tables: bool = False
     description: Optional[str] = None
 
 
 class SQLTestFramework:
     """Main framework for executing SQL tests."""
 
-    def __init__(self, adapter: DatabaseAdapter):
+    def __init__(self, adapter: DatabaseAdapter) -> None:
         self.adapter = adapter
         self.type_converter = self.adapter.get_type_converter()
         self.temp_tables: List[str] = []
 
-    def run_test(self, test_case: TestCase) -> List[T]:
+    def run_test(self, test_case: TestCase[T]) -> List[T]:
         """
         Execute a test case and return deserialized results.
 
@@ -92,14 +101,13 @@ class SQLTestFramework:
                 )
 
                 # Check size limit for adapters that need it
-                if hasattr(self.adapter, "get_query_size_limit"):
-                    size_limit = self.adapter.get_query_size_limit()
-                    if size_limit and len(final_query.encode("utf-8")) > size_limit:
-                        raise QuerySizeLimitExceeded(
-                            len(final_query.encode("utf-8")),
-                            size_limit,
-                            self.adapter.__class__.__name__,
-                        )
+                size_limit = self.adapter.get_query_size_limit()
+                if size_limit and len(final_query.encode("utf-8")) > size_limit:
+                    raise QuerySizeLimitExceeded(
+                        len(final_query.encode("utf-8")),
+                        size_limit,
+                        self.adapter.__class__.__name__,
+                    )
 
             # Execute query
             result_df = self.adapter.execute_query(final_query)
@@ -170,7 +178,7 @@ class SQLTestFramework:
 
     def _validate_mock_tables(
         self, resolved_tables: Dict[str, str], mock_tables: List[BaseMockTable]
-    ):
+    ) -> None:
         """Validate that all required mock tables are provided."""
         provided_tables = {mock.get_qualified_name() for mock in mock_tables}
         required_tables = set(resolved_tables.values())
@@ -298,7 +306,7 @@ class SQLTestFramework:
             # Parse the query to an AST to ensure it's valid SQL
             # and generate standardized SQL
             parsed = sqlglot.parse_one(query, dialect=dialect)
-            sql = parsed.sql(dialect=dialect)
+            sql: str = parsed.sql(dialect=dialect)
 
             # For each table in our mapping, attempt direct string replacement
             # This works because the SQL format output by sqlglot is predictable
@@ -348,10 +356,10 @@ class SQLTestFramework:
         # Get type hints from the result class
         type_hints = get_type_hints(result_class)
 
-        results = []
+        results: List[T] = []
         for _, row in result_df.iterrows():
             # Convert row to dictionary with proper types
-            converted_row = {}
+            converted_row: Dict[str, Any] = {}
             for col_name, value in row.items():
                 if col_name in type_hints:
                     target_type = type_hints[col_name]

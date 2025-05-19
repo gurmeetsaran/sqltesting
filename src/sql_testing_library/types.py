@@ -2,7 +2,10 @@
 
 from datetime import date, datetime
 from decimal import Decimal
-from typing import Any, Type, get_args, get_origin
+from typing import Any, Type, TypeVar, get_args, get_origin
+
+
+T = TypeVar("T")
 
 
 class BaseTypeConverter:
@@ -21,7 +24,8 @@ class BaseTypeConverter:
     def get_optional_inner_type(type_hint: Type) -> Type:
         """Extract T from Optional[T]."""
         args = get_args(type_hint)
-        return next(arg for arg in args if arg is not type(None))
+        inner_type: Type = next(arg for arg in args if arg is not type(None))
+        return inner_type
 
     def convert(self, value: Any, target_type: Type) -> Any:
         """Convert value to target type."""

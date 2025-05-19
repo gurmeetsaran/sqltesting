@@ -1,10 +1,10 @@
 # Linting and Formatting Guidelines
 
-This project uses [Ruff](https://github.com/astral-sh/ruff) for linting and formatting Python code. Ruff is a fast Python linter and formatter written in Rust.
+This project uses [Ruff](https://github.com/astral-sh/ruff) for linting and formatting Python code, and [Mypy](http://mypy-lang.org/) for static type checking.
 
 ## Setup
 
-Ruff is already included in the dev dependencies of the project. You can install it with:
+Linting and type checking tools are already included in the dev dependencies of the project. You can install them with:
 
 ```bash
 poetry install --with dev
@@ -40,7 +40,17 @@ To automatically format the code:
 poetry run ruff format src tests
 ```
 
+## Type Checking
+
+To run static type checking with Mypy:
+
+```bash
+poetry run mypy src
+```
+
 ## Configuration
+
+### Ruff
 
 Ruff configuration is defined in the `pyproject.toml` file under the `[tool.ruff]` section. Key settings include:
 
@@ -51,6 +61,17 @@ Ruff configuration is defined in the `pyproject.toml` file under the `[tool.ruff
   - Pyflakes logical errors (F)
   - Import sorting (I)
   - Bugbear checks (B)
+
+### Mypy
+
+Mypy configuration is defined in the `mypy.ini` file. Key settings include:
+
+- Strict type checking enabled for the src directory
+- Disallows untyped function definitions and incomplete type hints
+- Warns about unused configurations and redundant casts
+- Properly handles Pydantic models
+- Ignores missing imports from external packages
+- Excludes the tests directory from type checking
 
 ## Pre-commit Hooks
 
@@ -84,12 +105,17 @@ poetry run pre-commit run --all-files
 
 ## IDE Integration
 
+### Ruff
 Ruff has extensions available for various IDEs:
 
 - VSCode: [Ruff Extension](https://marketplace.visualstudio.com/items?itemName=charliermarsh.ruff)
 - PyCharm: [Ruff Plugin](https://plugins.jetbrains.com/plugin/20574-ruff)
 
-These extensions will highlight linting issues directly in your editor and can apply automatic formatting on save.
+### Mypy
+Mypy has extensions available for various IDEs:
+
+- VSCode: [Mypy Extension](https://marketplace.visualstudio.com/items?itemName=matangover.mypy)
+- PyCharm: Built-in support for Mypy
 
 ## Development Workflow
 
@@ -97,6 +123,7 @@ For the best development experience:
 
 1. Set up the pre-commit hooks as described above
 2. Configure your IDE to use Ruff for linting and formatting
-3. Run pre-commit hooks locally before pushing changes
+3. Configure your IDE to use Mypy for type checking
+4. Run pre-commit hooks locally before pushing changes
 
-This ensures that your code always meets the project's formatting and linting standards before it's committed or pushed to the repository.
+This ensures that your code always meets the project's formatting, linting, and type safety standards before it's committed or pushed to the repository.
