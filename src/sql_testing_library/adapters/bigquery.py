@@ -1,9 +1,11 @@
 """BigQuery adapter implementation."""
 
-from typing import Any, Optional, Union
 from datetime import date, datetime
 from decimal import Decimal
+from typing import Any, Optional, Union
+
 import pandas as pd
+
 
 try:
     from google.cloud import bigquery
@@ -13,9 +15,9 @@ except ImportError:
     HAS_BIGQUERY = False
     bigquery = None
 
-from .base import DatabaseAdapter
 from ..mock_table import BaseMockTable
 from ..types import BaseTypeConverter
+from .base import DatabaseAdapter
 
 
 class BigQueryTypeConverter(BaseTypeConverter):
@@ -30,7 +32,9 @@ class BigQueryTypeConverter(BaseTypeConverter):
 class BigQueryAdapter(DatabaseAdapter):
     """Google BigQuery adapter for SQL testing."""
 
-    def __init__(self, project_id: str, dataset_id: str, credentials_path: Optional[str] = None):
+    def __init__(
+        self, project_id: str, dataset_id: str, credentials_path: Optional[str] = None
+    ):
         if not HAS_BIGQUERY:
             raise ImportError(
                 "BigQuery adapter requires google-cloud-bigquery. "
@@ -57,7 +61,10 @@ class BigQueryAdapter(DatabaseAdapter):
     def create_temp_table(self, mock_table: BaseMockTable) -> str:
         """Create temporary table in BigQuery."""
         import time
-        temp_table_name = f"temp_{mock_table.get_table_name()}_{int(time.time() * 1000)}"
+
+        temp_table_name = (
+            f"temp_{mock_table.get_table_name()}_{int(time.time() * 1000)}"
+        )
         table_id = f"{self.project_id}.{self.dataset_id}.{temp_table_name}"
 
         # Create table schema from mock table
@@ -71,7 +78,9 @@ class BigQueryAdapter(DatabaseAdapter):
         df = mock_table.to_dataframe()
         if not df.empty:
             job_config = bigquery.LoadJobConfig()
-            job = self.client.load_table_from_dataframe(df, table, job_config=job_config)
+            job = self.client.load_table_from_dataframe(
+                df, table, job_config=job_config
+            )
             job.result()  # Wait for job to complete
 
         return table_id
@@ -88,15 +97,15 @@ class BigQueryAdapter(DatabaseAdapter):
         """Format value for BigQuery CTE VALUES clause."""
         if value is None:
             return "NULL"
-        elif column_type == str:
+        elif column_type is str:
             # Escape single quotes
             escaped_value = str(value).replace("'", "\\'")
             return f"'{escaped_value}'"
         elif column_type in (int, float):
             return str(value)
-        elif column_type == bool:
+        elif column_type is bool:
             return "TRUE" if value else "FALSE"
-        elif column_type == date:
+        elif column_type is date:
             return f"DATE('{value}')"
         elif column_type == datetime:
             return f"DATETIME('{value.isoformat()}')"
@@ -111,7 +120,9 @@ class BigQueryAdapter(DatabaseAdapter):
         """Get BigQuery-specific type converter."""
         return BigQueryTypeConverter()
 
-    def _get_bigquery_schema(self, mock_table: BaseMockTable): # -> list[bigquery.schema.SchemaField]:
+    def _get_bigquery_schema(
+        self, mock_table: BaseMockTable
+    ):  # -> list[bigquery.schema.SchemaField]:
         """Convert mock table schema to BigQuery schema."""
         column_types = mock_table.get_column_types()
 
@@ -123,15 +134,17 @@ class BigQueryAdapter(DatabaseAdapter):
             bool: bigquery.enums.SqlTypeNames.BOOL,
             date: bigquery.enums.SqlTypeNames.DATE,
             datetime: bigquery.enums.SqlTypeNames.DATETIME,
-            Decimal: bigquery.enums.SqlTypeNames.NUMERIC
+            Decimal: bigquery.enums.SqlTypeNames.NUMERIC,
         }
 
         schema = []
         for col_name, col_type in column_types.items():
             # Handle Optional types
-            if hasattr(col_type, '__origin__') and col_type.__origin__ is Union:
+            if hasattr(col_type, "__origin__") and col_type.__origin__ is Union:
                 # Extract the non-None type from Optional[T]
-                non_none_types = [arg for arg in col_type.__args__ if arg is not type(None)]
+                non_none_types = [
+                    arg for arg in col_type.__args__ if arg is not type(None)
+                ]
                 if non_none_types:
                     col_type = non_none_types[0]
 

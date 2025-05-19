@@ -1,8 +1,9 @@
 """Mock table base class and utilities."""
 
 from abc import ABC, abstractmethod
-from typing import Any, List, Dict, get_type_hints
 from dataclasses import is_dataclass
+from typing import Any, Dict, List, get_type_hints
+
 import pandas as pd
 
 
@@ -60,13 +61,12 @@ class BaseMockTable(ABC):
 
         # Get the original dataclass if available
         sample_item = self.data[0]
-        if hasattr(self, '_original_dataclass'):
+        if hasattr(self, "_original_dataclass"):
             return get_type_hints(self._original_dataclass)
 
         # Fallback: infer from data values
         return {
-            key: type(value) for key, value in sample_item.items()
-            if value is not None
+            key: type(value) for key, value in sample_item.items() if value is not None
         }
 
     def to_dataframe(self) -> pd.DataFrame:
@@ -75,4 +75,4 @@ class BaseMockTable(ABC):
 
     def get_cte_alias(self) -> str:
         """Get the CTE alias name (database__tablename)."""
-        return f"{self.get_database_name().replace('-', '_').replace('.', '_')}__{self.get_table_name()}"
+        return f"{self.get_database_name().replace('-', '_').replace('.', '_')}__{self.get_table_name()}"  # noqa: E501

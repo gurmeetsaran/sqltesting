@@ -2,6 +2,7 @@
 
 from abc import ABC, abstractmethod
 from typing import Any, Optional
+
 import pandas as pd
 
 from ..mock_table import BaseMockTable

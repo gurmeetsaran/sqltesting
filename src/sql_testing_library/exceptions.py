@@ -1,10 +1,11 @@
 """Custom exceptions for SQL testing library."""
 
-from typing import List, Any
+from typing import Any, List
 
 
 class SQLTestingError(Exception):
     """Base exception for SQL testing library."""
+
     pass
 
 

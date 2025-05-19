@@ -1,27 +1,29 @@
 """Core SQL testing framework."""
 
-from typing import List, Dict, Any, Type, Optional, TypeVar, get_type_hints
 from dataclasses import dataclass
+from typing import Dict, List, Optional, Type, TypeVar, get_type_hints
+
 import pandas as pd
 import sqlglot
 from sqlglot import exp
 
-from .mock_table import BaseMockTable
 from .adapters.base import DatabaseAdapter
 from .exceptions import (
-    SQLParseError,
     MockTableNotFoundError,
     QuerySizeLimitExceeded,
-    TypeConversionError
+    SQLParseError,
+    TypeConversionError,
 )
-from .types import BaseTypeConverter
+from .mock_table import BaseMockTable
 
-T = TypeVar('T')
+
+T = TypeVar("T")
 
 
 @dataclass
 class TestCase:
     """Represents a SQL test case."""
+
     query: str
     execution_database: str
     mock_tables: Optional[List[BaseMockTable]] = None
@@ -51,25 +53,32 @@ class SQLTestFramework:
         try:
             # Validate required fields
             if test_case.mock_tables is None:
-                raise ValueError("mock_tables must be provided either in TestCase or sql_test decorator")
-            
+                raise ValueError(
+                    "mock_tables must be provided either in TestCase or "
+                    "sql_test decorator"
+                )
+
             if test_case.result_class is None:
-                raise ValueError("result_class must be provided either in TestCase or sql_test decorator")
-            
+                raise ValueError(
+                    "result_class must be provided either in TestCase or "
+                    "sql_test decorator"
+                )
+
             # Parse SQL to find table references
             referenced_tables = self._parse_sql_tables(test_case.query)
 
             # Resolve unqualified table names
             resolved_tables = self._resolve_table_names(
-                referenced_tables,
-                test_case.execution_database
+                referenced_tables, test_case.execution_database
             )
 
             # Validate all required mock tables are provided
             self._validate_mock_tables(resolved_tables, test_case.mock_tables)
 
             # Create table name mapping
-            table_mapping = self._create_table_mapping(resolved_tables, test_case.mock_tables)
+            table_mapping = self._create_table_mapping(
+                resolved_tables, test_case.mock_tables
+            )
 
             if test_case.use_physical_tables:
                 # Create physical temporary tables
@@ -83,13 +92,13 @@ class SQLTestFramework:
                 )
 
                 # Check size limit for adapters that need it
-                if hasattr(self.adapter, 'get_query_size_limit'):
+                if hasattr(self.adapter, "get_query_size_limit"):
                     size_limit = self.adapter.get_query_size_limit()
-                    if size_limit and len(final_query.encode('utf-8')) > size_limit:
+                    if size_limit and len(final_query.encode("utf-8")) > size_limit:
                         raise QuerySizeLimitExceeded(
-                            len(final_query.encode('utf-8')),
+                            len(final_query.encode("utf-8")),
                             size_limit,
-                            self.adapter.__class__.__name__
+                            self.adapter.__class__.__name__,
                         )
 
             # Execute query
@@ -109,20 +118,20 @@ class SQLTestFramework:
         try:
             dialect = self.adapter.get_sqlglot_dialect()
             parsed = sqlglot.parse_one(query, dialect=dialect)
-            
+
             # Get all CTE (WITH clause) aliases to filter them out
             cte_aliases = set()
             for cte in parsed.find_all(exp.CTE):
-                if hasattr(cte, 'alias'):
+                if hasattr(cte, "alias"):
                     cte_aliases.add(str(cte.alias))
-                    
+
             # Find all real tables (excluding the CTEs)
             tables = []
             for table in parsed.find_all(exp.Table):
                 # Skip tables that are actually CTE references
                 if str(table.name) in cte_aliases:
                     continue
-                    
+
                 # Get the fully qualified name including catalog/schema if present
                 if table.db and table.catalog:
                     qualified_name = f"{table.catalog}.{table.db}.{table.name}"
@@ -130,15 +139,17 @@ class SQLTestFramework:
                     qualified_name = f"{table.db}.{table.name}"
                 else:
                     qualified_name = str(table.name)
-                    
+
                 tables.append(qualified_name)
-                
+
             return list(set(tables))  # Remove duplicates
 
         except Exception as e:
-            raise SQLParseError(query, str(e))
+            raise SQLParseError(query, str(e))  # noqa:  B904
 
-    def _resolve_table_names(self, referenced_tables: List[str], execution_database: str) -> Dict[str, str]:
+    def _resolve_table_names(
+        self, referenced_tables: List[str], execution_database: str
+    ) -> Dict[str, str]:
         """
         Resolve unqualified table names using execution database context.
 
@@ -147,7 +158,7 @@ class SQLTestFramework:
         """
         resolved = {}
         for table_name in referenced_tables:
-            if '.' in table_name:
+            if "." in table_name:
                 # Already qualified
                 resolved[table_name] = table_name
             else:
@@ -157,7 +168,9 @@ class SQLTestFramework:
 
         return resolved
 
-    def _validate_mock_tables(self, resolved_tables: Dict[str, str], mock_tables: List[BaseMockTable]):
+    def _validate_mock_tables(
+        self, resolved_tables: Dict[str, str], mock_tables: List[BaseMockTable]
+    ):
         """Validate that all required mock tables are provided."""
         provided_tables = {mock.get_qualified_name() for mock in mock_tables}
         required_tables = set(resolved_tables.values())
@@ -167,11 +180,12 @@ class SQLTestFramework:
         if missing_tables:
             raise MockTableNotFoundError(
                 list(missing_tables)[0],  # Show first missing table
-                list(provided_tables)
+                list(provided_tables),
             )
 
-    def _create_table_mapping(self, resolved_tables: Dict[str, str], mock_tables: List[BaseMockTable]) -> Dict[
-        str, BaseMockTable]:
+    def _create_table_mapping(
+        self, resolved_tables: Dict[str, str], mock_tables: List[BaseMockTable]
+    ) -> Dict[str, BaseMockTable]:
         """Create mapping from qualified table names to mock table objects."""
         mock_table_map = {mock.get_qualified_name(): mock for mock in mock_tables}
 
@@ -182,8 +196,12 @@ class SQLTestFramework:
 
         return table_mapping
 
-    def _generate_cte_query(self, query: str, table_mapping: Dict[str, BaseMockTable],
-                            mock_tables: List[BaseMockTable]) -> str:
+    def _generate_cte_query(
+        self,
+        query: str,
+        table_mapping: Dict[str, BaseMockTable],
+        mock_tables: List[BaseMockTable],
+    ) -> str:
         """Generate query with CTE injections for mock data."""
         # Generate CTEs for each mock table
         ctes = []
@@ -215,7 +233,7 @@ class SQLTestFramework:
         if df.empty:
             # Generate empty CTE
             columns = list(column_types.keys())
-            return f"{alias} AS (SELECT {', '.join(f'NULL as {col}' for col in columns)} WHERE 1=0)"
+            return f"{alias} AS (SELECT {', '.join(f'NULL as {col}' for col in columns)} WHERE 1=0)"  # noqa: E501
 
         # Get dialect to determine the correct CTE format
         dialect = self.adapter.get_sqlglot_dialect()
@@ -224,7 +242,7 @@ class SQLTestFramework:
             # BigQuery-specific format using UNNEST + STRUCT
             struct_rows = []
             columns = list(df.columns)
-            
+
             # Process each row
             for idx, (_, row) in enumerate(df.iterrows()):
                 # For the first row, include column names
@@ -232,7 +250,9 @@ class SQLTestFramework:
                     first_row_values = []
                     for col_name, value in row.items():
                         col_type = column_types.get(col_name, str)
-                        formatted_value = self.adapter.format_value_for_cte(value, col_type)
+                        formatted_value = self.adapter.format_value_for_cte(
+                            value, col_type
+                        )
                         first_row_values.append(f"{formatted_value} as {col_name}")
                     struct_rows.append(f"({', '.join(first_row_values)})")
                 else:
@@ -240,13 +260,15 @@ class SQLTestFramework:
                     row_values = []
                     for col_name, value in row.items():
                         col_type = column_types.get(col_name, str)
-                        formatted_value = self.adapter.format_value_for_cte(value, col_type)
+                        formatted_value = self.adapter.format_value_for_cte(
+                            value, col_type
+                        )
                         row_values.append(formatted_value)
                     struct_rows.append(f"({', '.join(row_values)})")
-            
+
             # Combine the rows into the UNNEST format
-            joined_rows = ',\n      '.join(struct_rows)
-            return f"{alias} AS (\n  SELECT\n    *\n  FROM UNNEST([\n    STRUCT\n      {joined_rows}\n]))"
+            joined_rows = ",\n      ".join(struct_rows)
+            return f"{alias} AS (\n  SELECT\n    *\n  FROM UNNEST([\n    STRUCT\n      {joined_rows}\n]))"  # noqa: E501
         else:
             # Standard SQL format using VALUES clause
             values_rows = []
@@ -258,21 +280,26 @@ class SQLTestFramework:
                     row_values.append(formatted_value)
                 values_rows.append(f"({', '.join(row_values)})")
 
-            column_list = ', '.join(df.columns)
-            values_clause = ', '.join(values_rows)
+            column_list = ", ".join(df.columns)
+            values_clause = ", ".join(values_rows)
 
-            return f"{alias} AS (SELECT * FROM (VALUES {values_clause}) AS t({column_list}))"
+            return (
+                f"{alias} AS (SELECT * FROM (VALUES {values_clause})"
+                f" AS t({column_list}))"
+            )
 
-    def _replace_table_names_in_query(self, query: str, replacement_mapping: Dict[str, str]) -> str:
+    def _replace_table_names_in_query(
+        self, query: str, replacement_mapping: Dict[str, str]
+    ) -> str:
         """Replace table names in query using string manipulation."""
         try:
             dialect = self.adapter.get_sqlglot_dialect()
-            
+
             # Parse the query to an AST to ensure it's valid SQL
             # and generate standardized SQL
             parsed = sqlglot.parse_one(query, dialect=dialect)
             sql = parsed.sql(dialect=dialect)
-            
+
             # For each table in our mapping, attempt direct string replacement
             # This works because the SQL format output by sqlglot is predictable
             for table_name, cte_alias in replacement_mapping.items():
@@ -282,19 +309,23 @@ class SQLTestFramework:
                 sql = sql.replace(f"JOIN {table_name}", f"JOIN {cte_alias}")
                 # Replace in FROM clauses within subqueries
                 sql = sql.replace(f"FROM {table_name} ", f"FROM {cte_alias} ")
-                
+
                 # Special handling for table names in the WITH clause for CTEs
                 within_cte_pattern = f"FROM {table_name} WHERE"
                 within_cte_replacement = f"FROM {cte_alias} WHERE"
                 sql = sql.replace(within_cte_pattern, within_cte_replacement)
-            
-            return sql
-            
-        except Exception as e:
-            raise SQLParseError(query, str(e))
 
-    def _execute_with_physical_tables(self, query: str, table_mapping: Dict[str, BaseMockTable],
-                                      mock_tables: List[BaseMockTable]) -> str:
+            return sql
+
+        except Exception as e:
+            raise SQLParseError(query, str(e))  # noqa:  B904
+
+    def _execute_with_physical_tables(
+        self,
+        query: str,
+        table_mapping: Dict[str, BaseMockTable],
+        mock_tables: List[BaseMockTable],
+    ) -> str:
         """Execute query using physical temporary tables."""
         # Create physical tables
         replacement_mapping = {}
@@ -307,7 +338,9 @@ class SQLTestFramework:
         # Replace table names and return modified query
         return self._replace_table_names_in_query(query, replacement_mapping)
 
-    def _deserialize_results(self, result_df: pd.DataFrame, result_class: Type[T]) -> List[T]:
+    def _deserialize_results(
+        self, result_df: pd.DataFrame, result_class: Type[T]
+    ) -> List[T]:
         """Deserialize query results to typed objects."""
         if result_df.empty:
             return []
@@ -323,10 +356,12 @@ class SQLTestFramework:
                 if col_name in type_hints:
                     target_type = type_hints[col_name]
                     try:
-                        converted_value = self.type_converter.convert(value, target_type)
+                        converted_value = self.type_converter.convert(
+                            value, target_type
+                        )
                         converted_row[col_name] = converted_value
-                    except Exception as e:
-                        raise TypeConversionError(value, target_type, col_name)
+                    except Exception:
+                        raise TypeConversionError(value, target_type, col_name)  # noqa:  B904
                 else:
                     converted_row[col_name] = value
 
@@ -335,6 +370,8 @@ class SQLTestFramework:
                 result_obj = result_class(**converted_row)
                 results.append(result_obj)
             except Exception as e:
-                raise TypeError(f"Failed to create {result_class.__name__} instance: {e}")
+                raise TypeError(  # noqa:  B904
+                    f"Failed to create {result_class.__name__} instance: {e}"
+                )
 
         return results

@@ -1,9 +1,8 @@
 """Type conversion utilities."""
 
-from typing import Any, Type, get_origin, get_args
 from datetime import date, datetime
 from decimal import Decimal
-import pandas as pd
+from typing import Any, Type, get_args, get_origin
 
 
 class BaseTypeConverter:
@@ -37,17 +36,17 @@ class BaseTypeConverter:
             target_type = self.get_optional_inner_type(target_type)
 
         # Handle basic types
-        if target_type == str:
+        if target_type is str:
             return str(value)
-        elif target_type == int:
+        elif target_type is int:
             if isinstance(value, str):
                 return int(float(value))  # Handle "123.0" -> 123
             return int(value)
-        elif target_type == float:
+        elif target_type is float:
             return float(value)
-        elif target_type == bool:
+        elif target_type is bool:
             if isinstance(value, str):
-                return value.lower() in ('true', '1', 'yes', 't')
+                return value.lower() in ("true", "1", "yes", "t")
             return bool(value)
         elif target_type == Decimal:
             return Decimal(str(value))
