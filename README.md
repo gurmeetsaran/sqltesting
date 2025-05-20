@@ -3,6 +3,7 @@
 A Python library for testing SQL queries with mock data injection across Athena, BigQuery, and Redshift.
 
 [![Tests](https://github.com/gurmeetsaran/sqltesting/actions/workflows/tests.yaml/badge.svg)](https://github.com/gurmeetsaran/sqltesting/actions/workflows/tests.yaml)
+[![codecov](https://codecov.io/gh/gurmeetsaran/sqltesting/branch/master/graph/badge.svg)](https://codecov.io/gh/gurmeetsaran/sqltesting)
 ## Features
 
 - **Multi-Database Support**: Test SQL across BigQuery, Athena, and Redshift

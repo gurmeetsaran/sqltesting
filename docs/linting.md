@@ -48,6 +48,47 @@ To run static type checking with Mypy:
 poetry run mypy src
 ```
 
+## Code Coverage
+
+The project uses [pytest-cov](https://pytest-cov.readthedocs.io/) to measure code coverage. This helps ensure that tests exercise as much of the codebase as possible.
+
+### Local Coverage
+
+To run tests with code coverage locally:
+
+```bash
+# Using the script
+./scripts/coverage.sh
+
+# Or directly
+poetry run pytest
+```
+
+The coverage configuration is defined in `pyproject.toml` under the `[tool.pytest.ini_options]` section. The current setup:
+
+- Measures coverage for the `src/sql_testing_library` directory
+- Generates a terminal report with missing lines highlighted
+- Creates an XML report at `coverage.xml` (useful for CI systems)
+- Creates an HTML report in the `htmlcov` directory
+
+To view the HTML coverage report, open `htmlcov/index.html` in a browser after running the tests.
+
+### CI/CD Coverage
+
+The project is also configured to publish code coverage metrics to [Codecov](https://codecov.io/) as part of the CI pipeline. This provides:
+
+1. A public dashboard showing code coverage trends over time
+2. A badge in the README showing current coverage percentage
+3. Coverage feedback on pull requests
+4. Detailed reports on which parts of the code lack test coverage
+
+The GitHub Actions workflow automatically:
+- Runs tests with coverage enabled
+- Generates an XML coverage report
+- Uploads the report to Codecov
+
+The Codecov configuration is stored in `codecov.yml` at the root of the repository.
+
 ## Configuration
 
 ### Ruff
