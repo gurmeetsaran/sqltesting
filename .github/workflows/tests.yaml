@@ -39,9 +39,16 @@ jobs:
         echo "GOOGLE_APPLICATION_CREDENTIALS=${GOOGLE_APPLICATION_CREDENTIALS}" >> $GITHUB_ENV
         echo "GCP_PROJECT_ID=${GCP_PROJECT_ID}" >> $GITHUB_ENV
 
-    - name: Run tests
+    - name: Run tests with coverage
       run: |
-        poetry run pytest tests/
+        poetry run pytest --cov=src/sql_testing_library --cov-report=xml
+
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v3
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
+        file: ./coverage.xml
+        fail_ci_if_error: false
 
     - name: Clean up credentials
       run: |
