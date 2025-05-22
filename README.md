@@ -23,6 +23,9 @@ pip install sql-testing-library[bigquery]
 # Install with Athena support
 pip install sql-testing-library[athena]
 
+# Install with Redshift support
+pip install sql-testing-library[redshift]
+
 # Or install with all database adapters
 pip install sql-testing-library[all]
 ```
@@ -33,7 +36,7 @@ pip install sql-testing-library[all]
 
 ```ini
 [sql_testing]
-adapter = bigquery  # Use 'bigquery' or 'athena'
+adapter = bigquery  # Use 'bigquery', 'athena', or 'redshift'
 
 # BigQuery configuration
 [sql_testing.bigquery]
@@ -48,6 +51,14 @@ credentials_path = <path to credentials json>
 # region = us-west-2
 # aws_access_key_id = <optional>  # Optional: if not using default credentials
 # aws_secret_access_key = <optional>  # Optional: if not using default credentials
+
+# Redshift configuration
+# [sql_testing.redshift]
+# host = <redshift-host.example.com>
+# database = <test_database>
+# user = <redshift_user>
+# password = <redshift_password>
+# port = <5439>  # Optional: default port is 5439
 ```
 
 2. **Write a test** using one of the flexible patterns:
@@ -178,9 +189,21 @@ def test_athena_query():
         query="SELECT user_id, name FROM users WHERE user_id = 1",
         execution_database="test_db"
     )
+
+# Use Redshift adapter for this test
+@sql_test(
+    adapter_type="redshift",
+    mock_tables=[...],
+    result_class=UserResult
+)
+def test_redshift_query():
+    return TestCase(
+        query="SELECT user_id, name FROM users WHERE user_id = 1",
+        execution_database="test_db"
+    )
 ```
 
-The adapter_type parameter will use the configuration from the corresponding section in pytest.ini, such as `[sql_testing.bigquery]` or `[sql_testing.athena]`.
+The adapter_type parameter will use the configuration from the corresponding section in pytest.ini, such as `[sql_testing.bigquery]`, `[sql_testing.athena]`, or `[sql_testing.redshift]`.
 
 ### Adapter-Specific Features
 
@@ -194,6 +217,13 @@ The adapter_type parameter will use the configuration from the corresponding sec
 - Uses CTAS (CREATE TABLE AS SELECT) for efficient temporary table creation
 - Handles large queries by automatically falling back to physical tables
 - Supports authentication via AWS credentials or instance profiles
+
+#### Redshift Adapter
+- Supports Amazon Redshift data warehouse service
+- Uses CTAS (CREATE TABLE AS SELECT) for efficient temporary table creation
+- Takes advantage of Redshift's automatic session-based temporary table cleanup
+- Handles large datasets and complex queries with SQL-compliant syntax
+- Supports authentication via username and password
 
 **Default Behavior:**
 - If adapter_type is not specified in the TestCase or decorator, the library will use the adapter specified in the `[sql_testing]` section's `adapter` setting.
@@ -242,4 +272,7 @@ For detailed usage and configuration options, see the example files included.
 - Python >= 3.9
 - sqlglot >= 18.0.0
 - pydantic >= 2.0.0
-- Database-specific clients (google-cloud-bigquery, boto3, psycopg2-binary)
+- Database-specific clients:
+  - google-cloud-bigquery for BigQuery
+  - boto3 for Athena
+  - psycopg2-binary for Redshift
