@@ -16,8 +16,7 @@ except ImportError:
 # Optional adapters - these may not be implemented yet,
 # but prepare the imports for when they are
 try:
-    # This import will fail as module does not exist yet
-    from . import athena  # type: ignore # noqa: F401
+    from .athena import AthenaAdapter  # noqa: F401
 
     __all__.append("AthenaAdapter")
 except ImportError:

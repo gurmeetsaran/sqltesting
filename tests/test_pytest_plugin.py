@@ -85,7 +85,7 @@ class TestPytestPluginConfig(unittest.TestCase):
         mock_config["sql_testing.athena"] = {
             "database": "test_db",
             "s3_output_location": "s3://test-bucket/",
-            "region": "us-east-1",
+            "region": "us-west-2",
         }
 
         # Create SQLTestDecorator instance with mocked config parser
@@ -96,7 +96,7 @@ class TestPytestPluginConfig(unittest.TestCase):
         athena_config = decorator._load_adapter_config("athena")
         assert athena_config["database"] == "test_db"
         assert athena_config["s3_output_location"] == "s3://test-bucket/"
-        assert athena_config["region"] == "us-east-1"
+        assert athena_config["region"] == "us-west-2"
 
         # Test loading configuration for BigQuery
         bigquery_config = decorator._load_adapter_config("bigquery")
