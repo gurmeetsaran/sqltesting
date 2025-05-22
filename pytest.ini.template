@@ -1,7 +1,16 @@
 [sql_testing]
-adapter = bigquery
+adapter = bigquery  # Use 'bigquery' or 'athena'
 
+# BigQuery configuration
 [sql_testing.bigquery]
 project_id = ${GCP_PROJECT_ID}
 dataset_id = sqltesting
 credentials_path = ${GOOGLE_APPLICATION_CREDENTIALS}
+
+# Athena configuration - uncomment and customize for Athena
+# [sql_testing.athena]
+# database = ${AWS_ATHENA_DATABASE}
+# s3_output_location = ${AWS_ATHENA_OUTPUT_LOCATION}
+# region = ${AWS_REGION:-us-west-2}
+# aws_access_key_id = ${AWS_ACCESS_KEY_ID}        # Optional: if not using default credentials
+# aws_secret_access_key = ${AWS_SECRET_ACCESS_KEY} # Optional: if not using default credentials

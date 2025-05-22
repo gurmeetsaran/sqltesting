@@ -9,6 +9,7 @@ from typing import Any, Callable, Dict, List, Optional, Type, TypeVar, cast
 import pytest
 from _pytest.nodes import Item
 
+from .adapters.base import DatabaseAdapter
 from .core import AdapterType, SQLTestFramework, TestCase
 from .mock_table import BaseMockTable
 
@@ -58,6 +59,9 @@ class SQLTestDecorator:
         # Load adapter-specific configuration
         adapter_config = self._load_adapter_config(adapter_type)
 
+        # Variable to hold the appropriate adapter instance
+        database_adapter: DatabaseAdapter
+
         if adapter_type == "bigquery":
             from .adapters.bigquery import BigQueryAdapter
 
@@ -76,15 +80,37 @@ class SQLTestDecorator:
                     "in configuration"
                 )
 
-            adapter = BigQueryAdapter(
+            database_adapter = BigQueryAdapter(
                 project_id=project_id,
                 dataset_id=dataset_id,
                 credentials_path=credentials_path,
             )
+        elif adapter_type == "athena":
+            from .adapters.athena import AthenaAdapter
+
+            database = adapter_config.get("database")
+            s3_output_location = adapter_config.get("s3_output_location")
+            region = adapter_config.get("region", "us-west-2")
+            aws_access_key_id = adapter_config.get("aws_access_key_id")
+            aws_secret_access_key = adapter_config.get("aws_secret_access_key")
+
+            if not database or not s3_output_location:
+                raise ValueError(
+                    "Athena adapter requires 'database' and 's3_output_location' "
+                    "in configuration"
+                )
+
+            database_adapter = AthenaAdapter(
+                database=database,
+                s3_output_location=s3_output_location,
+                region=region,
+                aws_access_key_id=aws_access_key_id,
+                aws_secret_access_key=aws_secret_access_key,
+            )
         else:
             raise ValueError(f"Unsupported adapter type: {adapter_type}")
 
-        return SQLTestFramework(adapter)
+        return SQLTestFramework(database_adapter)
 
     def _get_project_root(self) -> str:
         """Get the project root directory."""
