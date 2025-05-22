@@ -28,3 +28,10 @@ try:
     __all__.append("RedshiftAdapter")
 except ImportError:
     pass
+
+try:
+    from .trino import TrinoAdapter  # noqa: F401
+
+    __all__.append("TrinoAdapter")
+except ImportError:
+    pass

@@ -28,6 +28,16 @@ boto3 = ">=1.26.0"
 [tool.poetry.group.redshift.dependencies]
 psycopg2-binary = ">=2.9.0"
 
+[tool.poetry.group.trino.dependencies]
+trino = ">=0.322.0"
+
+[tool.poetry.extras]
+all = ["google-cloud-bigquery", "boto3", "psycopg2-binary", "trino"]
+bigquery = ["google-cloud-bigquery"]
+athena = ["boto3"]
+redshift = ["psycopg2-binary"]
+trino = ["trino"]
+
 [tool.poetry.group.dev.dependencies]
 pytest = ">=7.0.0"
 pytest-asyncio = ">=0.21.0"

@@ -1,5 +1,5 @@
 [sql_testing]
-adapter = bigquery  # Use 'bigquery', 'athena', or 'redshift'
+adapter = bigquery  # Use 'bigquery', 'athena', 'redshift', or 'trino'
 
 # BigQuery configuration
 [sql_testing.bigquery]
@@ -22,3 +22,21 @@ credentials_path = ${GOOGLE_APPLICATION_CREDENTIALS}
 # user = ${REDSHIFT_USER}
 # password = ${REDSHIFT_PASSWORD}
 # port = ${REDSHIFT_PORT:-5439}  # Optional: default port is 5439
+
+# Trino configuration - uncomment and customize for Trino
+# [sql_testing.trino]
+# host = ${TRINO_HOST}
+# port = ${TRINO_PORT:-8080}     # Optional: default port is 8080
+# user = ${TRINO_USER}
+# catalog = ${TRINO_CATALOG:-memory}  # Optional: default catalog is 'memory'
+# schema = ${TRINO_SCHEMA:-default}   # Optional: default schema is 'default'
+# http_scheme = ${TRINO_HTTP_SCHEME:-http}  # Optional: default is 'http', use 'https' for secure connections
+#
+# # Authentication configuration (choose one method)
+# # For Basic Authentication:
+# # auth_type = basic
+# # password = ${TRINO_PASSWORD}
+#
+# # For JWT Authentication:
+# # auth_type = jwt
+# # token = ${TRINO_JWT_TOKEN}
