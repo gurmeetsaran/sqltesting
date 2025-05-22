@@ -6,6 +6,7 @@ from typing import (
     Dict,
     Generic,
     List,
+    Literal,
     Optional,
     Type,
     TypeVar,
@@ -26,6 +27,9 @@ from .exceptions import (
 from .mock_table import BaseMockTable
 
 
+# Type for adapter types
+AdapterType = Literal["bigquery", "athena", "redshift"]
+
 T = TypeVar("T")
 
 
@@ -39,6 +43,7 @@ class TestCase(Generic[T]):
     result_class: Optional[Type[T]] = None
     use_physical_tables: bool = False
     description: Optional[str] = None
+    adapter_type: Optional[AdapterType] = None
 
 
 class SQLTestFramework:
