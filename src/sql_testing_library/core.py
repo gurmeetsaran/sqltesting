@@ -304,33 +304,49 @@ class SQLTestFramework:
     def _replace_table_names_in_query(
         self, query: str, replacement_mapping: Dict[str, str]
     ) -> str:
-        """Replace table names in query using string manipulation."""
+        """Replace table names in query using sqlglot AST transformation."""
         try:
             dialect = self.adapter.get_sqlglot_dialect()
 
-            # Parse the query to an AST to ensure it's valid SQL
-            # and generate standardized SQL
+            # Parse the query to an AST
             parsed = sqlglot.parse_one(query, dialect=dialect)
-            sql: str = parsed.sql(dialect=dialect)
 
-            # For each table in our mapping, attempt direct string replacement
-            # This works because the SQL format output by sqlglot is predictable
-            for table_name, cte_alias in replacement_mapping.items():
-                # Replace in FROM clauses
-                sql = sql.replace(f"FROM {table_name}", f"FROM {cte_alias}")
-                # Replace in JOIN clauses
-                sql = sql.replace(f"JOIN {table_name}", f"JOIN {cte_alias}")
-                # Replace in FROM clauses within subqueries
-                sql = sql.replace(f"FROM {table_name} ", f"FROM {cte_alias} ")
+            # Create a transformer to replace table names
+            def transform_tables(node: exp.Expression) -> exp.Expression:
+                if isinstance(node, exp.Table):
+                    # Get the original table name
+                    if node.db and node.catalog:
+                        original_name = f"{node.catalog}.{node.db}.{node.name}"
+                    elif node.db:
+                        original_name = f"{node.db}.{node.name}"
+                    else:
+                        original_name = str(node.name)
 
-                # Special handling for table names in the WITH clause for CTEs
-                within_cte_pattern = f"FROM {table_name} WHERE"
-                within_cte_replacement = f"FROM {cte_alias} WHERE"
-                sql = sql.replace(within_cte_pattern, within_cte_replacement)
+                    # Check if this table should be replaced
+                    if original_name in replacement_mapping:
+                        # Create a new Table node with the replacement name
+                        new_table = exp.Table(
+                            this=exp.Identifier(this=replacement_mapping[original_name])
+                        )
 
-            return sql
+                        # Preserve the table alias if it exists
+                        if hasattr(node, "alias") and node.alias:
+                            new_table.set("alias", node.alias)
+
+                        return new_table
+
+                return node
+
+            # Apply the transformation to the AST
+            transformed = parsed.transform(transform_tables)
+
+            # Generate the SQL from the transformed AST
+            result_sql: str = transformed.sql(dialect=dialect)
+            return result_sql
 
         except Exception as e:
+            # Re-raise the exception as SQLParseError to maintain compatibility
+            # with the existing error handling expectations
             raise SQLParseError(query, str(e))  # noqa:  B904
 
     def _execute_with_physical_tables(
