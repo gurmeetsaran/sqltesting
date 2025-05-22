@@ -29,9 +29,17 @@ pip install sql-testing-library[all]
 ```ini
 [sql_testing]
 adapter = bigquery
+
+[sql_testing.bigquery]
 project_id = <my-test-project>
 dataset_id = <test_dataset>
 credentials_path = <path to credentials json>
+
+# You can add configurations for other adapters:
+# [sql_testing.athena]
+# database = <test_database>
+# s3_output_location = s3://my-athena-results/
+# region = us-east-1
 ```
 
 2. **Write a test** using one of the flexible patterns:
@@ -128,10 +136,49 @@ The library supports flexible ways to configure your tests:
 1. **All Config in Decorator**: Define all mock tables and result class in the `@sql_test` decorator, with only query and execution_database in TestCase.
 2. **All Config in TestCase**: Use an empty `@sql_test()` decorator and define everything in the TestCase return value.
 3. **Mix and Match**: Specify some parameters in the decorator and others in the TestCase.
+4. **Per-Test Database Adapters**: Specify which adapter to use for specific tests.
 
 **Important notes**:
 - Parameters provided in the decorator take precedence over those in TestCase
 - Either the decorator or TestCase must provide mock_tables and result_class
+
+### Using Different Database Adapters in Tests
+
+You can specify which database adapter to use for individual tests:
+
+```python
+# Use BigQuery adapter for this test
+@sql_test(
+    adapter_type="bigquery",
+    mock_tables=[...],
+    result_class=UserResult
+)
+def test_bigquery_query():
+    return TestCase(
+        query="SELECT user_id, name FROM users WHERE user_id = 1",
+        execution_database="analytics_db"
+    )
+
+# Use Athena adapter for this test
+@sql_test(
+    adapter_type="athena",
+    mock_tables=[...],
+    result_class=UserResult
+)
+def test_athena_query():
+    return TestCase(
+        query="SELECT user_id, name FROM users WHERE user_id = 1",
+        execution_database="analytics_db"
+    )
+```
+
+The adapter_type parameter will use the configuration from the corresponding section in pytest.ini, such as `[sql_testing.bigquery]` or `[sql_testing.athena]`.
+
+**Default Behavior:**
+- If adapter_type is not specified in the TestCase or decorator, the library will use the adapter specified in the `[sql_testing]` section's `adapter` setting.
+- If no adapter is specified in the `[sql_testing]` section, it defaults to "bigquery".
+- The library will then look for adapter-specific configuration in the `[sql_testing.<adapter>]` section.
+- If the adapter-specific section doesn't exist, it falls back to using the `[sql_testing]` section for backward compatibility.
 
 ## Development Setup
 
