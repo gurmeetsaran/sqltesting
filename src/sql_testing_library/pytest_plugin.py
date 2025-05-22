@@ -107,6 +107,34 @@ class SQLTestDecorator:
                 aws_access_key_id=aws_access_key_id,
                 aws_secret_access_key=aws_secret_access_key,
             )
+        elif adapter_type == "redshift":
+            from .adapters.redshift import RedshiftAdapter
+
+            host = adapter_config.get("host")
+            database = adapter_config.get("database")
+            user = adapter_config.get("user")
+            password = adapter_config.get("password")
+            port = int(adapter_config.get("port", "5439"))
+
+            if not all([host, database, user, password]):
+                raise ValueError(
+                    "Redshift adapter requires 'host', 'database', 'user', "
+                    "and 'password' in configuration"
+                )
+
+            # All required values are now guaranteed to exist
+            assert host is not None
+            assert database is not None
+            assert user is not None
+            assert password is not None
+
+            database_adapter = RedshiftAdapter(
+                host=host,
+                database=database,
+                user=user,
+                password=password,
+                port=port,
+            )
         else:
             raise ValueError(f"Unsupported adapter type: {adapter_type}")
 
@@ -350,7 +378,9 @@ def pytest_runtest_call(item: Item) -> None:
             function = cast(Callable[[], List[Any]], item_function)
             results = function()
             # Store results for potential inspection
-            item._sql_test_results = results
+            # We use setattr to avoid mypy errors about unknown attributes
+            # Attach results to the pytest item for potential retrieval later
+            setattr(item, "_sql_test_results", results)  # noqa: B010
         except Exception as e:
             # Re-raise with better context
             raise AssertionError(f"SQL test failed: {e}") from e

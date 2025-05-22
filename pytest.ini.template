@@ -1,5 +1,5 @@
 [sql_testing]
-adapter = bigquery  # Use 'bigquery' or 'athena'
+adapter = bigquery  # Use 'bigquery', 'athena', or 'redshift'
 
 # BigQuery configuration
 [sql_testing.bigquery]
@@ -14,3 +14,11 @@ credentials_path = ${GOOGLE_APPLICATION_CREDENTIALS}
 # region = ${AWS_REGION:-us-west-2}
 # aws_access_key_id = ${AWS_ACCESS_KEY_ID}        # Optional: if not using default credentials
 # aws_secret_access_key = ${AWS_SECRET_ACCESS_KEY} # Optional: if not using default credentials
+
+# Redshift configuration - uncomment and customize for Redshift
+# [sql_testing.redshift]
+# host = ${REDSHIFT_HOST}
+# database = ${REDSHIFT_DATABASE}
+# user = ${REDSHIFT_USER}
+# password = ${REDSHIFT_PASSWORD}
+# port = ${REDSHIFT_PORT:-5439}  # Optional: default port is 5439

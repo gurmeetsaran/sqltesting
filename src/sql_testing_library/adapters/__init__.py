@@ -23,8 +23,7 @@ except ImportError:
     pass
 
 try:
-    # This import will fail as module does not exist yet
-    from . import redshift  # type: ignore # noqa: F401
+    from .redshift import RedshiftAdapter  # noqa: F401
 
     __all__.append("RedshiftAdapter")
 except ImportError:
