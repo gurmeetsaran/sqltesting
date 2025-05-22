@@ -1,6 +1,6 @@
 # SQL Testing Library
 
-A Python library for testing SQL queries with mock data injection across Athena, BigQuery, and Redshift.
+A Python library for testing SQL queries with mock data injection across Athena, BigQuery, Redshift, and Trino.
 
 [![Tests](https://github.com/gurmeetsaran/sqltesting/actions/workflows/tests.yaml/badge.svg)](https://github.com/gurmeetsaran/sqltesting/actions/workflows/tests.yaml)
 [![GitHub license](https://img.shields.io/github/license/gurmeetsaran/sqltesting.svg)](https://github.com/gurmeetsaran/sqltesting/blob/master/LICENSE)
@@ -8,7 +8,7 @@ A Python library for testing SQL queries with mock data injection across Athena,
 ![python version](https://img.shields.io/badge/python-3.9%2B-yellowgreen)
 ## Features
 
-- **Multi-Database Support**: Test SQL across BigQuery, Athena, and Redshift
+- **Multi-Database Support**: Test SQL across BigQuery, Athena, Redshift, and Trino
 - **Mock Data Injection**: Use Python dataclasses for type-safe test data
 - **CTE or Physical Tables**: Automatic fallback for query size limits
 - **Type-Safe Results**: Deserialize results to Pydantic models
@@ -26,6 +26,9 @@ pip install sql-testing-library[athena]
 # Install with Redshift support
 pip install sql-testing-library[redshift]
 
+# Install with Trino support
+pip install sql-testing-library[trino]
+
 # Or install with all database adapters
 pip install sql-testing-library[all]
 ```
@@ -36,7 +39,7 @@ pip install sql-testing-library[all]
 
 ```ini
 [sql_testing]
-adapter = bigquery  # Use 'bigquery', 'athena', or 'redshift'
+adapter = bigquery  # Use 'bigquery', 'athena', 'redshift', or 'trino'
 
 # BigQuery configuration
 [sql_testing.bigquery]
@@ -59,6 +62,24 @@ credentials_path = <path to credentials json>
 # user = <redshift_user>
 # password = <redshift_password>
 # port = <5439>  # Optional: default port is 5439
+
+# Trino configuration
+# [sql_testing.trino]
+# host = <trino-host.example.com>
+# port = <8080>  # Optional: default port is 8080
+# user = <trino_user>
+# catalog = <memory>  # Optional: default catalog is 'memory'
+# schema = <default>  # Optional: default schema is 'default'
+# http_scheme = <http>  # Optional: default is 'http', use 'https' for secure connections
+#
+# # Authentication configuration (choose one method)
+# # For Basic Authentication:
+# auth_type = basic
+# password = <trino_password>
+#
+# # For JWT Authentication:
+# # auth_type = jwt
+# # token = <jwt_token>
 ```
 
 2. **Write a test** using one of the flexible patterns:
@@ -201,9 +222,21 @@ def test_redshift_query():
         query="SELECT user_id, name FROM users WHERE user_id = 1",
         execution_database="test_db"
     )
+
+# Use Trino adapter for this test
+@sql_test(
+    adapter_type="trino",
+    mock_tables=[...],
+    result_class=UserResult
+)
+def test_trino_query():
+    return TestCase(
+        query="SELECT user_id, name FROM users WHERE user_id = 1",
+        execution_database="test_db"
+    )
 ```
 
-The adapter_type parameter will use the configuration from the corresponding section in pytest.ini, such as `[sql_testing.bigquery]`, `[sql_testing.athena]`, or `[sql_testing.redshift]`.
+The adapter_type parameter will use the configuration from the corresponding section in pytest.ini, such as `[sql_testing.bigquery]`, `[sql_testing.athena]`, `[sql_testing.redshift]`, or `[sql_testing.trino]`.
 
 ### Adapter-Specific Features
 
@@ -224,6 +257,14 @@ The adapter_type parameter will use the configuration from the corresponding sec
 - Takes advantage of Redshift's automatic session-based temporary table cleanup
 - Handles large datasets and complex queries with SQL-compliant syntax
 - Supports authentication via username and password
+
+#### Trino Adapter
+- Supports Trino (formerly PrestoSQL) distributed SQL query engine
+- Uses CTAS (CREATE TABLE AS SELECT) for efficient temporary table creation
+- Provides explicit table cleanup management
+- Works with a variety of catalogs and data sources
+- Handles large datasets and complex queries with full SQL support
+- Supports multiple authentication methods including Basic and JWT
 
 **Default Behavior:**
 - If adapter_type is not specified in the TestCase or decorator, the library will use the adapter specified in the `[sql_testing]` section's `adapter` setting.
@@ -276,3 +317,4 @@ For detailed usage and configuration options, see the example files included.
   - google-cloud-bigquery for BigQuery
   - boto3 for Athena
   - psycopg2-binary for Redshift
+  - trino for Trino

@@ -135,6 +135,43 @@ class SQLTestDecorator:
                 password=password,
                 port=port,
             )
+        elif adapter_type == "trino":
+            from .adapters.trino import TrinoAdapter
+
+            host = adapter_config.get("host")
+            port = int(adapter_config.get("port", "8080"))
+            user = adapter_config.get("user")
+            catalog = adapter_config.get("catalog", "memory")
+            schema = adapter_config.get("schema", "default")
+            http_scheme = adapter_config.get("http_scheme", "http")
+
+            # Auth dictionary for various authentication methods
+            auth = None
+            auth_type = adapter_config.get("auth_type")
+            if auth_type == "basic":
+                password = adapter_config.get("password")
+                if password:
+                    auth = {"type": "basic", "user": user, "password": password}
+            elif auth_type == "jwt":
+                token = adapter_config.get("token")
+                if token:
+                    auth = {"type": "jwt", "token": token}
+
+            if not host:
+                raise ValueError("Trino adapter requires 'host' in configuration")
+
+            # Host is now guaranteed to exist
+            assert host is not None
+
+            database_adapter = TrinoAdapter(
+                host=host,
+                port=port,
+                user=user,
+                catalog=catalog,
+                schema=schema,
+                http_scheme=http_scheme,
+                auth=auth,
+            )
         else:
             raise ValueError(f"Unsupported adapter type: {adapter_type}")
 

@@ -28,7 +28,7 @@ from .mock_table import BaseMockTable
 
 
 # Type for adapter types
-AdapterType = Literal["bigquery", "athena", "redshift"]
+AdapterType = Literal["bigquery", "athena", "redshift", "trino"]
 
 T = TypeVar("T")
 
