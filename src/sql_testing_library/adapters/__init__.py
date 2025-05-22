@@ -35,3 +35,10 @@ try:
     __all__.append("TrinoAdapter")
 except ImportError:
     pass
+
+try:
+    from .snowflake import SnowflakeAdapter  # noqa: F401
+
+    __all__.append("SnowflakeAdapter")
+except ImportError:
+    pass
