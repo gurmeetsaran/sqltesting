@@ -341,6 +341,24 @@ The library automatically:
 
 For detailed usage and configuration options, see the example files included.
 
+## Known Limitations and TODOs
+
+The library has a few known limitations that are planned to be addressed in future updates:
+
+### Core Functionality
+- The `mock_table` function is not exposed in the public API but is used in tests
+- TestCase interface could be streamlined for better usability
+
+### Snowflake Support
+- Physical table tests for Snowflake are currently skipped due to complex mocking requirements
+- Need better support for Snowflake-specific data types (VARIANT, OBJECT, ARRAY)
+- Add integration tests with actual Snowflake connection
+
+### General Improvements
+- Add support for more SQL dialects
+- Improve error handling for malformed SQL
+- Enhance documentation with more examples
+
 ## Requirements
 
 - Python >= 3.9

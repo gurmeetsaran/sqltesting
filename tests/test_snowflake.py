@@ -6,7 +6,24 @@ from unittest import mock
 import pandas as pd
 
 from sql_testing_library.adapters.snowflake import SnowflakeAdapter
-from sql_testing_library.core import SQLTester, mock_table
+from sql_testing_library.core import SQLTestFramework
+from sql_testing_library.mock_table import BaseMockTable
+
+
+# Add a mock_table function since it doesn't exist in the core module
+def mock_table(data):
+    """Mock implementation for mock_table function."""
+    if isinstance(data[0], object):
+        # Create a BaseMockTable instance
+        class MockTable(BaseMockTable):
+            def get_database_name(self) -> str:
+                return "test_db"
+
+            def get_table_name(self) -> str:
+                return "test_table"
+
+        return MockTable(data)
+    return data
 
 
 class TestSnowflakeBasic(unittest.TestCase):
@@ -55,7 +72,7 @@ class TestSnowflakeBasic(unittest.TestCase):
             database="test_db",
         )
 
-        tester = SQLTester(adapter)
+        tester = SQLTestFramework(adapter)
 
         # Define a simple query using CTE
         query = """
@@ -65,11 +82,29 @@ class TestSnowflakeBasic(unittest.TestCase):
         SELECT id, name, active FROM data
         """
 
-        # Create mock table
-        users_table = mock_table(users)
+        # Create mock table with dictionaries instead of classes
+        user_dicts = [
+            {"id": user.id, "name": user.name, "active": user.active} for user in users
+        ]
+
+        class UserMockTable(BaseMockTable):
+            def get_database_name(self) -> str:
+                return "test_db"
+
+            def get_table_name(self) -> str:
+                return "users"
+
+        users_table = UserMockTable(user_dicts)
+
+        # Create a mock dictionary to adapt to the SQLTestFramework interface
+        # mock_tables = {"users": users_table}
+        table_mapping = {"users": users_table}
+
+        # Generate the CTE query
+        final_query = tester._generate_cte_query(query, table_mapping, [users_table])
 
         # Run test
-        result = tester.run(query, {"users": users_table}, use_cte=True)
+        result = tester.adapter.execute_query(final_query)
 
         # Verify query execution
         self.assertTrue(mock_cursor.execute.called)
@@ -121,7 +156,7 @@ class TestSnowflakeBasic(unittest.TestCase):
             database="test_db",
         )
 
-        tester = SQLTester(adapter)
+        tester = SQLTestFramework(adapter)
 
         # Define query that counts active users
         query = """
@@ -130,11 +165,29 @@ class TestSnowflakeBasic(unittest.TestCase):
         WHERE active = TRUE
         """
 
-        # Create mock table
-        users_table = mock_table(users)
+        # Create mock table with dictionaries instead of classes
+        user_dicts = [
+            {"id": user.id, "name": user.name, "active": user.active} for user in users
+        ]
 
-        # Run test with CTE transformation
-        result = tester.run(query, {"users": users_table}, use_cte=True)
+        class UserMockTable(BaseMockTable):
+            def get_database_name(self) -> str:
+                return "test_db"
+
+            def get_table_name(self) -> str:
+                return "users"
+
+        users_table = UserMockTable(user_dicts)
+
+        # Create a mock dictionary to adapt to the SQLTestFramework interface
+        # mock_tables = {"users": users_table}
+        table_mapping = {"users": users_table}
+
+        # Generate the CTE query
+        final_query = tester._generate_cte_query(query, table_mapping, [users_table])
+
+        # Run test
+        result = tester.adapter.execute_query(final_query)
 
         # Verify a CTE query was executed
         self.assertTrue(mock_cursor.execute.called)

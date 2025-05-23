@@ -33,7 +33,7 @@ class TestSnowflakeAdapter(unittest.TestCase):
     def test_initialization(self, mock_snowflake_connect):
         """Test adapter initialization."""
         # Test with all parameters
-        SnowflakeAdapter(
+        adapter = SnowflakeAdapter(
             account=self.account,
             user=self.user,
             password=self.password,
@@ -42,6 +42,9 @@ class TestSnowflakeAdapter(unittest.TestCase):
             warehouse=self.warehouse,
             role=self.role,
         )
+
+        # Force connection to be established
+        adapter._get_connection()
 
         mock_snowflake_connect.assert_called_once_with(
             account=self.account,
@@ -57,12 +60,15 @@ class TestSnowflakeAdapter(unittest.TestCase):
         mock_snowflake_connect.reset_mock()
 
         # Test with minimal parameters
-        SnowflakeAdapter(
+        adapter = SnowflakeAdapter(
             account=self.account,
             user=self.user,
             password=self.password,
             database=self.database,
         )
+
+        # Force connection to be established
+        adapter._get_connection()
 
         mock_snowflake_connect.assert_called_once_with(
             account=self.account,
