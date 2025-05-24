@@ -196,9 +196,7 @@ class TestAthenaIntegration(unittest.TestCase):
                             date(2023, 1, 15),
                             True,
                         ),
-                        Customer(
-                            2, "Bob Smith", "bob@example.com", date(2023, 2, 20), False
-                        ),
+                        Customer(2, "Bob Smith", "bob@example.com", date(2023, 2, 20), False),
                     ]
                 ),
                 OrderMockTable(
@@ -462,9 +460,7 @@ class TestAthenaIntegration(unittest.TestCase):
                             False,
                             Decimal("0"),
                         ),
-                        Customer(
-                            3, "Carol", "", date(2023, 2, 1), True, Decimal("1500.50")
-                        ),
+                        Customer(3, "Carol", "", date(2023, 2, 1), True, Decimal("1500.50")),
                     ]
                 )
             ],

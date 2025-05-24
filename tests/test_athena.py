@@ -63,9 +63,7 @@ class TestAthenaIntegration(unittest.TestCase):
 
         # Mock Athena client responses
         self.mock_client = mock.MagicMock()
-        self.mock_client.start_query_execution.return_value = {
-            "QueryExecutionId": "test_query_id"
-        }
+        self.mock_client.start_query_execution.return_value = {"QueryExecutionId": "test_query_id"}
         self.mock_client.get_query_execution.return_value = {
             "QueryExecution": {"Status": {"State": "SUCCEEDED"}}
         }
@@ -98,9 +96,7 @@ class TestAthenaIntegration(unittest.TestCase):
         # Initialize adapter config
         adapter_config = decorator._load_adapter_config()
         self.assertEqual(adapter_config["database"], "test_db")
-        self.assertEqual(
-            adapter_config["s3_output_location"], "s3://test-bucket/output/"
-        )
+        self.assertEqual(adapter_config["s3_output_location"], "s3://test-bucket/output/")
         self.assertEqual(adapter_config["region"], "us-west-2")
 
         # Create framework
@@ -109,9 +105,7 @@ class TestAthenaIntegration(unittest.TestCase):
         # Verify Athena adapter was created correctly
         self.assertEqual(framework.adapter.__class__.__name__, "AthenaAdapter")
         self.assertEqual(framework.adapter.database, "test_db")
-        self.assertEqual(
-            framework.adapter.s3_output_location, "s3://test-bucket/output/"
-        )
+        self.assertEqual(framework.adapter.s3_output_location, "s3://test-bucket/output/")
 
     def test_athena_sql_test_decorator(self, mock_boto3_client):
         """Test sql_test decorator with Athena adapter."""
@@ -138,9 +132,7 @@ class TestAthenaIntegration(unittest.TestCase):
                 mock_tables=[
                     UsersMockTable(
                         [
-                            User(
-                                1, "Alice", "alice@example.com", True, date(2023, 1, 1)
-                            ),
+                            User(1, "Alice", "alice@example.com", True, date(2023, 1, 1)),
                             User(2, "Bob", "bob@example.com", False, date(2023, 1, 2)),
                         ]
                     )

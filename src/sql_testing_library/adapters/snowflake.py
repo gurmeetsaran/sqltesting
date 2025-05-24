@@ -1,5 +1,6 @@
 """Snowflake adapter implementation."""
 
+import logging
 import time
 from datetime import date, datetime
 from decimal import Decimal
@@ -135,15 +136,11 @@ class SnowflakeAdapter(DatabaseAdapter):
                 if len(table_parts) == 3:
                     # database.schema.table format
                     database, schema, table = table_parts
-                    drop_query = (
-                        f'DROP TABLE IF EXISTS "{database}"."{schema}"."{table}"'
-                    )
+                    drop_query = f'DROP TABLE IF EXISTS "{database}"."{schema}"."{table}"'
                 elif len(table_parts) == 2:
                     # schema.table format, use default database
                     schema, table = table_parts
-                    drop_query = (
-                        f'DROP TABLE IF EXISTS "{self.database}"."{schema}"."{table}"'
-                    )
+                    drop_query = f'DROP TABLE IF EXISTS "{self.database}"."{schema}"."{table}"'
                 else:
                     # Just table name, use default database and schema
                     table = full_table_name
@@ -151,7 +148,7 @@ class SnowflakeAdapter(DatabaseAdapter):
 
                 self.execute_query(drop_query)
             except Exception as e:
-                print(f"Warning: Failed to drop table {full_table_name}: {e}")
+                logging.warning(f"Warning: Failed to drop table {full_table_name}: {e}")
 
     def format_value_for_cte(self, value: Any, column_type: type) -> str:
         """Format value for Snowflake CTE VALUES clause."""
@@ -214,9 +211,7 @@ class SnowflakeAdapter(DatabaseAdapter):
                 # Handle Optional types
                 if hasattr(col_type, "__origin__") and col_type.__origin__ is Union:
                     # Extract the non-None type from Optional[T]
-                    non_none_types = [
-                        arg for arg in get_args(col_type) if arg is not type(None)
-                    ]
+                    non_none_types = [arg for arg in get_args(col_type) if arg is not type(None)]
                     if non_none_types:
                         col_type = non_none_types[0]
 

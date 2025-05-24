@@ -65,9 +65,7 @@ class TestAthenaPhysicalTables(unittest.TestCase):
 
         # Mock Athena client responses
         self.mock_client = mock.MagicMock()
-        self.mock_client.start_query_execution.return_value = {
-            "QueryExecutionId": "test_query_id"
-        }
+        self.mock_client.start_query_execution.return_value = {"QueryExecutionId": "test_query_id"}
         self.mock_client.get_query_execution.return_value = {
             "QueryExecution": {"Status": {"State": "SUCCEEDED"}}
         }

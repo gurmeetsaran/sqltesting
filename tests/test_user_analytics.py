@@ -184,9 +184,7 @@ class TestUserAnalytics(unittest.TestCase):
             Order(105, 5, Decimal("75.00"), date(2023, 3, 5)),  # March
         ]
 
-        @sql_test(
-            mock_tables=[OrdersMockTable(test_orders)], result_class=MonthlyRevenue
-        )
+        @sql_test(mock_tables=[OrdersMockTable(test_orders)], result_class=MonthlyRevenue)
         def execute_test():
             return TestCase(
                 query="""
@@ -227,9 +225,7 @@ class TestUserAnalytics(unittest.TestCase):
 
         @sql_test(
             mock_tables=[
-                UsersMockTable(
-                    [User(42, "Test User", "test@example.com", date(2023, 1, 1))]
-                )
+                UsersMockTable([User(42, "Test User", "test@example.com", date(2023, 1, 1))])
             ],
             result_class=UserOrderSummary,
             use_physical_tables=True,  # Test physical tables option
@@ -263,11 +259,7 @@ class TestUserAnalytics(unittest.TestCase):
         """Test handling of empty result sets."""
 
         @sql_test(
-            mock_tables=[
-                UsersMockTable(
-                    [User(1, "Alice", "alice@example.com", date(2023, 1, 1))]
-                )
-            ],
+            mock_tables=[UsersMockTable([User(1, "Alice", "alice@example.com", date(2023, 1, 1))])],
             result_class=UserOrderSummary,
             adapter_type="bigquery",
         )
@@ -343,9 +335,7 @@ class TestUserAnalytics(unittest.TestCase):
 
         @sql_test(
             mock_tables=[
-                UsersMockTable(
-                    [User(1, "Alice", "alice@example.com", date(2023, 1, 1))]
-                ),
+                UsersMockTable([User(1, "Alice", "alice@example.com", date(2023, 1, 1))]),
                 OrdersMockTable([Order(101, 1, Decimal("123.45"), date(2023, 2, 1))]),
             ],
             result_class=TypeTestResult,
@@ -392,9 +382,7 @@ class TestUserAnalytics(unittest.TestCase):
         @sql_test(
             mock_tables=[
                 # Only provide users table, but query needs orders too
-                UsersMockTable(
-                    [User(1, "Alice", "alice@example.com", date(2023, 1, 1))]
-                )
+                UsersMockTable([User(1, "Alice", "alice@example.com", date(2023, 1, 1))])
             ],
             result_class=UserOrderSummary,
             adapter_type="bigquery",

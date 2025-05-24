@@ -180,9 +180,7 @@ class RedshiftAdapter(DatabaseAdapter):
                 # Handle Optional types
                 if hasattr(col_type, "__origin__") and col_type.__origin__ is Union:
                     # Extract the non-None type from Optional[T]
-                    non_none_types = [
-                        arg for arg in get_args(col_type) if arg is not type(None)
-                    ]
+                    non_none_types = [arg for arg in get_args(col_type) if arg is not type(None)]
                     if non_none_types:
                         col_type = non_none_types[0]
 

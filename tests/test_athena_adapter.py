@@ -73,9 +73,7 @@ class TestAthenaAdapter(unittest.TestCase):
         mock_boto3_client.return_value = mock_client
 
         # Set up mock response for start_query_execution
-        mock_client.start_query_execution.return_value = {
-            "QueryExecutionId": "test_query_id"
-        }
+        mock_client.start_query_execution.return_value = {"QueryExecutionId": "test_query_id"}
 
         # Set up mock response for get_query_execution
         mock_client.get_query_execution.return_value = {
@@ -111,12 +109,8 @@ class TestAthenaAdapter(unittest.TestCase):
             QueryExecutionContext={"Database": self.database},
             ResultConfiguration={"OutputLocation": self.s3_output_location},
         )
-        mock_client.get_query_execution.assert_called_with(
-            QueryExecutionId="test_query_id"
-        )
-        mock_client.get_query_results.assert_called_once_with(
-            QueryExecutionId="test_query_id"
-        )
+        mock_client.get_query_execution.assert_called_with(QueryExecutionId="test_query_id")
+        mock_client.get_query_results.assert_called_once_with(QueryExecutionId="test_query_id")
 
         # Check DataFrame result
         expected_df = pd.DataFrame([["1", "Test User"]], columns=["id", "name"])
@@ -138,9 +132,7 @@ class TestAthenaAdapter(unittest.TestCase):
         # Test numeric formatting
         self.assertEqual(adapter.format_value_for_cte(123, int), "123")
         self.assertEqual(adapter.format_value_for_cte(123.45, float), "123.45")
-        self.assertEqual(
-            adapter.format_value_for_cte(Decimal("123.45"), Decimal), "123.45"
-        )
+        self.assertEqual(adapter.format_value_for_cte(Decimal("123.45"), Decimal), "123.45")
 
         # Test boolean formatting
         self.assertEqual(adapter.format_value_for_cte(True, bool), "TRUE")
@@ -148,9 +140,7 @@ class TestAthenaAdapter(unittest.TestCase):
 
         # Test date/time formatting
         test_date = date(2023, 1, 15)
-        self.assertEqual(
-            adapter.format_value_for_cte(test_date, date), "DATE '2023-01-15'"
-        )
+        self.assertEqual(adapter.format_value_for_cte(test_date, date), "DATE '2023-01-15'")
         test_datetime = datetime(2023, 1, 15, 10, 30, 45)
         self.assertEqual(
             adapter.format_value_for_cte(test_datetime, datetime),
@@ -167,9 +157,7 @@ class TestAthenaAdapter(unittest.TestCase):
         mock_boto3_client.return_value = mock_client
 
         # Set up mock responses for execute_query calls
-        mock_client.start_query_execution.return_value = {
-            "QueryExecutionId": "test_query_id"
-        }
+        mock_client.start_query_execution.return_value = {"QueryExecutionId": "test_query_id"}
         mock_client.get_query_execution.return_value = {
             "QueryExecution": {"Status": {"State": "SUCCEEDED"}}
         }
@@ -239,9 +227,7 @@ class TestAthenaAdapter(unittest.TestCase):
         mock_boto3_client.return_value = mock_client
 
         # Set up mock responses for execute_query calls
-        mock_client.start_query_execution.return_value = {
-            "QueryExecutionId": "test_query_id"
-        }
+        mock_client.start_query_execution.return_value = {"QueryExecutionId": "test_query_id"}
         mock_client.get_query_execution.return_value = {
             "QueryExecution": {"Status": {"State": "SUCCEEDED"}}
         }

@@ -197,9 +197,7 @@ class TestReplaceTableNamesInQuery(unittest.TestCase):
         query = "SELECT * FROM users"
         replacement_mapping = {"users": "user_cte"}
 
-        result = self.framework._replace_table_names_in_query(
-            query, replacement_mapping
-        )
+        result = self.framework._replace_table_names_in_query(query, replacement_mapping)
 
         # With our implementation, we should see the replacement
         self.assertIn("FROM user_cte", result)
@@ -210,9 +208,7 @@ class TestReplaceTableNamesInQuery(unittest.TestCase):
         query = "SELECT * FROM analytics_db.users"
         replacement_mapping = {"analytics_db.users": "user_cte"}
 
-        result = self.framework._replace_table_names_in_query(
-            query, replacement_mapping
-        )
+        result = self.framework._replace_table_names_in_query(query, replacement_mapping)
 
         # With our implementation, we should see the replacement
         self.assertIn("FROM user_cte", result)
@@ -223,9 +219,7 @@ class TestReplaceTableNamesInQuery(unittest.TestCase):
         query = "SELECT * FROM bigquery-public-data.analytics_db.users"
         replacement_mapping = {"bigquery-public-data.analytics_db.users": "user_cte"}
 
-        result = self.framework._replace_table_names_in_query(
-            query, replacement_mapping
-        )
+        result = self.framework._replace_table_names_in_query(query, replacement_mapping)
 
         # With our implementation, we should see the replacement
         self.assertIn("FROM user_cte", result)
@@ -238,9 +232,7 @@ class TestReplaceTableNamesInQuery(unittest.TestCase):
         # Modify the test to use the exact table reference as seen in core.py
         replacement_mapping = {"users": "user_cte"}
 
-        result = self.framework._replace_table_names_in_query(
-            query, replacement_mapping
-        )
+        result = self.framework._replace_table_names_in_query(query, replacement_mapping)
 
         # Update our assertions to match the actual output format
         self.assertNotIn("FROM users", result)
@@ -260,9 +252,7 @@ class TestReplaceTableNamesInQuery(unittest.TestCase):
         """
         replacement_mapping = {"users": "user_cte", "orders": "order_cte"}
 
-        result = self.framework._replace_table_names_in_query(
-            query, replacement_mapping
-        )
+        result = self.framework._replace_table_names_in_query(query, replacement_mapping)
 
         # Modified assertions to match actual output format
         self.assertNotIn("FROM users", result)
@@ -281,9 +271,7 @@ class TestReplaceTableNamesInQuery(unittest.TestCase):
         """
         replacement_mapping = {"users": "user_cte", "orders": "order_cte"}
 
-        result = self.framework._replace_table_names_in_query(
-            query, replacement_mapping
-        )
+        result = self.framework._replace_table_names_in_query(query, replacement_mapping)
 
         # Modified assertions to match actual output format
         self.assertNotIn("FROM users", result)
@@ -318,9 +306,7 @@ class TestReplaceTableNamesInQuery(unittest.TestCase):
             "products": "product_cte",
         }
 
-        result = self.framework._replace_table_names_in_query(
-            query, replacement_mapping
-        )
+        result = self.framework._replace_table_names_in_query(query, replacement_mapping)
 
         # Check for exact table name replacements
         self.assertIn("FROM user_cte", result)
@@ -358,9 +344,7 @@ class TestReplaceTableNamesInQuery(unittest.TestCase):
         """
         replacement_mapping = {"users": "user_cte", "orders": "order_cte"}
 
-        result = self.framework._replace_table_names_in_query(
-            query, replacement_mapping
-        )
+        result = self.framework._replace_table_names_in_query(query, replacement_mapping)
 
         self.assertIn("SELECT user_id, name FROM user_cte", result)
         self.assertIn("SELECT order_id, user_id FROM order_cte", result)
@@ -372,9 +356,7 @@ class TestReplaceTableNamesInQuery(unittest.TestCase):
         query = "SELECT * FROM users"
         replacement_mapping = {"customers": "customer_cte"}
 
-        result = self.framework._replace_table_names_in_query(
-            query, replacement_mapping
-        )
+        result = self.framework._replace_table_names_in_query(query, replacement_mapping)
 
         # The query should remain unchanged
         self.assertEqual(result.strip(), "SELECT * FROM users")

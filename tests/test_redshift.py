@@ -131,9 +131,7 @@ class TestRedshiftIntegration(unittest.TestCase):
                 mock_tables=[
                     UsersMockTable(
                         [
-                            User(
-                                1, "Alice", "alice@example.com", True, date(2023, 1, 1)
-                            ),
+                            User(1, "Alice", "alice@example.com", True, date(2023, 1, 1)),
                             User(2, "Bob", "bob@example.com", False, date(2023, 1, 2)),
                         ]
                     )

@@ -50,8 +50,7 @@ class BaseMockTable(ABC):
         """Convert dataclass instance to dictionary."""
         if is_dataclass(obj):
             result: Dict[str, Any] = {
-                field.name: getattr(obj, field.name)
-                for field in obj.__dataclass_fields__.values()
+                field.name: getattr(obj, field.name) for field in obj.__dataclass_fields__.values()
             }
             return result
         return obj  # type: ignore  # This should be a dict already
@@ -130,9 +129,7 @@ class BaseMockTable(ABC):
             # Optional[T] is Union[T, None], so filter out NoneType
             non_none_types = [arg for arg in args if arg is not type(None)]
             if non_none_types:
-                return cast(
-                    Type[Any], non_none_types[0]
-                )  # Return the first non-None type
+                return cast(Type[Any], non_none_types[0])  # Return the first non-None type
         return col_type
 
     def to_dataframe(self) -> pd.DataFrame:

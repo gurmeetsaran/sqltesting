@@ -185,9 +185,7 @@ class AthenaAdapter(DatabaseAdapter):
     ) -> tuple[str, Optional[str]]:
         """Wait for query to complete, returns final status and error info if failed."""
         for _ in range(max_retries):
-            response = self.client.get_query_execution(
-                QueryExecutionId=query_execution_id
-            )
+            response = self.client.get_query_execution(QueryExecutionId=query_execution_id)
             query_execution = response["QueryExecution"]
             status = query_execution["Status"]["State"]
 
@@ -204,9 +202,7 @@ class AthenaAdapter(DatabaseAdapter):
                     elif "AthenaError" in status_info:
                         athena_error = status_info["AthenaError"]
                         error_type = athena_error.get("ErrorType", "Unknown")
-                        error_message = athena_error.get(
-                            "ErrorMessage", "No details available"
-                        )
+                        error_message = athena_error.get("ErrorMessage", "No details available")
                         error_info = f"{error_type}: {error_message}"
 
                 return query_status, error_info
@@ -242,9 +238,7 @@ class AthenaAdapter(DatabaseAdapter):
                 # Handle Optional types
                 if hasattr(col_type, "__origin__") and col_type.__origin__ is Union:
                     # Extract the non-None type from Optional[T]
-                    non_none_types = [
-                        arg for arg in get_args(col_type) if arg is not type(None)
-                    ]
+                    non_none_types = [arg for arg in get_args(col_type) if arg is not type(None)]
                     if non_none_types:
                         col_type = non_none_types[0]
 
