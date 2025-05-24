@@ -141,9 +141,7 @@ class TestTrinoPhysicalTables(unittest.TestCase):
             self.assertGreaterEqual(len(ctas_calls), 1)
 
             # Verify the CTAS contains ORC format specification
-            self.assertTrue(
-                any("WITH (format = 'ORC')" in call[0][0] for call in ctas_calls)
-            )
+            self.assertTrue(any("WITH (format = 'ORC')" in call[0][0] for call in ctas_calls))
 
             # There should be no separate INSERT calls since we're using CTAS
             insert_calls = [

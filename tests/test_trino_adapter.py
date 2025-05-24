@@ -130,9 +130,7 @@ class TestTrinoAdapter(unittest.TestCase):
         mock_cursor.fetchall.assert_called_once()
 
         # Check DataFrame result
-        expected_df = pd.DataFrame(
-            [(1, "Test User"), (2, "Another User")], columns=["id", "name"]
-        )
+        expected_df = pd.DataFrame([(1, "Test User"), (2, "Another User")], columns=["id", "name"])
         pd.testing.assert_frame_equal(result_df, expected_df)
 
     def test_execute_query_non_select(self, mock_trino_connect):
@@ -176,9 +174,7 @@ class TestTrinoAdapter(unittest.TestCase):
         # Test numeric formatting
         self.assertEqual(adapter.format_value_for_cte(123, int), "123")
         self.assertEqual(adapter.format_value_for_cte(123.45, float), "123.45")
-        self.assertEqual(
-            adapter.format_value_for_cte(Decimal("123.45"), Decimal), "123.45"
-        )
+        self.assertEqual(adapter.format_value_for_cte(Decimal("123.45"), Decimal), "123.45")
 
         # Test boolean formatting
         self.assertEqual(adapter.format_value_for_cte(True, bool), "TRUE")
@@ -186,9 +182,7 @@ class TestTrinoAdapter(unittest.TestCase):
 
         # Test date/time formatting
         test_date = date(2023, 1, 15)
-        self.assertEqual(
-            adapter.format_value_for_cte(test_date, date), "DATE '2023-01-15'"
-        )
+        self.assertEqual(adapter.format_value_for_cte(test_date, date), "DATE '2023-01-15'")
         test_datetime = datetime(2023, 1, 15, 10, 30, 45)
         self.assertEqual(
             adapter.format_value_for_cte(test_datetime, datetime),
@@ -244,9 +238,7 @@ class TestTrinoAdapter(unittest.TestCase):
             table_name = adapter.create_temp_table(mock_table)
 
         # Check table name format (catalog.schema.table)
-        self.assertEqual(
-            table_name, f"{self.catalog}.{self.schema}.temp_users_1234567890123"
-        )
+        self.assertEqual(table_name, f"{self.catalog}.{self.schema}.temp_users_1234567890123")
 
         # Check execute_query calls - only one call for CTAS
         self.assertEqual(mock_cursor.execute.call_count, 1)
@@ -310,9 +302,7 @@ class TestTrinoAdapter(unittest.TestCase):
             table_name = adapter.create_temp_table(empty_mock_table)
 
         # Check table name format
-        self.assertEqual(
-            table_name, f"{self.catalog}.{self.schema}.temp_empty_users_1234567890123"
-        )
+        self.assertEqual(table_name, f"{self.catalog}.{self.schema}.temp_empty_users_1234567890123")
 
         # Check execute_query calls
         self.assertEqual(mock_cursor.execute.call_count, 1)
@@ -322,9 +312,7 @@ class TestTrinoAdapter(unittest.TestCase):
         create_sql = create_call[0][0]
 
         # Verify the SQL contains the expected elements for creating an empty table
-        self.assertIn(
-            f"CREATE TABLE {self.schema}.temp_empty_users_1234567890123", create_sql
-        )
+        self.assertIn(f"CREATE TABLE {self.schema}.temp_empty_users_1234567890123", create_sql)
         self.assertIn("WITH (format = 'ORC')", create_sql)
         self.assertIn('"id" BIGINT', create_sql)
         self.assertIn('"name" VARCHAR', create_sql)

@@ -137,15 +137,11 @@ class TrinoAdapter(DatabaseAdapter):
                 elif len(table_parts) == 2:
                     # schema.table format, use default catalog
                     schema, table = table_parts
-                    drop_query = (
-                        f'DROP TABLE IF EXISTS {self.catalog}.{schema}."{table}"'
-                    )
+                    drop_query = f'DROP TABLE IF EXISTS {self.catalog}.{schema}."{table}"'
                 else:
                     # Just table name, use default catalog and schema
                     table = full_table_name
-                    drop_query = (
-                        f'DROP TABLE IF EXISTS {self.catalog}.{self.schema}."{table}"'
-                    )
+                    drop_query = f'DROP TABLE IF EXISTS {self.catalog}.{self.schema}."{table}"'
 
                 self.execute_query(drop_query)
             except Exception as e:
@@ -212,9 +208,7 @@ class TrinoAdapter(DatabaseAdapter):
                 # Handle Optional types
                 if hasattr(col_type, "__origin__") and col_type.__origin__ is Union:
                     # Extract the non-None type from Optional[T]
-                    non_none_types = [
-                        arg for arg in get_args(col_type) if arg is not type(None)
-                    ]
+                    non_none_types = [arg for arg in get_args(col_type) if arg is not type(None)]
                     if non_none_types:
                         col_type = non_none_types[0]
 

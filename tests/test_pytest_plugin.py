@@ -148,9 +148,7 @@ credentials_path = /path/to/credentials.json
             decorator = SQLTestDecorator()
 
             # Mock _get_project_root to return our temp directory
-            with mock.patch.object(
-                decorator, "_get_project_root", return_value=temp_dir
-            ):
+            with mock.patch.object(decorator, "_get_project_root", return_value=temp_dir):
                 # First call should parse the file
                 config_parser1 = decorator._get_config_parser()
                 assert "sql_testing" in config_parser1

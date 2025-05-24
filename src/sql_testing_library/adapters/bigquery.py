@@ -68,9 +68,7 @@ class BigQueryAdapter(DatabaseAdapter):
         """Create temporary table in BigQuery."""
         import time
 
-        temp_table_name = (
-            f"temp_{mock_table.get_table_name()}_{int(time.time() * 1000)}"
-        )
+        temp_table_name = f"temp_{mock_table.get_table_name()}_{int(time.time() * 1000)}"
         table_id = f"{self.project_id}.{self.dataset_id}.{temp_table_name}"
 
         # Create table schema from mock table
@@ -84,9 +82,7 @@ class BigQueryAdapter(DatabaseAdapter):
         df = mock_table.to_dataframe()
         if not df.empty:
             job_config = bigquery.LoadJobConfig()
-            job = self.client.load_table_from_dataframe(
-                df, table, job_config=job_config
-            )
+            job = self.client.load_table_from_dataframe(df, table, job_config=job_config)
             job.result()  # Wait for job to complete
 
         return table_id
@@ -126,9 +122,7 @@ class BigQueryAdapter(DatabaseAdapter):
         """Get BigQuery-specific type converter."""
         return BigQueryTypeConverter()
 
-    def _get_bigquery_schema(
-        self, mock_table: BaseMockTable
-    ) -> List[bigquery.SchemaField]:
+    def _get_bigquery_schema(self, mock_table: BaseMockTable) -> List[bigquery.SchemaField]:
         """Convert mock table schema to BigQuery schema."""
         column_types = mock_table.get_column_types()
 
@@ -148,9 +142,7 @@ class BigQueryAdapter(DatabaseAdapter):
             # Handle Optional types
             if hasattr(col_type, "__origin__") and col_type.__origin__ is Union:
                 # Extract the non-None type from Optional[T]
-                non_none_types = [
-                    arg for arg in get_args(col_type) if arg is not type(None)
-                ]
+                non_none_types = [arg for arg in get_args(col_type) if arg is not type(None)]
                 if non_none_types:
                     col_type = non_none_types[0]
 

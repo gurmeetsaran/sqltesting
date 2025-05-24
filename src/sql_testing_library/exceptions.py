@@ -17,8 +17,7 @@ class MockTableNotFoundError(SQLTestingError):
         self.available_mocks = available_mocks
         available_list = ", ".join(available_mocks) if available_mocks else "None"
         super().__init__(
-            f"Mock table not found: '{qualified_table_name}'. "
-            f"Available: {available_list}"
+            f"Mock table not found: '{qualified_table_name}'. Available: {available_list}"
         )
 
 
@@ -52,6 +51,5 @@ class TypeConversionError(SQLTestingError):
         self.target_type = target_type
         self.column_name = column_name
         super().__init__(
-            f"Cannot convert '{value}' to {target_type.__name__} "
-            f"for column '{column_name}'"
+            f"Cannot convert '{value}' to {target_type.__name__} for column '{column_name}'"
         )

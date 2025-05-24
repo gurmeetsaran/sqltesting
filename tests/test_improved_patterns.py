@@ -142,9 +142,7 @@ class TestImprovedPatterns(unittest.TestCase):
     def test_pattern_3_mix_and_match(self):
         """Pattern 3: Mix and match decorator and TestCase values."""
 
-        @sql_test(
-            mock_tables=[UsersMockTable(test_users), OrdersMockTable(test_orders)]
-        )
+        @sql_test(mock_tables=[UsersMockTable(test_users), OrdersMockTable(test_orders)])
         def execute_test():
             return TestCase(
                 query="""
