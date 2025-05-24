@@ -1,0 +1,219 @@
+name: BigQuery Integration Tests
+
+on:
+  pull_request:
+    branches: [master, main]
+    paths:
+      - 'src/sql_testing_library/adapters/bigquery.py'
+      - 'src/sql_testing_library/core.py'
+      - 'src/sql_testing_library/mock_table.py'
+      - 'tests/test_bigquery*.py'
+      - 'tests/integration/test_bigquery_integration.py'
+      - '.github/workflows/bigquery-integration.yml'
+  push:
+    branches: [master, main]
+  workflow_dispatch:  # Allow manual trigger
+
+env:
+  PYTHON_VERSION: '3.10'
+
+jobs:
+
+  real-integration:
+    name: Real BigQuery Integration Tests
+    runs-on: ubuntu-latest
+    if: |
+      (github.event_name == 'push' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main')) ||
+      (github.event_name == 'pull_request') ||
+      (github.event_name == 'workflow_dispatch')
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ env.PYTHON_VERSION }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install dependencies
+        run: |
+          python -m pip install -U pip poetry
+          poetry install --with bigquery
+
+      - name: Validate GCP credentials and configuration
+        env:
+          GCP_SA_KEY: ${{ secrets.GCP_SA_KEY }}
+          GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+          BIGQUERY_DATABASE: ${{ vars.BIGQUERY_DATABASE || 'sqltesting' }}
+        run: |
+          if [ -z "$GCP_SA_KEY" ] || [ -z "$GCP_PROJECT_ID" ]; then
+            echo "❌ GCP credentials not configured in GitHub secrets"
+            echo "Please add the following secrets to your repository:"
+            echo "- GCP_SA_KEY (secret) - Service Account JSON key"
+            echo "- GCP_PROJECT_ID (secret) - GCP Project ID"
+            echo ""
+            echo "Please add the following variables to your repository (optional):"
+            echo "- BIGQUERY_DATABASE (variable, defaults to 'sqltesting')"
+            exit 1
+          fi
+          echo "✅ GCP credentials and configuration validated"
+
+      - name: Set up Google Cloud credentials
+        env:
+          GCP_SA_KEY: ${{ secrets.GCP_SA_KEY }}
+          GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+          BIGQUERY_DATABASE: ${{ vars.BIGQUERY_DATABASE || 'sqltesting' }}
+        run: |
+          # Set up GCP credentials file
+          echo "$GCP_SA_KEY" > gcp-key.json
+          export GOOGLE_APPLICATION_CREDENTIALS=$(pwd)/gcp-key.json
+
+          # Set environment variables for the workflow
+          echo "GOOGLE_APPLICATION_CREDENTIALS=${GOOGLE_APPLICATION_CREDENTIALS}" >> $GITHUB_ENV
+          echo "BIGQUERY_PROJECT_ID=${GCP_PROJECT_ID}" >> $GITHUB_ENV
+          echo "BIGQUERY_DATABASE=${BIGQUERY_DATABASE}" >> $GITHUB_ENV
+
+          # Generate pytest.ini file for BigQuery integration tests
+          echo "[sql_testing]" > pytest.ini
+          echo "adapter = bigquery" >> pytest.ini
+          echo "project_id = ${GCP_PROJECT_ID}" >> pytest.ini
+          echo "dataset_id = ${BIGQUERY_DATABASE}" >> pytest.ini
+          echo "credentials_path = ${GOOGLE_APPLICATION_CREDENTIALS}" >> pytest.ini
+
+      - name: Test BigQuery connectivity
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ env.GOOGLE_APPLICATION_CREDENTIALS }}
+          BIGQUERY_PROJECT_ID: ${{ env.BIGQUERY_PROJECT_ID }}
+        run: |
+          poetry run python -c "
+          from google.cloud import bigquery
+          import os
+          try:
+              client = bigquery.Client(project=os.getenv('BIGQUERY_PROJECT_ID'))
+              # Test basic connectivity by listing datasets
+              datasets = list(client.list_datasets(max_results=1))
+              print('✅ Successfully connected to BigQuery')
+          except Exception as e:
+              print(f'❌ Failed to connect to BigQuery: {e}')
+              exit(1)
+          "
+
+      - name: Create test dataset if not exists
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ env.GOOGLE_APPLICATION_CREDENTIALS }}
+          BIGQUERY_PROJECT_ID: ${{ env.BIGQUERY_PROJECT_ID }}
+          BIGQUERY_DATABASE: ${{ env.BIGQUERY_DATABASE }}
+        run: |
+          poetry run python -c "
+          from google.cloud import bigquery
+          from google.cloud.exceptions import NotFound
+          import os
+
+          client = bigquery.Client(project=os.getenv('BIGQUERY_PROJECT_ID'))
+          dataset_id = f\"{os.getenv('BIGQUERY_PROJECT_ID')}.{os.getenv('BIGQUERY_DATABASE')}\"
+
+          try:
+              client.get_dataset(dataset_id)
+              print(f'✅ Dataset {dataset_id} already exists')
+          except NotFound:
+              dataset = bigquery.Dataset(dataset_id)
+              dataset.location = 'US'
+              dataset.description = 'Test dataset for SQL testing library integration tests'
+              client.create_dataset(dataset, timeout=30)
+              print(f'✅ Created dataset {dataset_id}')
+          except Exception as e:
+              print(f'❌ Failed to create/verify dataset: {e}')
+              exit(1)
+          "
+
+      - name: Run BigQuery integration tests
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ env.GOOGLE_APPLICATION_CREDENTIALS }}
+          BIGQUERY_PROJECT_ID: ${{ env.BIGQUERY_PROJECT_ID }}
+          BIGQUERY_DATABASE: ${{ env.BIGQUERY_DATABASE }}
+        run: |
+          # Run only tests marked with both 'integration' and 'bigquery' markers
+          poetry run pytest -v \
+            --tb=short \
+            --maxfail=3 \
+            -m "integration and bigquery" \
+            --durations=10
+
+      - name: Cleanup test resources
+        if: always()
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ env.GOOGLE_APPLICATION_CREDENTIALS }}
+          BIGQUERY_PROJECT_ID: ${{ env.BIGQUERY_PROJECT_ID }}
+          BIGQUERY_DATABASE: ${{ env.BIGQUERY_DATABASE }}
+        run: |
+          poetry run python -c "
+          from google.cloud import bigquery
+          import os
+          import time
+
+          print('🧹 Cleaning up test resources...')
+          client = bigquery.Client(project=os.getenv('BIGQUERY_PROJECT_ID'))
+          dataset_id = f\"{os.getenv('BIGQUERY_PROJECT_ID')}.{os.getenv('BIGQUERY_DATABASE')}\"
+
+          try:
+              # List and delete any tables created during tests
+              dataset = client.get_dataset(dataset_id)
+              tables = list(client.list_tables(dataset))
+
+              for table in tables:
+                  try:
+                      # Only delete tables that look like test tables
+                      if 'test' in table.table_id.lower() or 'mock' in table.table_id.lower():
+                          client.delete_table(table, not_found_ok=True)
+                          print(f'🗑️  Deleted test table: {table.table_id}')
+                  except Exception as e:
+                      print(f'⚠️  Could not delete table {table.table_id}: {e}')
+
+              # Cancel any running jobs from this test run
+              jobs = client.list_jobs(max_results=50, state_filter='RUNNING')
+              for job in jobs:
+                  try:
+                      if job.job_type == 'query' and 'test' in str(job.query).lower():
+                          job.cancel()
+                          print(f'🛑 Cancelled job: {job.job_id}')
+                  except Exception as e:
+                      print(f'⚠️  Could not cancel job {job.job_id}: {e}')
+
+              print('✅ Cleanup completed')
+          except Exception as e:
+              print(f'⚠️  Cleanup failed: {e}')
+          "
+
+      - name: Clean up credentials
+        if: always()
+        run: |
+          rm -f gcp-key.json
+
+  test-summary:
+    name: Test Summary
+    runs-on: ubuntu-latest
+    needs: real-integration
+    if: always()
+    steps:
+      - name: Test Summary
+        run: |
+          echo "## 🧪 BigQuery Integration Test Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "ℹ️ Unit tests are covered by the main test workflow" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          if [ "${{ needs.real-integration.result }}" == "success" ]; then
+            echo "✅ Real BigQuery Integration Tests: Passed" >> $GITHUB_STEP_SUMMARY
+          elif [ "${{ needs.real-integration.result }}" == "failure" ]; then
+            echo "❌ Real BigQuery Integration Tests: Failed" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "⏭️ Real BigQuery Integration Tests: Skipped" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Trigger**: ${{ github.event_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Branch**: ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ github.event_name }}" == "pull_request" ]; then
+            echo "**PR**: #${{ github.event.number }}" >> $GITHUB_STEP_SUMMARY
+          fi
