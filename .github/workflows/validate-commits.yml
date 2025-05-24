@@ -1,0 +1,41 @@
+name: Check commit message
+
+on:
+  pull_request:
+    types:
+      - opened
+      - reopened
+      - synchronize
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+
+      - name: Setup python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Check all commit messages in PR
+        run: |
+          python -m pip install -U pip commitizen
+
+          # Get all commits in the PR
+          git log --format="%H" origin/master..HEAD | while read commit; do
+            echo "Checking commit: $commit"
+            message=$(git show -s --format=%s $commit)
+            echo "Message: $message"
+            if ! cz check -m "$message"; then
+              echo "❌ Invalid commit message: $message"
+              exit 1
+            else
+              echo "✅ Valid commit message: $message"
+            fi
+          done
+
+          echo "🎉 All commit messages follow conventional commits format!"

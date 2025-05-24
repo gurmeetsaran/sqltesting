@@ -26,3 +26,9 @@ repos:
           - types-setuptools
         args: ["--ignore-missing-imports", "--disallow-untyped-defs", "--disallow-incomplete-defs"]
         exclude: ^tests/
+
+-   repo: https://github.com/compilerla/conventional-pre-commit
+    rev: v3.0.0
+    hooks:
+    -   id: conventional-pre-commit
+        stages: [commit-msg]
