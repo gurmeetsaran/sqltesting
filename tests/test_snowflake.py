@@ -40,7 +40,7 @@ class TestSnowflakeBasic(unittest.TestCase):
 
         # Mock execute response - first for the CTE query, then for table cleanup
         def execute_side_effect(query):
-            if "WITH data AS" in query:
+            if "WITH test_db__users AS" in query:
                 mock_cursor.description = [("id",), ("name",), ("active",)]
                 mock_cursor.fetchall.return_value = [
                     (1, "Alice", True),
@@ -83,9 +83,7 @@ class TestSnowflakeBasic(unittest.TestCase):
         """
 
         # Create mock table with dictionaries instead of classes
-        user_dicts = [
-            {"id": user.id, "name": user.name, "active": user.active} for user in users
-        ]
+        user_dicts = [{"id": user.id, "name": user.name, "active": user.active} for user in users]
 
         class UserMockTable(BaseMockTable):
             def get_database_name(self) -> str:
@@ -109,7 +107,7 @@ class TestSnowflakeBasic(unittest.TestCase):
         # Verify query execution
         self.assertTrue(mock_cursor.execute.called)
         query_arg = mock_cursor.execute.call_args_list[0][0][0]
-        self.assertIn("WITH data AS", query_arg)
+        self.assertIn("WITH test_db__users AS", query_arg)
 
         # Check result format
         self.assertIsInstance(result, pd.DataFrame)
@@ -166,9 +164,7 @@ class TestSnowflakeBasic(unittest.TestCase):
         """
 
         # Create mock table with dictionaries instead of classes
-        user_dicts = [
-            {"id": user.id, "name": user.name, "active": user.active} for user in users
-        ]
+        user_dicts = [{"id": user.id, "name": user.name, "active": user.active} for user in users]
 
         class UserMockTable(BaseMockTable):
             def get_database_name(self) -> str:

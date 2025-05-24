@@ -99,18 +99,20 @@ exclude = [
     "dist",
     "node_modules",
     "venv",
+    "scripts/validate-athena-setup.py",
 ]
 
 [tool.ruff.lint]
 # Enable Pyflakes and pycodestyle rules.
 select = ["E", "F", "I"]
-# Enable flake8-bugbear rules.
-extend-select = ["B"]
+# Enable flake8-bugbear rules and print statement detection.
+extend-select = ["B", "T20"]
 # Allow unused variables when underscore-prefixed.
 dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
 # Allow autofix for all enabled rules (when `--fix`) is provided.
 fixable = ["ALL"]
-unfixable = []
+# Prevent autofix of print statements - they should be manually reviewed and removed.
+unfixable = ["T201", "T203"]
 
 [tool.ruff.lint.isort]
 lines-after-imports = 2

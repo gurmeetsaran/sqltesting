@@ -2,7 +2,8 @@
 
 A Python library for testing SQL queries with mock data injection across Athena, BigQuery, Redshift, Trino, and Snowflake.
 
-[![Tests](https://github.com/gurmeetsaran/sqltesting/actions/workflows/tests.yaml/badge.svg)](https://github.com/gurmeetsaran/sqltesting/actions/workflows/tests.yaml)
+[![Unit Tests](https://github.com/gurmeetsaran/sqltesting/actions/workflows/tests.yaml/badge.svg)](https://github.com/gurmeetsaran/sqltesting/actions/workflows/tests.yaml)
+[![Athena Integration](https://github.com/gurmeetsaran/sqltesting/actions/workflows/athena-integration.yml/badge.svg)](https://github.com/gurmeetsaran/sqltesting/actions/workflows/athena-integration.yml)
 [![GitHub license](https://img.shields.io/github/license/gurmeetsaran/sqltesting.svg)](https://github.com/gurmeetsaran/sqltesting/blob/master/LICENSE)
 [![codecov](https://codecov.io/gh/gurmeetsaran/sqltesting/branch/master/graph/badge.svg?token=CN3G5X5ZA5)](https://codecov.io/gh/gurmeetsaran/sqltesting)
 ![python version](https://img.shields.io/badge/python-3.9%2B-yellowgreen)
@@ -16,6 +17,7 @@ A Python library for testing SQL queries with mock data injection across Athena,
 
 ## Installation
 
+### For End Users (pip)
 ```bash
 # Install with BigQuery support
 pip install sql-testing-library[bigquery]
@@ -34,6 +36,21 @@ pip install sql-testing-library[snowflake]
 
 # Or install with all database adapters
 pip install sql-testing-library[all]
+```
+
+### For Development (poetry)
+```bash
+# Install base dependencies
+poetry install
+
+# Install with specific database support
+poetry install --with bigquery
+poetry install --with athena
+poetry install --with redshift
+poetry install --with trino
+
+# Install with all database adapters and dev tools
+poetry install --with bigquery,athena,redshift,trino,dev
 ```
 
 ## Quick Start
@@ -319,7 +336,8 @@ To set up the development environment:
 
 1. Install development dependencies:
    ```bash
-   poetry install --with dev
+   # Install all dependencies including database adapters and dev tools
+   poetry install --with bigquery,athena,redshift,trino,dev
    ```
 
 2. Set up pre-commit hooks:
@@ -330,6 +348,30 @@ To set up the development environment:
 This ensures code is automatically formatted, linted, and type-checked on commit.
 
 For more information on code quality standards, see [docs/linting.md](docs/linting.md).
+
+## CI/CD Integration
+
+The library includes GitHub Actions workflows for automated testing:
+
+### Athena Integration Tests
+Automatically runs on every PR and merge to master:
+- **Unit Tests**: Mock-based tests in `tests/` (free)
+- **Integration Tests**: Real AWS Athena tests in `tests/integration/` (minimal cost)
+- **Cleanup**: Automatic resource cleanup
+
+#### Setup Guide
+1. **Configure GitHub Secrets & Variables** (see [Setup Guide](.github/ATHENA_CICD_SETUP.md)):
+   - **Secrets**: `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_ATHENA_OUTPUT_LOCATION`
+   - **Variables**: `AWS_ATHENA_DATABASE`, `AWS_REGION` (optional)
+
+2. **Validate Setup**:
+   ```bash
+   python scripts/validate-athena-setup.py
+   ```
+
+3. **Monitor Results**: Check GitHub Actions tab for test results
+
+**Cost**: ~$0.05 per test run. For cost optimization after release, see the [setup guide](.github/ATHENA_CICD_SETUP.md).
 
 ## Documentation
 

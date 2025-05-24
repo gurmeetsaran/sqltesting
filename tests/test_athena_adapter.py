@@ -154,7 +154,7 @@ class TestAthenaAdapter(unittest.TestCase):
         test_datetime = datetime(2023, 1, 15, 10, 30, 45)
         self.assertEqual(
             adapter.format_value_for_cte(test_datetime, datetime),
-            "TIMESTAMP '2023-01-15T10:30:45'",
+            "TIMESTAMP '2023-01-15 10:30:45'",
         )
 
         # Test None

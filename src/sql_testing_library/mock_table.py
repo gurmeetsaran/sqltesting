@@ -2,7 +2,18 @@
 
 from abc import ABC, abstractmethod
 from dataclasses import is_dataclass
-from typing import Any, Dict, List, get_type_hints
+from typing import (
+    Any,
+    Dict,
+    List,
+    Optional,
+    Type,
+    Union,
+    cast,
+    get_args,
+    get_origin,
+    get_type_hints,
+)
 
 import pandas as pd
 
@@ -17,6 +28,13 @@ class BaseMockTable(ABC):
         Args:
             data: List of dataclass instances or dictionaries
         """
+        # Store the original dataclass type if available for type hints
+        self._original_dataclass: Optional[Type[Any]]
+        if data and is_dataclass(data[0]):
+            self._original_dataclass = type(data[0])
+        else:
+            self._original_dataclass = None
+
         self.data = self._normalize_data(data)
 
     def _normalize_data(self, data: List[Any]) -> List[Dict[str, Any]]:
@@ -52,23 +70,70 @@ class BaseMockTable(ABC):
         """Return the fully qualified table name."""
         return f"{self.get_database_name()}.{self.get_table_name()}"
 
-    def get_column_types(self) -> Dict[str, type]:
+    def get_column_types(self) -> Dict[str, Type[Any]]:
         """
-        Extract column types from the dataclass type hints.
+        Extract column types from the dataclass type hints or infer from pandas dtypes.
         Returns a mapping of column name to Python type.
         """
         if not self.data:
             return {}
 
-        # Get the original dataclass if available
-        sample_item = self.data[0]
-        if hasattr(self, "_original_dataclass"):
-            return get_type_hints(self._original_dataclass)
+        # Try to get types from dataclass type hints first
+        if hasattr(self, "_original_dataclass") and self._original_dataclass:
+            type_hints = get_type_hints(self._original_dataclass)
+            # Unwrap Optional types (Union[T, None] -> T)
+            unwrapped_types = {}
+            for col_name, col_type in type_hints.items():
+                unwrapped_types[col_name] = self._unwrap_optional_type(col_type)
+            return unwrapped_types
 
-        # Fallback: infer from data values
-        return {
-            key: type(value) for key, value in sample_item.items() if value is not None
+        # Fallback: infer from pandas dtypes (handles nulls better)
+        df = self.to_dataframe()
+        type_mapping: Dict[str, Type[Any]] = {
+            "object": str,
+            "int64": int,
+            "float64": float,
+            "bool": bool,
         }
+
+        column_types: Dict[str, Type[Any]] = {}
+        for col_name, dtype in df.dtypes.items():
+            dtype_str = str(dtype)
+
+            # Handle special cases
+            if dtype_str.startswith("datetime64"):
+                from datetime import datetime
+
+                column_types[col_name] = datetime
+            elif dtype_str.startswith("timedelta"):
+                from datetime import timedelta
+
+                column_types[col_name] = timedelta
+            elif dtype_str in type_mapping:
+                column_types[col_name] = type_mapping[dtype_str]
+            else:
+                # For object dtype, try to infer from non-null values
+                non_null_values = df[col_name].dropna()
+                if not non_null_values.empty:
+                    sample_value = non_null_values.iloc[0]
+                    column_types[col_name] = type(sample_value)
+                else:
+                    column_types[col_name] = str  # Default to string
+
+        return column_types
+
+    def _unwrap_optional_type(self, col_type: Type[Any]) -> Type[Any]:
+        """Unwrap Optional[T] to T, leave other types unchanged."""
+        # Check if this is a Union type (which Optional[T] is)
+        if get_origin(col_type) is Union:
+            args = get_args(col_type)
+            # Optional[T] is Union[T, None], so filter out NoneType
+            non_none_types = [arg for arg in args if arg is not type(None)]
+            if non_none_types:
+                return cast(
+                    Type[Any], non_none_types[0]
+                )  # Return the first non-None type
+        return col_type
 
     def to_dataframe(self) -> pd.DataFrame:
         """Convert mock data to pandas DataFrame."""

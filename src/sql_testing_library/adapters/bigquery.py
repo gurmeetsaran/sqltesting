@@ -1,5 +1,6 @@
 """BigQuery adapter implementation."""
 
+import logging
 from datetime import date, datetime
 from decimal import Decimal
 from typing import Any, List, Optional, Type, Union, get_args
@@ -96,7 +97,7 @@ class BigQueryAdapter(DatabaseAdapter):
             try:
                 self.client.delete_table(table_name)
             except Exception as e:
-                print(f"Warning: Failed to delete table {table_name}: {e}")
+                logging.warning(f"Warning: Failed to delete table {table_name}: {e}")
 
     def format_value_for_cte(self, value: Any, column_type: type) -> str:
         """Format value for BigQuery CTE VALUES clause."""

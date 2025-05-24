@@ -10,7 +10,7 @@ import pytest
 from _pytest.nodes import Item
 
 from .adapters.base import DatabaseAdapter
-from .core import AdapterType, SQLTestFramework, TestCase
+from .core import AdapterType, SQLTestCase, SQLTestFramework
 from .mock_table import BaseMockTable
 
 
@@ -21,24 +21,20 @@ class SQLTestDecorator:
     """Manages SQL test decoration and execution."""
 
     def __init__(self) -> None:
-        self._framework: Optional[SQLTestFramework] = None
         self._config: Optional[Dict[str, str]] = None
         self._project_root: Optional[str] = None
         self._config_parser: Optional[configparser.ConfigParser] = None
 
-    def get_framework(
-        self, adapter_type: Optional[AdapterType] = None
-    ) -> SQLTestFramework:
+    def get_framework(self, adapter_type: Optional[AdapterType] = None) -> SQLTestFramework:
         """
-        Get or create SQL test framework from configuration.
+        Create a fresh SQL test framework from configuration.
 
         Args:
             adapter_type: Optional adapter type to use. If provided, this will use
                           configuration from [sql_testing.{adapter_type}] section.
         """
-        if adapter_type is not None or self._framework is None:
-            self._framework = self._create_framework_from_config(adapter_type)
-        return self._framework
+        # Always create a fresh framework - no caching to avoid test isolation issues
+        return self._create_framework_from_config(adapter_type)
 
     def _create_framework_from_config(
         self, adapter_type: Optional[AdapterType] = None
@@ -76,8 +72,7 @@ class SQLTestDecorator:
 
             if not project_id or not dataset_id:
                 raise ValueError(
-                    "BigQuery adapter requires 'project_id' and 'dataset_id' "
-                    "in configuration"
+                    "BigQuery adapter requires 'project_id' and 'dataset_id' in configuration"
                 )
 
             database_adapter = BigQueryAdapter(
@@ -96,8 +91,7 @@ class SQLTestDecorator:
 
             if not database or not s3_output_location:
                 raise ValueError(
-                    "Athena adapter requires 'database' and 's3_output_location' "
-                    "in configuration"
+                    "Athena adapter requires 'database' and 's3_output_location' in configuration"
                 )
 
             database_adapter = AthenaAdapter(
@@ -276,9 +270,7 @@ class SQLTestDecorator:
             )
             raise ValueError(msg)
 
-    def _load_adapter_config(
-        self, adapter_type: Optional[AdapterType] = None
-    ) -> Dict[str, str]:
+    def _load_adapter_config(self, adapter_type: Optional[AdapterType] = None) -> Dict[str, str]:
         """
         Load adapter-specific configuration.
 
@@ -316,28 +308,28 @@ def sql_test(
     result_class: Optional[Type[T]] = None,
     use_physical_tables: Optional[bool] = None,
     adapter_type: Optional[AdapterType] = None,
-) -> Callable[[Callable[[], TestCase[T]]], Callable[[], List[T]]]:
+) -> Callable[[Callable[[], SQLTestCase[T]]], Callable[[], List[T]]]:
     """
     Decorator to mark a function as a SQL test.
 
-    The decorator parameters will override any values specified in the TestCase returned
+    The decorator parameters will override any values specified in the SQLTestCase returned
     by the decorated function. If a parameter is not provided to the decorator, the
-    TestCase's value will be used.
+    SQLTestCase's value will be used.
 
     Args:
         mock_tables: Optional list of mock table objects to inject.
-                     If provided, overrides mock_tables in TestCase.
+                     If provided, overrides mock_tables in SQLTestCase.
         result_class: Optional Pydantic model class for deserializing results.
-                      If provided, overrides result_class in TestCase.
+                      If provided, overrides result_class in SQLTestCase.
         use_physical_tables: Optional flag to use physical tables instead of CTEs.
-                            If provided, overrides use_physical_tables in TestCase.
+                            If provided, overrides use_physical_tables in SQLTestCase.
         adapter_type: Optional adapter type to use for this test
                      (e.g., 'bigquery', 'athena').
-                     If provided, overrides adapter_type in TestCase and uses config
+                     If provided, overrides adapter_type in SQLTestCase and uses config
                      from [sql_testing.{adapter_type}] section.
     """
 
-    def decorator(func: Callable[[], TestCase[T]]) -> Callable[[], List[T]]:
+    def decorator(func: Callable[[], SQLTestCase[T]]) -> Callable[[], List[T]]:
         # Check for multiple sql_test decorators
         if hasattr(func, "_sql_test_decorated"):
             raise ValueError(
@@ -350,10 +342,10 @@ def sql_test(
             # Execute the test function to get the TestCase
             test_case = func()
 
-            # Validate that function returns a TestCase
-            if not isinstance(test_case, TestCase):
+            # Validate that function returns a SQLTestCase
+            if not isinstance(test_case, SQLTestCase):
                 raise TypeError(
-                    f"Function {func.__name__} must return a TestCase instance, "
+                    f"Function {func.__name__} must return a SQLTestCase instance, "
                     f"got {type(test_case)}"
                 )
 

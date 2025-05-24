@@ -7,7 +7,7 @@ from unittest import mock
 import pandas as pd
 
 from sql_testing_library.adapters.snowflake import SnowflakeAdapter
-from sql_testing_library.core import SQLTestFramework, TestCase
+from sql_testing_library.core import SQLTestCase, SQLTestFramework
 from sql_testing_library.mock_table import BaseMockTable
 
 
@@ -21,9 +21,7 @@ def mock_table(data):
                 return "test_db"
 
             def get_table_name(self) -> str:
-                if hasattr(data[0], "__class__") and hasattr(
-                    data[0].__class__, "__name__"
-                ):
+                if hasattr(data[0], "__class__") and hasattr(data[0].__class__, "__name__"):
                     return data[0].__class__.__name__.lower() + "s"
                 return "test_table"
 
@@ -124,7 +122,7 @@ class TestSnowflakePhysicalTables(unittest.TestCase):
                 return "persons"
 
         # Create a test case
-        test_case = TestCase(
+        test_case = SQLTestCase(
             query=sql,
             execution_database="test_db",
             mock_tables=[PersonMockTable(person_dicts)],
@@ -138,9 +136,7 @@ class TestSnowflakePhysicalTables(unittest.TestCase):
             resolved_tables = tester._resolve_table_names(
                 referenced_tables, test_case.execution_database
             )
-            table_mapping = tester._create_table_mapping(
-                resolved_tables, test_case.mock_tables
-            )
+            table_mapping = tester._create_table_mapping(resolved_tables, test_case.mock_tables)
             final_query = tester._execute_with_physical_tables(
                 test_case.query, table_mapping, test_case.mock_tables
             )
@@ -161,9 +157,7 @@ class TestSnowflakePhysicalTables(unittest.TestCase):
 
         # Check that a cleanup was performed
         drop_calls = [
-            call
-            for call in mock_cursor.execute.call_args_list
-            if "DROP TABLE" in call[0][0]
+            call for call in mock_cursor.execute.call_args_list if "DROP TABLE" in call[0][0]
         ]
         self.assertEqual(len(drop_calls), 1)
 
@@ -190,9 +184,7 @@ class TestSnowflakePhysicalTables(unittest.TestCase):
 
         # Create an extended Person class with department_id
         class PersonWithDept(Person):
-            def __init__(
-                self, id: int, name: str, dob: date, active: bool, dept_id: int
-            ) -> None:
+            def __init__(self, id: int, name: str, dob: date, active: bool, dept_id: int) -> None:
                 super().__init__(id, name, dob, active)
                 self.dept_id = dept_id
 
@@ -274,7 +266,7 @@ class TestSnowflakePhysicalTables(unittest.TestCase):
                 return "departments"
 
         # Create a test case
-        test_case = TestCase(
+        test_case = SQLTestCase(
             query=sql,
             execution_database="test_db",
             mock_tables=[
@@ -290,9 +282,7 @@ class TestSnowflakePhysicalTables(unittest.TestCase):
         resolved_tables = tester._resolve_table_names(
             referenced_tables, test_case.execution_database
         )
-        table_mapping = tester._create_table_mapping(
-            resolved_tables, test_case.mock_tables
-        )
+        table_mapping = tester._create_table_mapping(resolved_tables, test_case.mock_tables)
         final_query = tester._execute_with_physical_tables(
             test_case.query, table_mapping, test_case.mock_tables
         )
@@ -301,9 +291,7 @@ class TestSnowflakePhysicalTables(unittest.TestCase):
         # Verify results
         self.assertIsInstance(result, pd.DataFrame)
         self.assertEqual(len(result), 3)
-        self.assertEqual(
-            list(result.columns), ["person_id", "person_name", "department_name"]
-        )
+        self.assertEqual(list(result.columns), ["person_id", "person_name", "department_name"])
 
         # Check that CTAS statements were executed for both tables
         ctas_calls = [
@@ -315,9 +303,7 @@ class TestSnowflakePhysicalTables(unittest.TestCase):
 
         # Check that cleanup was performed for both tables
         drop_calls = [
-            call
-            for call in mock_cursor.execute.call_args_list
-            if "DROP TABLE" in call[0][0]
+            call for call in mock_cursor.execute.call_args_list if "DROP TABLE" in call[0][0]
         ]
         self.assertEqual(len(drop_calls), 2)
 

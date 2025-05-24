@@ -223,8 +223,8 @@ class TestBigQueryAdapter(unittest.TestCase):
         mock_client.delete_table.side_effect = Exception("Table not found")
         mock_bigquery_client.return_value = mock_client
 
-        # Mock print to verify warning
-        with mock.patch("builtins.print") as mock_print:
+        # Mock logging to verify warning
+        with mock.patch("logging.warning") as mock_warning:
             adapter = BigQueryAdapter(
                 project_id=self.project_id,
                 dataset_id=self.dataset_id,
@@ -237,10 +237,11 @@ class TestBigQueryAdapter(unittest.TestCase):
             # Verify delete_table was called
             mock_client.delete_table.assert_called_once_with(table_name)
 
-            # Verify warning was printed
-            mock_print.assert_called_once()
-            self.assertIn("Warning", mock_print.call_args[0][0])
-            self.assertIn("Failed to delete table", mock_print.call_args[0][0])
+            # Verify warning was logged
+            mock_warning.assert_called_once()
+            warning_message = mock_warning.call_args[0][0]
+            self.assertIn("Warning: Failed to delete table", warning_message)
+            self.assertIn(table_name, warning_message)
 
 
 class TestBigQueryTypeConverter(unittest.TestCase):
