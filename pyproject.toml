@@ -95,6 +95,7 @@ exclude = [
     "dist",
     "node_modules",
     "venv",
+    "scripts/validate-athena-setup.py",
 ]
 
 [tool.ruff.lint]

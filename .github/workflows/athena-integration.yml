@@ -1,0 +1,173 @@
+name: Athena Integration Tests
+
+on:
+  pull_request:
+    branches: [master, main]
+    paths:
+      - 'src/sql_testing_library/adapters/athena.py'
+      - 'src/sql_testing_library/core.py'
+      - 'src/sql_testing_library/mock_table.py'
+      - 'tests/test_athena*.py'
+      - 'tests/integration/test_athena_integration.py'
+      - '.github/workflows/athena-integration.yml'
+  push:
+    branches: [master, main]
+  workflow_dispatch:  # Allow manual trigger
+
+env:
+  PYTHON_VERSION: '3.10'
+
+jobs:
+
+  real-integration:
+    name: Real Athena Integration Tests
+    runs-on: ubuntu-latest
+    if: |
+      (github.event_name == 'push' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main')) ||
+      (github.event_name == 'pull_request') ||
+      (github.event_name == 'workflow_dispatch')
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ env.PYTHON_VERSION }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install dependencies
+        run: |
+          python -m pip install -U pip poetry
+          poetry install --with athena
+
+      - name: Validate AWS credentials and configuration
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_ATHENA_DATABASE: ${{ vars.AWS_ATHENA_DATABASE }}
+          AWS_ATHENA_OUTPUT_LOCATION: ${{ secrets.AWS_ATHENA_OUTPUT_LOCATION }}
+          AWS_REGION: ${{ vars.AWS_REGION || 'us-west-2' }}
+        run: |
+          if [ -z "$AWS_ACCESS_KEY_ID" ] || [ -z "$AWS_SECRET_ACCESS_KEY" ]; then
+            echo "❌ AWS credentials not configured in GitHub secrets"
+            echo "Please add the following secrets to your repository:"
+            echo "- AWS_ACCESS_KEY_ID (secret)"
+            echo "- AWS_SECRET_ACCESS_KEY (secret)"
+            echo "- AWS_ATHENA_OUTPUT_LOCATION (secret)"
+            echo ""
+            echo "Please add the following variables to your repository:"
+            echo "- AWS_ATHENA_DATABASE (variable)"
+            echo "- AWS_REGION (variable, optional, defaults to us-west-2)"
+            exit 1
+          fi
+          echo "✅ AWS credentials and configuration validated"
+
+      - name: Test AWS connectivity
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_REGION: ${{ vars.AWS_REGION || 'us-west-2' }}
+        run: |
+          poetry run python -c "
+          import boto3
+          try:
+              client = boto3.client('athena', region_name='${{ vars.AWS_REGION || 'us-west-2' }}')
+              client.list_work_groups()
+              print('✅ Successfully connected to AWS Athena')
+          except Exception as e:
+              print(f'❌ Failed to connect to AWS Athena: {e}')
+              exit(1)
+          "
+
+      - name: Set up Athena configuration
+        env:
+          AWS_ATHENA_DATABASE: ${{ vars.AWS_ATHENA_DATABASE }}
+          AWS_ATHENA_OUTPUT_LOCATION: ${{ secrets.AWS_ATHENA_OUTPUT_LOCATION }}
+          AWS_REGION: ${{ vars.AWS_REGION || 'us-west-2' }}
+        run: |
+          # Generate pytest.ini file for Athena integration tests
+          echo "[sql_testing]" > pytest.ini
+          echo "adapter = athena" >> pytest.ini
+          echo "database = ${AWS_ATHENA_DATABASE}" >> pytest.ini
+          echo "s3_output_location = ${AWS_ATHENA_OUTPUT_LOCATION}" >> pytest.ini
+          echo "region = ${AWS_REGION}" >> pytest.ini
+
+      - name: Run Athena integration tests
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_ATHENA_DATABASE: ${{ vars.AWS_ATHENA_DATABASE }}
+          AWS_ATHENA_OUTPUT_LOCATION: ${{ secrets.AWS_ATHENA_OUTPUT_LOCATION }}
+          AWS_REGION: ${{ vars.AWS_REGION || 'us-west-2' }}
+        run: |
+          # Run only tests marked with both 'integration' and 'athena' markers
+          poetry run pytest -v \
+            --tb=short \
+            --maxfail=3 \
+            -m "integration and athena" \
+            --durations=10
+
+      - name: Cleanup test resources
+        if: always()
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_REGION: ${{ vars.AWS_REGION || 'us-west-2' }}
+        run: |
+          poetry run python -c "
+          import boto3
+          import time
+
+          print('🧹 Cleaning up test resources...')
+          client = boto3.client('athena', region_name='${{ vars.AWS_REGION || 'us-west-2' }}')
+
+          try:
+              # Cancel any running queries from this test run
+              response = client.list_query_executions(
+                  MaxResults=50,
+                  WorkGroup='primary'
+              )
+
+              for query_id in response.get('QueryExecutionIds', []):
+                  try:
+                      execution = client.get_query_execution(QueryExecutionId=query_id)
+                      state = execution['QueryExecution']['Status']['State']
+                      if state in ['RUNNING', 'QUEUED']:
+                          client.stop_query_execution(QueryExecutionId=query_id)
+                          print(f'🛑 Stopped query: {query_id}')
+                  except Exception as e:
+                      print(f'⚠️  Could not stop query {query_id}: {e}')
+
+              print('✅ Cleanup completed')
+          except Exception as e:
+              print(f'⚠️  Cleanup failed: {e}')
+          "
+
+  test-summary:
+    name: Test Summary
+    runs-on: ubuntu-latest
+    needs: real-integration
+    if: always()
+    steps:
+      - name: Test Summary
+        run: |
+          echo "## 🧪 Athena Integration Test Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "ℹ️ Unit tests are covered by the main test workflow" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          if [ "${{ needs.real-integration.result }}" == "success" ]; then
+            echo "✅ Real Athena Integration Tests: Passed" >> $GITHUB_STEP_SUMMARY
+          elif [ "${{ needs.real-integration.result }}" == "failure" ]; then
+            echo "❌ Real Athena Integration Tests: Failed" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "⏭️ Real Athena Integration Tests: Skipped" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Trigger**: ${{ github.event_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Branch**: ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ github.event_name }}" == "pull_request" ]; then
+            echo "**PR**: #${{ github.event.number }}" >> $GITHUB_STEP_SUMMARY
+          fi
