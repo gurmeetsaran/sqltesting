@@ -1,5 +1,6 @@
 """Trino adapter implementation."""
 
+import logging
 import time
 from datetime import date, datetime
 from decimal import Decimal
@@ -148,7 +149,7 @@ class TrinoAdapter(DatabaseAdapter):
 
                 self.execute_query(drop_query)
             except Exception as e:
-                print(f"Warning: Failed to drop table {full_table_name}: {e}")
+                logging.warning(f"Warning: Failed to drop table {full_table_name}: {e}")
 
     def format_value_for_cte(self, value: Any, column_type: type) -> str:
         """Format value for Trino CTE VALUES clause."""

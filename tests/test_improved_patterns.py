@@ -79,6 +79,7 @@ class TestImprovedPatterns(unittest.TestCase):
         @sql_test(
             mock_tables=[UsersMockTable(test_users), OrdersMockTable(test_orders)],
             result_class=UserOrderSummary,
+            adapter_type="bigquery",
         )
         def execute_test():
             return TestCase(
@@ -127,6 +128,7 @@ class TestImprovedPatterns(unittest.TestCase):
                 execution_database="analytics_db",
                 mock_tables=[UsersMockTable(test_users), OrdersMockTable(test_orders)],
                 result_class=UserOrderSummary,
+                adapter_type="bigquery",
             )
 
         results = execute_test()
@@ -160,6 +162,7 @@ class TestImprovedPatterns(unittest.TestCase):
                 execution_database="analytics_db",
                 # We define result_class here instead of in decorator
                 result_class=UserOrderSummary,
+                adapter_type="bigquery",
             )
 
         results = execute_test()

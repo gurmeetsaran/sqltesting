@@ -130,9 +130,6 @@ class TestSQLParsingFunctions(unittest.TestCase):
         """
         tables = self.framework._parse_sql_tables(query)
 
-        # Print tables for debugging
-        print(f"CTE test found tables: {tables}")
-
         # We should only have the base tables, not the CTE names
         self.assertEqual(sorted(tables), sorted(["users", "orders"]))
 
@@ -203,7 +200,6 @@ class TestReplaceTableNamesInQuery(unittest.TestCase):
         result = self.framework._replace_table_names_in_query(
             query, replacement_mapping
         )
-        print(f"Simple table test result: {result}")
 
         # With our implementation, we should see the replacement
         self.assertIn("FROM user_cte", result)
@@ -217,7 +213,6 @@ class TestReplaceTableNamesInQuery(unittest.TestCase):
         result = self.framework._replace_table_names_in_query(
             query, replacement_mapping
         )
-        print(f"Qualified table test result: {result}")
 
         # With our implementation, we should see the replacement
         self.assertIn("FROM user_cte", result)
@@ -231,7 +226,6 @@ class TestReplaceTableNamesInQuery(unittest.TestCase):
         result = self.framework._replace_table_names_in_query(
             query, replacement_mapping
         )
-        print(f"Multi-level qualified table test result: {result}")
 
         # With our implementation, we should see the replacement
         self.assertIn("FROM user_cte", result)
@@ -247,9 +241,6 @@ class TestReplaceTableNamesInQuery(unittest.TestCase):
         result = self.framework._replace_table_names_in_query(
             query, replacement_mapping
         )
-
-        # Print the result for debugging
-        print(f"Aliased table test result: {result}")
 
         # Update our assertions to match the actual output format
         self.assertNotIn("FROM users", result)
@@ -273,9 +264,6 @@ class TestReplaceTableNamesInQuery(unittest.TestCase):
             query, replacement_mapping
         )
 
-        # Print the result for debugging
-        print(f"Multiple tables test result: {result}")
-
         # Modified assertions to match actual output format
         self.assertNotIn("FROM users", result)
         self.assertNotIn("JOIN orders", result)
@@ -296,9 +284,6 @@ class TestReplaceTableNamesInQuery(unittest.TestCase):
         result = self.framework._replace_table_names_in_query(
             query, replacement_mapping
         )
-
-        # Print the result for debugging
-        print(f"Subquery test result: {result}")
 
         # Modified assertions to match actual output format
         self.assertNotIn("FROM users", result)
@@ -336,9 +321,6 @@ class TestReplaceTableNamesInQuery(unittest.TestCase):
         result = self.framework._replace_table_names_in_query(
             query, replacement_mapping
         )
-
-        # Print the result for debugging
-        print(f"Complex query test result: {result}")
 
         # Check for exact table name replacements
         self.assertIn("FROM user_cte", result)

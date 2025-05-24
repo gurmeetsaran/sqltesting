@@ -21,7 +21,6 @@ class SQLTestDecorator:
     """Manages SQL test decoration and execution."""
 
     def __init__(self) -> None:
-        self._framework: Optional[SQLTestFramework] = None
         self._config: Optional[Dict[str, str]] = None
         self._project_root: Optional[str] = None
         self._config_parser: Optional[configparser.ConfigParser] = None
@@ -30,15 +29,14 @@ class SQLTestDecorator:
         self, adapter_type: Optional[AdapterType] = None
     ) -> SQLTestFramework:
         """
-        Get or create SQL test framework from configuration.
+        Create a fresh SQL test framework from configuration.
 
         Args:
             adapter_type: Optional adapter type to use. If provided, this will use
                           configuration from [sql_testing.{adapter_type}] section.
         """
-        if adapter_type is not None or self._framework is None:
-            self._framework = self._create_framework_from_config(adapter_type)
-        return self._framework
+        # Always create a fresh framework - no caching to avoid test isolation issues
+        return self._create_framework_from_config(adapter_type)
 
     def _create_framework_from_config(
         self, adapter_type: Optional[AdapterType] = None

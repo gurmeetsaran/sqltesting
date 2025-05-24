@@ -1,5 +1,6 @@
 """Amazon Athena adapter implementation."""
 
+import logging
 import time
 from datetime import date, datetime
 from decimal import Decimal
@@ -85,9 +86,12 @@ class AthenaAdapter(DatabaseAdapter):
         query_execution_id = response["QueryExecutionId"]
 
         # Wait for query to complete
-        query_status = self._wait_for_query(query_execution_id)
+        query_status, error_info = self._wait_for_query_with_error(query_execution_id)
         if query_status != "SUCCEEDED":
-            raise Exception(f"Athena query failed with status: {query_status}")
+            error_message = f"Athena query failed with status: {query_status}"
+            if error_info:
+                error_message += f";Error details: {error_info}"
+            raise Exception(error_message)
 
         # Get query results
         results = self.client.get_query_results(QueryExecutionId=query_execution_id)
@@ -137,7 +141,7 @@ class AthenaAdapter(DatabaseAdapter):
                 drop_query = f"DROP TABLE IF EXISTS {table_name}"
                 self.execute_query(drop_query)
             except Exception as e:
-                print(f"Warning: Failed to drop table {full_table_name}: {e}")
+                logging.warning(f"Warning: Failed to drop table {full_table_name}: {e}")
 
     def format_value_for_cte(self, value: Any, column_type: type) -> str:
         """Format value for Athena/Presto CTE VALUES clause."""
@@ -154,7 +158,7 @@ class AthenaAdapter(DatabaseAdapter):
         elif column_type is date:
             return f"DATE '{value}'"
         elif column_type == datetime:
-            return f"TIMESTAMP '{value.isoformat()}'"
+            return f"TIMESTAMP '{value.isoformat(sep=' ')}'"
         elif column_type == Decimal:
             return str(value)
         else:
@@ -173,23 +177,45 @@ class AthenaAdapter(DatabaseAdapter):
 
     def _wait_for_query(self, query_execution_id: str, max_retries: int = 60) -> str:
         """Wait for query to complete, returns final status."""
+        status, _ = self._wait_for_query_with_error(query_execution_id, max_retries)
+        return status
+
+    def _wait_for_query_with_error(
+        self, query_execution_id: str, max_retries: int = 60
+    ) -> tuple[str, Optional[str]]:
+        """Wait for query to complete, returns final status and error info if failed."""
         for _ in range(max_retries):
             response = self.client.get_query_execution(
                 QueryExecutionId=query_execution_id
             )
-            status = response["QueryExecution"]["Status"]["State"]
+            query_execution = response["QueryExecution"]
+            status = query_execution["Status"]["State"]
 
             # Explicitly cast to string to satisfy type checker
             query_status: str = str(status)
 
             if query_status in ("SUCCEEDED", "FAILED", "CANCELLED"):
-                return query_status
+                error_info = None
+                if query_status in ("FAILED", "CANCELLED"):
+                    # Extract error information
+                    status_info = query_execution["Status"]
+                    if "StateChangeReason" in status_info:
+                        error_info = status_info["StateChangeReason"]
+                    elif "AthenaError" in status_info:
+                        athena_error = status_info["AthenaError"]
+                        error_type = athena_error.get("ErrorType", "Unknown")
+                        error_message = athena_error.get(
+                            "ErrorMessage", "No details available"
+                        )
+                        error_info = f"{error_type}: {error_message}"
+
+                return query_status, error_info
 
             # Wait before checking again
             time.sleep(1)
 
         # If we reached here, we timed out
-        return "TIMEOUT"
+        return "TIMEOUT", "Query execution timed out after waiting for completion"
 
     def _generate_ctas_sql(self, table_name: str, mock_table: BaseMockTable) -> str:
         """Generate CREATE TABLE AS SELECT (CTAS) statement for Athena."""

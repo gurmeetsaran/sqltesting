@@ -231,8 +231,18 @@ class SQLTestFramework:
 
         # Combine CTEs with original query
         if ctes:
-            cte_block = "WITH " + ",\n".join(ctes)
-            final_query = f"{cte_block}\n{modified_query}"
+            # Check if modified query already starts with WITH
+            modified_query_stripped = modified_query.strip()
+            if modified_query_stripped.upper().startswith("WITH"):
+                # Query already has WITH clause, so append our CTEs with comma
+                cte_block = ",\n".join(ctes)
+                final_query = (
+                    f"WITH {cte_block},\n{modified_query_stripped[4:].strip()}"
+                )
+            else:
+                # Query doesn't have WITH clause, add it
+                cte_block = "WITH " + ",\n".join(ctes)
+                final_query = f"{cte_block}\n{modified_query}"
         else:
             final_query = modified_query
 
@@ -242,7 +252,6 @@ class SQLTestFramework:
         """Generate CTE SQL for a mock table."""
         df = mock_table.to_dataframe()
         column_types = mock_table.get_column_types()
-
         if df.empty:
             # Generate empty CTE
             columns = list(column_types.keys())

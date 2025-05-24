@@ -127,6 +127,7 @@ class TestUserAnalytics(unittest.TestCase):
                 ),
             ],
             result_class=UserOrderSummary,
+            adapter_type="bigquery",
         )
         def execute_test():
             return TestCase(
@@ -197,6 +198,7 @@ class TestUserAnalytics(unittest.TestCase):
                     ORDER BY month
                 """,
                 execution_database="analytics_db",
+                adapter_type="bigquery",
             )
 
         # Execute and verify results
@@ -231,6 +233,7 @@ class TestUserAnalytics(unittest.TestCase):
             ],
             result_class=UserOrderSummary,
             use_physical_tables=True,  # Test physical tables option
+            adapter_type="bigquery",
         )
         def execute_test():
             return TestCase(
@@ -266,6 +269,7 @@ class TestUserAnalytics(unittest.TestCase):
                 )
             ],
             result_class=UserOrderSummary,
+            adapter_type="bigquery",
         )
         def execute_test():
             return TestCase(
@@ -300,6 +304,7 @@ class TestUserAnalytics(unittest.TestCase):
                 )
             ],
             result_class=UserWithOptionalEmail,
+            adapter_type="bigquery",
         )
         def execute_test():
             return TestCase(
@@ -344,6 +349,7 @@ class TestUserAnalytics(unittest.TestCase):
                 OrdersMockTable([Order(101, 1, Decimal("123.45"), date(2023, 2, 1))]),
             ],
             result_class=TypeTestResult,
+            adapter_type="bigquery",
         )
         def execute_test():
             return TestCase(
@@ -391,6 +397,7 @@ class TestUserAnalytics(unittest.TestCase):
                 )
             ],
             result_class=UserOrderSummary,
+            adapter_type="bigquery",
         )
         def execute_test():
             return TestCase(
