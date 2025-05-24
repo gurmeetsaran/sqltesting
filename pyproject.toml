@@ -31,12 +31,16 @@ psycopg2-binary = ">=2.9.0"
 [tool.poetry.group.trino.dependencies]
 trino = ">=0.322.0"
 
+[tool.poetry.group.snowflake.dependencies]
+snowflake-connector-python = ">=3.0.0"
+
 [tool.poetry.extras]
-all = ["google-cloud-bigquery", "boto3", "psycopg2-binary", "trino"]
+all = ["google-cloud-bigquery", "boto3", "psycopg2-binary", "trino", "snowflake-connector-python"]
 bigquery = ["google-cloud-bigquery"]
 athena = ["boto3"]
 redshift = ["psycopg2-binary"]
 trino = ["trino"]
+snowflake = ["snowflake-connector-python"]
 
 [tool.poetry.group.dev.dependencies]
 pytest = ">=7.0.0"
@@ -68,7 +72,7 @@ strict_optional = true
 
 [tool.ruff]
 # Same as Black.
-line-length = 88
+line-length = 100
 indent-width = 4
 target-version = "py39"
 

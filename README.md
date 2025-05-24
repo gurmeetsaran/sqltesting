@@ -1,6 +1,6 @@
 # SQL Testing Library
 
-A Python library for testing SQL queries with mock data injection across Athena, BigQuery, Redshift, and Trino.
+A Python library for testing SQL queries with mock data injection across Athena, BigQuery, Redshift, Trino, and Snowflake.
 
 [![Unit Tests](https://github.com/gurmeetsaran/sqltesting/actions/workflows/tests.yaml/badge.svg)](https://github.com/gurmeetsaran/sqltesting/actions/workflows/tests.yaml)
 [![Athena Integration](https://github.com/gurmeetsaran/sqltesting/actions/workflows/athena-integration.yml/badge.svg)](https://github.com/gurmeetsaran/sqltesting/actions/workflows/athena-integration.yml)
@@ -9,7 +9,7 @@ A Python library for testing SQL queries with mock data injection across Athena,
 ![python version](https://img.shields.io/badge/python-3.9%2B-yellowgreen)
 ## Features
 
-- **Multi-Database Support**: Test SQL across BigQuery, Athena, Redshift, and Trino
+- **Multi-Database Support**: Test SQL across BigQuery, Athena, Redshift, Trino, and Snowflake
 - **Mock Data Injection**: Use Python dataclasses for type-safe test data
 - **CTE or Physical Tables**: Automatic fallback for query size limits
 - **Type-Safe Results**: Deserialize results to Pydantic models
@@ -30,6 +30,9 @@ pip install sql-testing-library[redshift]
 
 # Install with Trino support
 pip install sql-testing-library[trino]
+
+# Install with Snowflake support
+pip install sql-testing-library[snowflake]
 
 # Or install with all database adapters
 pip install sql-testing-library[all]
@@ -56,7 +59,7 @@ poetry install --with bigquery,athena,redshift,trino,dev
 
 ```ini
 [sql_testing]
-adapter = bigquery  # Use 'bigquery', 'athena', 'redshift', or 'trino'
+adapter = bigquery  # Use 'bigquery', 'athena', 'redshift', 'trino', or 'snowflake'
 
 # BigQuery configuration
 [sql_testing.bigquery]
@@ -97,6 +100,16 @@ credentials_path = <path to credentials json>
 # # For JWT Authentication:
 # # auth_type = jwt
 # # token = <jwt_token>
+
+# Snowflake configuration
+# [sql_testing.snowflake]
+# account = <account-identifier>
+# user = <snowflake_user>
+# password = <snowflake_password>
+# database = <test_database>
+# schema = <PUBLIC>  # Optional: default schema is 'PUBLIC'
+# warehouse = <compute_wh>  # Optional: specify a warehouse
+# role = <role_name>  # Optional: specify a role
 ```
 
 2. **Write a test** using one of the flexible patterns:
@@ -251,9 +264,21 @@ def test_trino_query():
         query="SELECT user_id, name FROM users WHERE user_id = 1",
         execution_database="test_db"
     )
+
+# Use Snowflake adapter for this test
+@sql_test(
+    adapter_type="snowflake",
+    mock_tables=[...],
+    result_class=UserResult
+)
+def test_snowflake_query():
+    return TestCase(
+        query="SELECT user_id, name FROM users WHERE user_id = 1",
+        execution_database="test_db"
+    )
 ```
 
-The adapter_type parameter will use the configuration from the corresponding section in pytest.ini, such as `[sql_testing.bigquery]`, `[sql_testing.athena]`, `[sql_testing.redshift]`, or `[sql_testing.trino]`.
+The adapter_type parameter will use the configuration from the corresponding section in pytest.ini, such as `[sql_testing.bigquery]`, `[sql_testing.athena]`, `[sql_testing.redshift]`, `[sql_testing.trino]`, or `[sql_testing.snowflake]`.
 
 ### Adapter-Specific Features
 
@@ -282,6 +307,14 @@ The adapter_type parameter will use the configuration from the corresponding sec
 - Works with a variety of catalogs and data sources
 - Handles large datasets and complex queries with full SQL support
 - Supports multiple authentication methods including Basic and JWT
+
+#### Snowflake Adapter
+- Supports Snowflake cloud data platform
+- Uses CTAS (CREATE TABLE AS SELECT) for efficient temporary table creation
+- Creates temporary tables that automatically expire at the end of the session
+- Handles large datasets and complex queries with Snowflake's SQL dialect
+- Supports authentication via username and password
+- Optional support for warehouse, role, and schema specification
 
 **Default Behavior:**
 - If adapter_type is not specified in the TestCase or decorator, the library will use the adapter specified in the `[sql_testing]` section's `adapter` setting.
@@ -350,6 +383,24 @@ The library automatically:
 
 For detailed usage and configuration options, see the example files included.
 
+## Known Limitations and TODOs
+
+The library has a few known limitations that are planned to be addressed in future updates:
+
+### Core Functionality
+- The `mock_table` function is not exposed in the public API but is used in tests
+- TestCase interface could be streamlined for better usability
+
+### Snowflake Support
+- Physical table tests for Snowflake are currently skipped due to complex mocking requirements
+- Need better support for Snowflake-specific data types (VARIANT, OBJECT, ARRAY)
+- Add integration tests with actual Snowflake connection
+
+### General Improvements
+- Add support for more SQL dialects
+- Improve error handling for malformed SQL
+- Enhance documentation with more examples
+
 ## Requirements
 
 - Python >= 3.9
@@ -360,3 +411,4 @@ For detailed usage and configuration options, see the example files included.
   - boto3 for Athena
   - psycopg2-binary for Redshift
   - trino for Trino
+  - snowflake-connector-python for Snowflake

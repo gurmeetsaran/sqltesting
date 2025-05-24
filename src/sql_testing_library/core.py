@@ -34,8 +34,10 @@ T = TypeVar("T")
 
 
 @dataclass
-class TestCase(Generic[T]):
+class SQLTestCase(Generic[T]):
     """Represents a SQL test case."""
+
+    __test__ = False  # Tell pytest this is not a test class
 
     query: str
     execution_database: str
@@ -54,7 +56,7 @@ class SQLTestFramework:
         self.type_converter = self.adapter.get_type_converter()
         self.temp_tables: List[str] = []
 
-    def run_test(self, test_case: TestCase[T]) -> List[T]:
+    def run_test(self, test_case: SQLTestCase[T]) -> List[T]:
         """
         Execute a test case and return deserialized results.
 
@@ -68,14 +70,12 @@ class SQLTestFramework:
             # Validate required fields
             if test_case.mock_tables is None:
                 raise ValueError(
-                    "mock_tables must be provided either in TestCase or "
-                    "sql_test decorator"
+                    "mock_tables must be provided either in SQLTestCase or sql_test decorator"
                 )
 
             if test_case.result_class is None:
                 raise ValueError(
-                    "result_class must be provided either in TestCase or "
-                    "sql_test decorator"
+                    "result_class must be provided either in SQLTestCase or sql_test decorator"
                 )
 
             # Parse SQL to find table references
@@ -90,9 +90,7 @@ class SQLTestFramework:
             self._validate_mock_tables(resolved_tables, test_case.mock_tables)
 
             # Create table name mapping
-            table_mapping = self._create_table_mapping(
-                resolved_tables, test_case.mock_tables
-            )
+            table_mapping = self._create_table_mapping(resolved_tables, test_case.mock_tables)
 
             if test_case.use_physical_tables:
                 # Create physical temporary tables
@@ -236,9 +234,7 @@ class SQLTestFramework:
             if modified_query_stripped.upper().startswith("WITH"):
                 # Query already has WITH clause, so append our CTEs with comma
                 cte_block = ",\n".join(ctes)
-                final_query = (
-                    f"WITH {cte_block},\n{modified_query_stripped[4:].strip()}"
-                )
+                final_query = f"WITH {cte_block},\n{modified_query_stripped[4:].strip()}"
             else:
                 # Query doesn't have WITH clause, add it
                 cte_block = "WITH " + ",\n".join(ctes)
@@ -272,9 +268,7 @@ class SQLTestFramework:
                     first_row_values = []
                     for col_name, value in row.items():
                         col_type = column_types.get(col_name, str)
-                        formatted_value = self.adapter.format_value_for_cte(
-                            value, col_type
-                        )
+                        formatted_value = self.adapter.format_value_for_cte(value, col_type)
                         first_row_values.append(f"{formatted_value} as {col_name}")
                     struct_rows.append(f"({', '.join(first_row_values)})")
                 else:
@@ -282,9 +276,7 @@ class SQLTestFramework:
                     row_values = []
                     for col_name, value in row.items():
                         col_type = column_types.get(col_name, str)
-                        formatted_value = self.adapter.format_value_for_cte(
-                            value, col_type
-                        )
+                        formatted_value = self.adapter.format_value_for_cte(value, col_type)
                         row_values.append(formatted_value)
                     struct_rows.append(f"({', '.join(row_values)})")
 
@@ -305,14 +297,9 @@ class SQLTestFramework:
             column_list = ", ".join(df.columns)
             values_clause = ", ".join(values_rows)
 
-            return (
-                f"{alias} AS (SELECT * FROM (VALUES {values_clause})"
-                f" AS t({column_list}))"
-            )
+            return f"{alias} AS (SELECT * FROM (VALUES {values_clause}) AS t({column_list}))"
 
-    def _replace_table_names_in_query(
-        self, query: str, replacement_mapping: Dict[str, str]
-    ) -> str:
+    def _replace_table_names_in_query(self, query: str, replacement_mapping: Dict[str, str]) -> str:
         """Replace table names in query using sqlglot AST transformation."""
         try:
             dialect = self.adapter.get_sqlglot_dialect()
@@ -376,9 +363,7 @@ class SQLTestFramework:
         # Replace table names and return modified query
         return self._replace_table_names_in_query(query, replacement_mapping)
 
-    def _deserialize_results(
-        self, result_df: pd.DataFrame, result_class: Type[T]
-    ) -> List[T]:
+    def _deserialize_results(self, result_df: pd.DataFrame, result_class: Type[T]) -> List[T]:
         """Deserialize query results to typed objects."""
         if result_df.empty:
             return []
@@ -394,9 +379,7 @@ class SQLTestFramework:
                 if col_name in type_hints:
                     target_type = type_hints[col_name]
                     try:
-                        converted_value = self.type_converter.convert(
-                            value, target_type
-                        )
+                        converted_value = self.type_converter.convert(value, target_type)
                         converted_row[col_name] = converted_value
                     except Exception:
                         raise TypeConversionError(value, target_type, col_name)  # noqa:  B904
