@@ -54,11 +54,17 @@ jobs:
             INCREMENT="auto"
           fi
 
-          # Bump version using commitizen
-          if [ "$INCREMENT" = "auto" ]; then
-            poetry run cz bump --changelog
+          # Check if this is the first release
+          if ! git tag -l | grep -q .; then
+            echo "This is the first release, creating initial tag"
+            poetry run cz bump --yes --changelog
           else
-            poetry run cz bump --increment $INCREMENT --changelog
+            # Bump version using commitizen
+            if [ "$INCREMENT" = "auto" ]; then
+              poetry run cz bump --yes --changelog
+            else
+              poetry run cz bump --yes --increment $INCREMENT --changelog
+            fi
           fi
 
       - name: Get new version
