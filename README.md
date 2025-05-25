@@ -2,8 +2,40 @@
 
 A Python library for testing SQL queries with mock data injection across Athena, BigQuery, Redshift, Trino, and Snowflake.
 
+## 🎯 Motivation
+
+SQL testing in data engineering can be challenging, especially when working with large datasets and complex queries across multiple database platforms. This library was born from real-world production needs at scale, addressing the pain points of:
+
+- **Fragile Integration Tests**: Traditional tests that depend on live data break when data changes
+- **Slow Feedback Loops**: Running tests against full datasets takes too long for CI/CD
+- **Database Engine Upgrades**: UDF semantics and SQL behavior change between database versions, causing silent production failures
+- **Database Lock-in**: Tests written for one database don't work on another
+- **Complex Setup**: Each database requires different mocking strategies and tooling
+
+For more details on our journey and the engineering challenges we solved, read the full story: [**"Our Journey to Building a Scalable SQL Testing Library for Athena"**](https://eng.wealthfront.com/2025/04/07/our-journey-to-building-a-scalable-sql-testing-library-for-athena/)
+
+## 🚀 Key Use Cases
+
+### Data Engineering Teams
+- **ETL Pipeline Testing**: Validate data transformations with controlled input data
+- **Data Quality Assurance**: Test data validation rules and business logic in SQL
+- **Schema Migration Testing**: Ensure queries work correctly after schema changes
+- **Database Engine Upgrades**: Catch breaking changes in SQL UDF semantics across database versions before they hit production
+- **Cross-Database Compatibility**: Write tests once, run on multiple database platforms
+
+### Analytics Teams
+- **Report Validation**: Test analytical queries with known datasets to verify results
+- **A/B Test Analysis**: Validate statistical calculations and business metrics
+- **Dashboard Backend Testing**: Ensure dashboard queries return expected data structures
+
+### DevOps & CI/CD
+- **Fast Feedback**: Run comprehensive SQL tests in seconds, not minutes
+- **Isolated Testing**: Tests don't interfere with production data or other tests
+- **Cost Optimization**: Reduce cloud database costs by avoiding large dataset queries in tests
+
 [![Unit Tests](https://github.com/gurmeetsaran/sqltesting/actions/workflows/tests.yaml/badge.svg)](https://github.com/gurmeetsaran/sqltesting/actions/workflows/tests.yaml)
 [![Athena Integration](https://github.com/gurmeetsaran/sqltesting/actions/workflows/athena-integration.yml/badge.svg)](https://github.com/gurmeetsaran/sqltesting/actions/workflows/athena-integration.yml)
+[![BigQuery Integration](https://github.com/gurmeetsaran/sqltesting/actions/workflows/bigquery-integration.yml/badge.svg)](https://github.com/gurmeetsaran/sqltesting/actions/workflows/bigquery-integration.yml)
 [![GitHub license](https://img.shields.io/github/license/gurmeetsaran/sqltesting.svg)](https://github.com/gurmeetsaran/sqltesting/blob/master/LICENSE)
 [![codecov](https://codecov.io/gh/gurmeetsaran/sqltesting/branch/master/graph/badge.svg?token=CN3G5X5ZA5)](https://codecov.io/gh/gurmeetsaran/sqltesting)
 ![python version](https://img.shields.io/badge/python-3.9%2B-yellowgreen)
