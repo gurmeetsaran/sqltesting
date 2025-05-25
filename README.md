@@ -2,6 +2,13 @@
 
 A Python library for testing SQL queries with mock data injection across Athena, BigQuery, Redshift, Trino, and Snowflake.
 
+[![Unit Tests](https://github.com/gurmeetsaran/sqltesting/actions/workflows/tests.yaml/badge.svg)](https://github.com/gurmeetsaran/sqltesting/actions/workflows/tests.yaml)
+[![Athena Integration](https://github.com/gurmeetsaran/sqltesting/actions/workflows/athena-integration.yml/badge.svg)](https://github.com/gurmeetsaran/sqltesting/actions/workflows/athena-integration.yml)
+[![BigQuery Integration](https://github.com/gurmeetsaran/sqltesting/actions/workflows/bigquery-integration.yml/badge.svg)](https://github.com/gurmeetsaran/sqltesting/actions/workflows/bigquery-integration.yml)
+[![GitHub license](https://img.shields.io/github/license/gurmeetsaran/sqltesting.svg)](https://github.com/gurmeetsaran/sqltesting/blob/master/LICENSE)
+[![codecov](https://codecov.io/gh/gurmeetsaran/sqltesting/branch/master/graph/badge.svg?token=CN3G5X5ZA5)](https://codecov.io/gh/gurmeetsaran/sqltesting)
+![python version](https://img.shields.io/badge/python-3.9%2B-yellowgreen)
+
 ## 🎯 Motivation
 
 SQL testing in data engineering can be challenging, especially when working with large datasets and complex queries across multiple database platforms. This library was born from real-world production needs at scale, addressing the pain points of:
@@ -33,12 +40,6 @@ For more details on our journey and the engineering challenges we solved, read t
 - **Isolated Testing**: Tests don't interfere with production data or other tests
 - **Cost Optimization**: Reduce cloud database costs by avoiding large dataset queries in tests
 
-[![Unit Tests](https://github.com/gurmeetsaran/sqltesting/actions/workflows/tests.yaml/badge.svg)](https://github.com/gurmeetsaran/sqltesting/actions/workflows/tests.yaml)
-[![Athena Integration](https://github.com/gurmeetsaran/sqltesting/actions/workflows/athena-integration.yml/badge.svg)](https://github.com/gurmeetsaran/sqltesting/actions/workflows/athena-integration.yml)
-[![BigQuery Integration](https://github.com/gurmeetsaran/sqltesting/actions/workflows/bigquery-integration.yml/badge.svg)](https://github.com/gurmeetsaran/sqltesting/actions/workflows/bigquery-integration.yml)
-[![GitHub license](https://img.shields.io/github/license/gurmeetsaran/sqltesting.svg)](https://github.com/gurmeetsaran/sqltesting/blob/master/LICENSE)
-[![codecov](https://codecov.io/gh/gurmeetsaran/sqltesting/branch/master/graph/badge.svg?token=CN3G5X5ZA5)](https://codecov.io/gh/gurmeetsaran/sqltesting)
-![python version](https://img.shields.io/badge/python-3.9%2B-yellowgreen)
 ## Features
 
 - **Multi-Database Support**: Test SQL across BigQuery, Athena, Redshift, Trino, and Snowflake
