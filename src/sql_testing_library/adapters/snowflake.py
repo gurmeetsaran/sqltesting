@@ -58,7 +58,7 @@ class SnowflakeAdapter(DatabaseAdapter):
         self.schema = schema
         self.warehouse = warehouse
         self.role = role
-        self.conn = None
+        self.conn: Optional[Any] = None
 
     def _get_connection(self) -> Any:
         """Get or create a connection to Snowflake."""

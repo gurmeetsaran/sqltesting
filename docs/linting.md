@@ -168,3 +168,32 @@ For the best development experience:
 4. Run pre-commit hooks locally before pushing changes
 
 This ensures that your code always meets the project's formatting, linting, and type safety standards before it's committed or pushed to the repository.
+
+## Consistency Across Tools
+
+To ensure all linting and type checking tools work consistently:
+
+### Configuration Files
+- **`mypy.ini`** - Primary mypy configuration with exclusions: `^(tests/|scripts/)`
+- **`.pre-commit-config.yaml`** - Must match mypy.ini exclusions
+- **`scripts/lint.sh`** - Must use same exclusions as other tools
+
+### External Library Handling
+When adding new external dependencies (cloud providers, databases), add to mypy.ini:
+```ini
+[mypy-newlibrary.*]
+ignore_missing_imports = true
+```
+
+### Testing Consistency
+All three approaches should give the same results:
+```bash
+python -m mypy src          # Direct mypy
+./scripts/lint.sh           # Lint script
+pre-commit run mypy --all-files  # Pre-commit hook
+```
+
+### Current Exclusions
+- **Scripts folder**: Excluded from all linting (allows print statements, external deps)
+- **Tests folder**: Excluded from mypy (different type checking rules)
+- **Source folder**: Full strict linting and type checking applied

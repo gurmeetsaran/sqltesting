@@ -20,26 +20,6 @@ jobs:
         python -m pip install -U pip poetry
         poetry install
 
-    - name: Set up Google Cloud credentials
-      env:
-        GCP_SA_KEY: ${{ secrets.GCP_SA_KEY }}
-        GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
-      run: |
-        # Set up GCP credentials file
-        echo "$GCP_SA_KEY" > gcp-key.json
-        export GOOGLE_APPLICATION_CREDENTIALS=$(pwd)/gcp-key.json
-
-        # Generate pytest.ini file programmatically
-        echo "[sql_testing]" > pytest.ini
-        echo "adapter = bigquery" >> pytest.ini
-        echo "project_id = ${GCP_PROJECT_ID}" >> pytest.ini
-        echo "dataset_id = sqltesting" >> pytest.ini
-        echo "credentials_path = ${GOOGLE_APPLICATION_CREDENTIALS}" >> pytest.ini
-
-        # Set environment variables for the workflow
-        echo "GOOGLE_APPLICATION_CREDENTIALS=${GOOGLE_APPLICATION_CREDENTIALS}" >> $GITHUB_ENV
-        echo "GCP_PROJECT_ID=${GCP_PROJECT_ID}" >> $GITHUB_ENV
-
     - name: Run unit tests with coverage (exclude integration tests)
       run: |
         poetry run pytest -m "not integration" --cov=src/sql_testing_library --cov-report=xml
@@ -50,7 +30,3 @@ jobs:
         token: ${{ secrets.CODECOV_TOKEN }}
         file: ./coverage.xml
         fail_ci_if_error: false
-
-    - name: Clean up credentials
-      run: |
-        rm -f gcp-key.json
