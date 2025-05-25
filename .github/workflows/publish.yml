@@ -48,17 +48,28 @@ jobs:
           twine check dist/*
 
       - name: Publish to Test PyPI
-        if: github.event_name == 'workflow_dispatch' && github.event.inputs.pypi_repository == 'testpypi'
+        if: (github.event_name == 'release' && github.event.action == 'published') || (github.event_name == 'workflow_dispatch' && github.event.inputs.pypi_repository == 'testpypi')
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           password: ${{ secrets.TEST_PYPI_API_TOKEN }}
           repository-url: https://test.pypi.org/legacy/
 
-#      - name: Publish to PyPI
-#        if: (github.event_name == 'release' && github.event.action == 'published') || (github.event_name == 'workflow_dispatch' && github.event.inputs.pypi_repository == 'pypi')
-#        uses: pypa/gh-action-pypi-publish@release/v1
-#        with:
-#          password: ${{ secrets.PYPI_API_TOKEN }}
+      - name: Publish to PyPI
+        if: github.event_name == 'workflow_dispatch' && github.event.inputs.pypi_repository == 'pypi'
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          password: ${{ secrets.PYPI_API_TOKEN }}
+
+      - name: Show installation instructions
+        if: success()
+        run: |
+          if [ "${{ github.event.inputs.pypi_repository }}" = "testpypi" ] || [ "${{ github.event_name }}" = "release" ]; then
+            echo "📦 Test PyPI Package Published!"
+            echo "🧪 Test install: pip install -i https://test.pypi.org/simple/ sql-testing-library"
+          elif [ "${{ github.event.inputs.pypi_repository }}" = "pypi" ]; then
+            echo "🚀 Production PyPI Package Published!"
+            echo "📦 Install: pip install sql-testing-library"
+          fi
 
       - name: Create deployment status
         if: success()
