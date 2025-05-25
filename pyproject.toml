@@ -138,3 +138,5 @@ version_scheme = "pep440"
 version_provider = "poetry"
 update_changelog_on_bump = true
 major_version_zero = true
+changelog_merge_prerelease = true
+changelog_start_rev = "0.1.0"
