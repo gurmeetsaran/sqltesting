@@ -1,17 +1,42 @@
-name: Bump version
+name: Release
 
 on:
-  push:
-    branches:
-      - master
+  workflow_dispatch:
+    inputs:
+      version_type:
+        description: 'Version increment (auto = based on conventional commits)'
+        required: true
+        default: 'auto'
+        type: choice
+        options:
+          - auto
+          - patch
+          - minor
+          - major
 
 jobs:
-  bump-version:
-    if: "!startsWith(github.event.head_commit.message, 'bump:')"
+  unit-tests:
+    name: Unit Tests and Code Quality
+    uses: ./.github/workflows/tests.yaml
+    secrets: inherit
+
+  athena-integration:
+    name: Athena Integration Tests
+    uses: ./.github/workflows/athena-integration.yml
+    secrets: inherit
+
+  bigquery-integration:
+    name: BigQuery Integration Tests
+    uses: ./.github/workflows/bigquery-integration.yml
+    secrets: inherit
+
+  release:
+    name: Create release
+    needs: [unit-tests, athena-integration, bigquery-integration]
     runs-on: ubuntu-latest
-    name: "Bump version and create changelog with commitizen"
+
     steps:
-      - name: Check out
+      - name: Check out code
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
@@ -32,15 +57,14 @@ jobs:
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
 
-      - name: Create bump and changelog
+      - name: Bump version and create changelog
         run: |
-          # Check if any commits since last tag are bumpable
-          if poetry run cz bump --dry-run; then
-            echo "Found bumpable commits, proceeding with version bump"
+          if [ "${{ github.event.inputs.version_type }}" = "auto" ]; then
+            echo "🤖 Auto-determining version bump from conventional commits..."
             poetry run cz bump --changelog --yes
           else
-            echo "No bumpable commits found (docs, style, etc.), skipping version bump"
-            exit 0
+            echo "📌 Manual version bump: ${{ github.event.inputs.version_type }}"
+            poetry run cz bump --increment ${{ github.event.inputs.version_type }} --changelog --yes
           fi
 
       - name: Get new version
@@ -53,7 +77,7 @@ jobs:
         run: |
           git push origin master --tags
 
-      - name: Release
+      - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.version.outputs.version }}
