@@ -1,0 +1,83 @@
+name: Release
+
+on:
+  push:
+    branches:
+      - master
+  workflow_dispatch:
+    inputs:
+      version_type:
+        description: 'Version increment type'
+        required: true
+        default: 'patch'
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+
+jobs:
+  release:
+    name: Bump version and create release
+    runs-on: ubuntu-latest
+    if: "!startsWith(github.event.head_commit.message, 'bump:')"
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install -U pip poetry
+          poetry install --with dev
+
+      - name: Configure git
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+
+      - name: Bump version and create changelog
+        run: |
+          # Determine increment type
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            INCREMENT="${{ github.event.inputs.version_type }}"
+          else
+            # Auto-determine from conventional commits
+            INCREMENT="auto"
+          fi
+
+          # Bump version using commitizen
+          if [ "$INCREMENT" = "auto" ]; then
+            poetry run cz bump --changelog
+          else
+            poetry run cz bump --increment $INCREMENT --changelog
+          fi
+
+      - name: Get new version
+        id: version
+        run: |
+          VERSION=$(poetry version --short)
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Push changes
+        run: |
+          git push origin master --tags
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.version }}
+          name: Release ${{ steps.version.outputs.version }}
+          body_path: "CHANGELOG.md"
+          draft: false
+          prerelease: ${{ startsWith(steps.version.outputs.version, '0.') }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
