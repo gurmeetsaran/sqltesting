@@ -12,7 +12,15 @@ on:
       - '.github/workflows/bigquery-integration.yml'
   push:
     branches: [master, main]
+    paths:
+      - 'src/sql_testing_library/adapters/bigquery.py'
+      - 'src/sql_testing_library/core.py'
+      - 'src/sql_testing_library/mock_table.py'
+      - 'tests/test_bigquery*.py'
+      - 'tests/integration/test_bigquery_integration.py'
+      - '.github/workflows/bigquery-integration.yml'
   workflow_dispatch:  # Allow manual trigger
+  workflow_call:      # Allow workflow reuse
 
 env:
   PYTHON_VERSION: '3.10'
@@ -25,7 +33,8 @@ jobs:
     if: |
       (github.event_name == 'push' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main')) ||
       (github.event_name == 'pull_request') ||
-      (github.event_name == 'workflow_dispatch')
+      (github.event_name == 'workflow_dispatch') ||
+      (github.event_name == 'workflow_call')
 
     steps:
       - name: Checkout code
