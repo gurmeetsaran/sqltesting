@@ -1,29 +1,17 @@
-name: Release
+name: Bump version
 
 on:
   push:
     branches:
       - master
-  workflow_dispatch:
-    inputs:
-      version_type:
-        description: 'Version increment type'
-        required: true
-        default: 'patch'
-        type: choice
-        options:
-          - patch
-          - minor
-          - major
 
 jobs:
-  release:
-    name: Bump version and create release
-    runs-on: ubuntu-latest
+  bump-version:
     if: "!startsWith(github.event.head_commit.message, 'bump:')"
-
+    runs-on: ubuntu-latest
+    name: "Bump version and create changelog with commitizen"
     steps:
-      - name: Check out code
+      - name: Check out
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
@@ -44,27 +32,15 @@ jobs:
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
 
-      - name: Bump version and create changelog
+      - name: Create bump and changelog
         run: |
-          # Determine increment type
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            INCREMENT="${{ github.event.inputs.version_type }}"
+          # Check if any commits since last tag are bumpable
+          if poetry run cz bump --dry-run; then
+            echo "Found bumpable commits, proceeding with version bump"
+            poetry run cz bump --changelog --yes
           else
-            # Auto-determine from conventional commits
-            INCREMENT="auto"
-          fi
-
-          # Check if this is the first release
-          if ! git tag -l | grep -q .; then
-            echo "This is the first release, creating initial tag"
-            poetry run cz bump --yes --changelog
-          else
-            # Bump version using commitizen
-            if [ "$INCREMENT" = "auto" ]; then
-              poetry run cz bump --yes --changelog
-            else
-              poetry run cz bump --yes --increment $INCREMENT --changelog
-            fi
+            echo "No bumpable commits found (docs, style, etc.), skipping version bump"
+            exit 0
           fi
 
       - name: Get new version
@@ -77,7 +53,7 @@ jobs:
         run: |
           git push origin master --tags
 
-      - name: Create GitHub Release
+      - name: Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.version.outputs.version }}
