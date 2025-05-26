@@ -40,9 +40,14 @@ jobs:
     uses: ./.github/workflows/trino-integration.yml
     secrets: inherit
 
+  snowflake-integration:
+    name: Snowflake Integration Tests
+    uses: ./.github/workflows/snowflake-integration.yml
+    secrets: inherit
+
   release:
     name: Create release
-    needs: [unit-tests, athena-integration, bigquery-integration, redshift-integration, trino-integration]
+    needs: [unit-tests, athena-integration, bigquery-integration, redshift-integration, trino-integration, snowflake-integration]
     runs-on: ubuntu-latest
 
     steps:

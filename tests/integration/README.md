@@ -9,6 +9,7 @@ This directory contains integration tests that require real database connections
 - **`test_redshift_integration.py`**: AWS Redshift integration tests
 - **`test_bigquery_integration.py`**: Google BigQuery integration tests
 - **`test_trino_integration.py`**: Trino integration tests (Docker-based)
+- **`test_snowflake_integration.py`**: Snowflake integration tests
 
 ## Running Integration Tests
 
@@ -21,6 +22,7 @@ pytest tests/integration/ -v -m integration
 pytest tests/integration/ -v -m "integration and athena"
 pytest tests/integration/ -v -m "integration and redshift"
 pytest tests/integration/ -v -m "integration and trino"
+pytest tests/integration/ -v -m "integration and snowflake"
 ```
 
 ### Individual Test Files
@@ -33,6 +35,9 @@ pytest tests/integration/test_redshift_integration.py -v
 
 # Trino integration tests only
 pytest tests/integration/test_trino_integration.py -v
+
+# Snowflake integration tests only
+pytest tests/integration/test_snowflake_integration.py -v
 
 # Skip slow tests
 pytest tests/integration/ -v -m "integration and not slow"
@@ -47,14 +52,14 @@ Each adapter requires specific environment variables. See the main documentation
 - **BigQuery**: `GOOGLE_APPLICATION_CREDENTIALS`, `GCP_PROJECT_ID`
 - **Redshift**: `REDSHIFT_HOST`, `REDSHIFT_USER`, etc.
 - **Trino**: Docker-based (no external credentials needed)
+- **Snowflake**: `SNOWFLAKE_ACCOUNT`, `SNOWFLAKE_USER`, `SNOWFLAKE_PASSWORD`, `SNOWFLAKE_DATABASE`, `SNOWFLAKE_WAREHOUSE` (optional), `SNOWFLAKE_ROLE` (optional)
 
 ### Markers
 All integration tests must use appropriate pytest markers:
 
 ```python
 @pytest.mark.integration
-@pytest.mark.athena  # or bigquery, redshift, trino
-@pytest.mark.trino   # for Trino tests
+@pytest.mark.athena  # or bigquery, redshift, trino, snowflake
 def test_my_integration():
     # Test implementation
 ```
@@ -67,9 +72,10 @@ def test_my_integration():
 - **BigQuery**: Varies by query complexity
 - **Redshift**: Cluster time charges
 - **Trino**: Free (Docker-based, no cloud costs)
+- **Snowflake**: Compute time charges based on warehouse size
 
 ### Cost Control
-- Use markers to run specific tests: `-m "athena and not slow"` or `-m "trino"`
+- Use markers to run specific tests: `-m "athena and not slow"`, `-m "trino"`, or `-m "snowflake"`
 - Set timeouts: `--timeout=300`
 - Limit failures: `--maxfail=3`
 - Run locally only when needed

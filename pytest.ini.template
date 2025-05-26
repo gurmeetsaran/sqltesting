@@ -1,5 +1,5 @@
 [sql_testing]
-adapter = bigquery  # Use 'bigquery', 'athena', 'redshift', or 'trino'
+adapter = bigquery  # Use 'bigquery', 'athena', 'redshift', 'trino', or 'snowflake'
 
 # BigQuery configuration
 [sql_testing.bigquery]
@@ -40,3 +40,13 @@ credentials_path = ${GOOGLE_APPLICATION_CREDENTIALS}
 # # For JWT Authentication:
 # # auth_type = jwt
 # # token = ${TRINO_JWT_TOKEN}
+
+# Snowflake configuration - uncomment and customize for Snowflake
+# [sql_testing.snowflake]
+# account = ${SNOWFLAKE_ACCOUNT}
+# user = ${SNOWFLAKE_USER}
+# password = ${SNOWFLAKE_PASSWORD}
+# database = ${SNOWFLAKE_DATABASE}
+# schema = ${SNOWFLAKE_SCHEMA:-PUBLIC}  # Optional: default schema is 'PUBLIC'
+# warehouse = ${SNOWFLAKE_WAREHOUSE}    # Required: specify a warehouse
+# role = ${SNOWFLAKE_ROLE}              # Optional: specify a role

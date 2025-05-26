@@ -166,6 +166,39 @@ class SQLTestDecorator:
                 http_scheme=http_scheme,
                 auth=auth,
             )
+        elif adapter_type == "snowflake":
+            from .adapters.snowflake import SnowflakeAdapter
+
+            account = adapter_config.get("account")
+            user = adapter_config.get("user")
+            password = adapter_config.get("password")
+            database = adapter_config.get("database")
+            schema = adapter_config.get("schema", "PUBLIC")
+            warehouse = adapter_config.get("warehouse")
+            role = adapter_config.get("role")
+
+            if not all([account, user, password, database, warehouse]):
+                raise ValueError(
+                    "Snowflake adapter requires 'account', 'user', 'password', "
+                    "'database', and 'warehouse' in configuration"
+                )
+
+            # All required values are now guaranteed to exist
+            assert account is not None
+            assert user is not None
+            assert password is not None
+            assert database is not None
+            assert warehouse is not None
+
+            database_adapter = SnowflakeAdapter(
+                account=account,
+                user=user,
+                password=password,
+                database=database,
+                schema=schema,
+                warehouse=warehouse,
+                role=role,
+            )
         else:
             raise ValueError(f"Unsupported adapter type: {adapter_type}")
 
