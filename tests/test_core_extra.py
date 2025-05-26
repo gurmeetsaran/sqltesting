@@ -1,5 +1,6 @@
 """Additional tests for core.py to boost coverage."""
 
+import contextlib
 import unittest
 from unittest.mock import MagicMock, patch
 
@@ -172,15 +173,20 @@ class TestSQLTestFrameworkCTEHandling(unittest.TestCase):
         mock_table = SimpleMockTable([{"id": 1, "name": "test"}])
 
         # Mock the necessary methods
-        with (
-            patch.object(self.framework, "_parse_sql_tables") as mock_parse,
-            patch.object(self.framework, "_resolve_table_names") as mock_resolve,
-            patch.object(self.framework, "_validate_mock_tables") as _,
-            patch.object(self.framework, "_create_table_mapping") as mock_mapping,
-            patch.object(self.framework, "_generate_cte_query") as mock_cte,
-            patch.object(self.framework, "_deserialize_results") as mock_deserialize,
-            patch.object(self.framework.adapter, "execute_query") as mock_execute,
-        ):
+        with contextlib.ExitStack() as stack:
+            mock_parse = stack.enter_context(patch.object(self.framework, "_parse_sql_tables"))
+            mock_resolve = stack.enter_context(patch.object(self.framework, "_resolve_table_names"))
+            stack.enter_context(patch.object(self.framework, "_validate_mock_tables"))
+            mock_mapping = stack.enter_context(
+                patch.object(self.framework, "_create_table_mapping")
+            )
+            mock_cte = stack.enter_context(patch.object(self.framework, "_generate_cte_query"))
+            mock_deserialize = stack.enter_context(
+                patch.object(self.framework, "_deserialize_results")
+            )
+            mock_execute = stack.enter_context(
+                patch.object(self.framework.adapter, "execute_query")
+            )
             mock_parse.return_value = ["test_table"]
             mock_resolve.return_value = ["test_db.test_table"]
             mock_mapping.return_value = {"test_db.test_table": mock_table}
