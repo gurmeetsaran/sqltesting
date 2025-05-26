@@ -123,7 +123,21 @@ class RedshiftAdapter(DatabaseAdapter):
     def format_value_for_cte(self, value: Any, column_type: type) -> str:
         """Format value for Redshift CTE VALUES clause."""
         if value is None:
-            return "NULL"
+            # Cast NULL values to appropriate types for Redshift
+            if column_type == Decimal:
+                return "NULL::DECIMAL(38,9)"
+            elif column_type is int:
+                return "NULL::BIGINT"
+            elif column_type is float:
+                return "NULL::DOUBLE PRECISION"
+            elif column_type is bool:
+                return "NULL::BOOLEAN"
+            elif column_type is date:
+                return "NULL::DATE"
+            elif column_type == datetime:
+                return "NULL::TIMESTAMP"
+            else:
+                return "NULL::VARCHAR(1024)"
         elif column_type is str:
             # Escape single quotes for SQL
             escaped_value = str(value).replace("'", "''")

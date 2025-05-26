@@ -193,8 +193,14 @@ class TestRedshiftAdapter(unittest.TestCase):
             "TIMESTAMP '2023-01-15T10:30:45'",
         )
 
-        # Test None
-        self.assertEqual(adapter.format_value_for_cte(None, str), "NULL")
+        # Test None with type casting
+        self.assertEqual(adapter.format_value_for_cte(None, str), "NULL::VARCHAR(1024)")
+        self.assertEqual(adapter.format_value_for_cte(None, Decimal), "NULL::DECIMAL(38,9)")
+        self.assertEqual(adapter.format_value_for_cte(None, int), "NULL::BIGINT")
+        self.assertEqual(adapter.format_value_for_cte(None, float), "NULL::DOUBLE PRECISION")
+        self.assertEqual(adapter.format_value_for_cte(None, bool), "NULL::BOOLEAN")
+        self.assertEqual(adapter.format_value_for_cte(None, date), "NULL::DATE")
+        self.assertEqual(adapter.format_value_for_cte(None, datetime), "NULL::TIMESTAMP")
 
     def test_create_temp_table(self, mock_psycopg2_connect):
         """Test temp table creation."""
