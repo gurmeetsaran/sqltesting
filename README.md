@@ -5,6 +5,7 @@ A Python library for testing SQL queries with mock data injection across Athena,
 [![Unit Tests](https://github.com/gurmeetsaran/sqltesting/actions/workflows/tests.yaml/badge.svg)](https://github.com/gurmeetsaran/sqltesting/actions/workflows/tests.yaml)
 [![Athena Integration](https://github.com/gurmeetsaran/sqltesting/actions/workflows/athena-integration.yml/badge.svg)](https://github.com/gurmeetsaran/sqltesting/actions/workflows/athena-integration.yml)
 [![BigQuery Integration](https://github.com/gurmeetsaran/sqltesting/actions/workflows/bigquery-integration.yml/badge.svg)](https://github.com/gurmeetsaran/sqltesting/actions/workflows/bigquery-integration.yml)
+[![Redshift Integration](https://github.com/gurmeetsaran/sqltesting/actions/workflows/redshift-integration.yml/badge.svg)](https://github.com/gurmeetsaran/sqltesting/actions/workflows/redshift-integration.yml)
 [![GitHub license](https://img.shields.io/github/license/gurmeetsaran/sqltesting.svg)](https://github.com/gurmeetsaran/sqltesting/blob/master/LICENSE)
 [![codecov](https://codecov.io/gh/gurmeetsaran/sqltesting/branch/master/graph/badge.svg?token=CN3G5X5ZA5)](https://codecov.io/gh/gurmeetsaran/sqltesting)
 ![python version](https://img.shields.io/badge/python-3.9%2B-yellowgreen)
@@ -166,7 +167,7 @@ class UserResult(BaseModel):
 
 class UsersMockTable(BaseMockTable):
     def get_database_name(self) -> str:
-        return "analytics_db"
+        return "sqltesting_db"
 
     def get_table_name(self) -> str:
         return "users"
@@ -184,7 +185,7 @@ class UsersMockTable(BaseMockTable):
 def test_pattern_1():
     return TestCase(
         query="SELECT user_id, name FROM users WHERE user_id = 1",
-        execution_database="analytics_db"
+        execution_database="sqltesting_db"
     )
 
 # Pattern 2: Define all test data in the TestCase
@@ -192,7 +193,7 @@ def test_pattern_1():
 def test_pattern_2():
     return TestCase(
         query="SELECT user_id, name FROM users WHERE user_id = 1",
-        execution_database="analytics_db",
+        execution_database="sqltesting_db",
         mock_tables=[
             UsersMockTable([
                 User(1, "Alice", "alice@example.com"),
@@ -214,7 +215,7 @@ def test_pattern_2():
 def test_pattern_3():
     return TestCase(
         query="SELECT user_id, name FROM users WHERE user_id = 1",
-        execution_database="analytics_db",
+        execution_database="sqltesting_db",
         result_class=UserResult
     )
 ```
@@ -259,7 +260,7 @@ You can specify which database adapter to use for individual tests:
 def test_bigquery_query():
     return TestCase(
         query="SELECT user_id, name FROM users WHERE user_id = 1",
-        execution_database="analytics_db"
+        execution_database="sqltesting_db"
     )
 
 # Use Athena adapter for this test
@@ -384,27 +385,70 @@ For more information on code quality standards, see [docs/linting.md](docs/linti
 
 ## CI/CD Integration
 
-The library includes GitHub Actions workflows for automated testing:
+The library includes comprehensive GitHub Actions workflows for automated testing across multiple database platforms:
 
-### Athena Integration Tests
+### Integration Tests
 Automatically runs on every PR and merge to master:
 - **Unit Tests**: Mock-based tests in `tests/` (free)
-- **Integration Tests**: Real AWS Athena tests in `tests/integration/` (minimal cost)
+- **Integration Tests**: Real database tests in `tests/integration/` (minimal cost)
 - **Cleanup**: Automatic resource cleanup
 
-#### Setup Guide
-1. **Configure GitHub Secrets & Variables** (see [Setup Guide](.github/ATHENA_CICD_SETUP.md)):
-   - **Secrets**: `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_ATHENA_OUTPUT_LOCATION`
-   - **Variables**: `AWS_ATHENA_DATABASE`, `AWS_REGION` (optional)
+### Athena Integration Tests
+- **Real AWS Athena tests** with automatic S3 setup and cleanup
+- **Cost**: ~$0.05 per test run
+- **Setup Guide**: [Athena CI/CD Setup](.github/ATHENA_CICD_SETUP.md)
 
-2. **Validate Setup**:
-   ```bash
-   python scripts/validate-athena-setup.py
-   ```
+**Required Setup**:
+- **Secrets**: `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_ATHENA_OUTPUT_LOCATION`
+- **Variables**: `AWS_ATHENA_DATABASE`, `AWS_REGION` (optional)
 
-3. **Monitor Results**: Check GitHub Actions tab for test results
+**Validation**:
+```bash
+python scripts/validate-athena-setup.py
+```
 
-**Cost**: ~$0.05 per test run. For cost optimization after release, see the [setup guide](.github/ATHENA_CICD_SETUP.md).
+### BigQuery Integration Tests
+- **Real GCP BigQuery tests** with dataset creation and cleanup
+- **Cost**: Minimal (within free tier for most use cases)
+- **Setup Guide**: [BigQuery CI/CD Setup](.github/BIGQUERY_CICD_SETUP.md)
+
+**Required Setup**:
+- **Secrets**: `GCP_SA_KEY`, `GCP_PROJECT_ID`
+
+**Validation**:
+```bash
+python scripts/validate-bigquery-setup.py
+```
+
+### Redshift Integration Tests
+- **Real AWS Redshift Serverless tests** with namespace/workgroup creation
+- **Cost**: ~$0.50-$1.00 per test run (free tier: $300 credit for new accounts)
+- **Setup Guide**: [Redshift CI/CD Setup](.github/REDSHIFT_CICD_SETUP.md)
+
+**Required Setup**:
+- **Secrets**: `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `REDSHIFT_ADMIN_PASSWORD`
+- **Variables**: `AWS_REGION`, `REDSHIFT_NAMESPACE`, `REDSHIFT_WORKGROUP` (optional)
+- **IAM Permissions**: Includes EC2 permissions for automatic security group configuration
+
+**Validation**:
+```bash
+python scripts/validate-redshift-setup.py
+```
+
+**Manual Testing**:
+```bash
+# Create Redshift cluster (automatically configures security groups for connectivity)
+python scripts/manage-redshift-cluster.py create
+
+# Get connection details and psql command
+python scripts/manage-redshift-cluster.py endpoint
+
+# Run integration tests
+poetry run pytest tests/integration/test_redshift_integration.py -v
+
+# Clean up resources (automatically waits for proper deletion order)
+python scripts/manage-redshift-cluster.py destroy
+```
 
 ## Documentation
 

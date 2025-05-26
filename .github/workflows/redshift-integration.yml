@@ -1,0 +1,168 @@
+name: Redshift Integration Tests
+
+on:
+  pull_request:
+    branches: [master, main]
+    paths:
+      - 'src/sql_testing_library/adapters/redshift.py'
+      - 'src/sql_testing_library/core.py'
+      - 'src/sql_testing_library/mock_table.py'
+      - 'tests/test_redshift*.py'
+      - 'tests/integration/test_redshift_integration.py'
+      - '.github/workflows/redshift-integration.yml'
+  push:
+    branches: [master, main]
+    paths:
+      - 'src/sql_testing_library/adapters/redshift.py'
+      - 'src/sql_testing_library/core.py'
+      - 'src/sql_testing_library/mock_table.py'
+      - 'tests/test_redshift*.py'
+      - 'tests/integration/test_redshift_integration.py'
+      - '.github/workflows/redshift-integration.yml'
+  workflow_dispatch:  # Allow manual trigger
+  workflow_call:      # Allow workflow reuse
+
+env:
+  PYTHON_VERSION: '3.10'
+
+jobs:
+
+  real-integration:
+    name: Real Redshift Integration Tests
+    runs-on: ubuntu-latest
+    if: |
+      (github.event_name == 'push' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main')) ||
+      (github.event_name == 'pull_request') ||
+      (github.event_name == 'workflow_dispatch') ||
+      (github.event_name == 'workflow_call')
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install dependencies
+        run: |
+          python -m pip install -U pip poetry
+          poetry install --with dev,redshift
+
+      - name: Create Redshift Serverless namespace and workgroup
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_REGION: ${{ vars.AWS_REGION || 'us-west-2' }}
+          REDSHIFT_NAMESPACE: ${{ vars.REDSHIFT_NAMESPACE || 'sql-testing-ns' }}
+          REDSHIFT_WORKGROUP: ${{ vars.REDSHIFT_WORKGROUP || 'sql-testing-wg' }}
+          REDSHIFT_ADMIN_USER: ${{ secrets.REDSHIFT_ADMIN_USER || 'admin' }}
+          REDSHIFT_ADMIN_PASSWORD: ${{ secrets.REDSHIFT_ADMIN_PASSWORD }}
+        run: |
+          # Install AWS CLI if not present
+          which aws || pip install awscli
+
+          # Validate required secrets
+          if [ -z "$REDSHIFT_ADMIN_PASSWORD" ]; then
+            echo "❌ REDSHIFT_ADMIN_PASSWORD secret is required"
+            echo "Please add this secret to your GitHub repository"
+            exit 1
+          fi
+
+          # Use the management script to create cluster
+          echo "Creating Redshift cluster using management script..."
+          poetry run python scripts/manage-redshift-cluster.py --region "$AWS_REGION" create \
+            --admin-user "$REDSHIFT_ADMIN_USER" \
+            --admin-password "$REDSHIFT_ADMIN_PASSWORD"
+
+      - name: Get Redshift endpoint and configure tests
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_REGION: ${{ vars.AWS_REGION || 'us-west-2' }}
+          REDSHIFT_WORKGROUP: ${{ vars.REDSHIFT_WORKGROUP || 'sql-testing-wg' }}
+          REDSHIFT_ADMIN_USER: ${{ secrets.REDSHIFT_ADMIN_USER || 'admin' }}
+          REDSHIFT_ADMIN_PASSWORD: ${{ secrets.REDSHIFT_ADMIN_PASSWORD }}
+        run: |
+          # Extract endpoint details using AWS CLI
+          REDSHIFT_HOST=$(aws redshift-serverless get-workgroup \
+            --workgroup-name "$REDSHIFT_WORKGROUP" \
+            --region "$AWS_REGION" \
+            --query 'workgroup.endpoint.address' \
+            --output text)
+
+          REDSHIFT_PORT=$(aws redshift-serverless get-workgroup \
+            --workgroup-name "$REDSHIFT_WORKGROUP" \
+            --region "$AWS_REGION" \
+            --query 'workgroup.endpoint.port' \
+            --output text)
+
+          # Generate pytest.ini file for Redshift integration tests
+          echo "[sql_testing]" > pytest.ini
+          echo "adapter = redshift" >> pytest.ini
+          echo "host = $REDSHIFT_HOST" >> pytest.ini
+          echo "database = sqltesting_db" >> pytest.ini
+          echo "user = $REDSHIFT_ADMIN_USER" >> pytest.ini
+          echo "password = $REDSHIFT_ADMIN_PASSWORD" >> pytest.ini
+          echo "port = $REDSHIFT_PORT" >> pytest.ini
+
+          echo "✅ Generated pytest.ini for Redshift integration tests"
+
+      - name: Wait for Redshift to be fully ready
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_REGION: ${{ vars.AWS_REGION || 'us-west-2' }}
+          REDSHIFT_WORKGROUP: ${{ vars.REDSHIFT_WORKGROUP || 'sql-testing-wg' }}
+        run: |
+          echo "Waiting for Redshift workgroup to be fully ready..."
+          # Check workgroup status until it's available
+          for i in {1..30}; do
+            STATUS=$(poetry run python scripts/manage-redshift-cluster.py --region "$AWS_REGION" status | grep "Workgroup" | awk '{print $3}')
+            echo "Attempt $i/30: Workgroup status is $STATUS"
+
+            if [ "$STATUS" = "AVAILABLE" ]; then
+              echo "✅ Redshift workgroup is ready!"
+              break
+            elif [ $i -eq 30 ]; then
+              echo "❌ Timeout waiting for workgroup to be ready"
+              exit 1
+            else
+              echo "⏳ Waiting 10 seconds before next check..."
+              sleep 10
+            fi
+          done
+
+      - name: Run Redshift integration tests
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_REGION: ${{ vars.AWS_REGION || 'us-west-2' }}
+        run: |
+          echo "Running Redshift integration tests..."
+          poetry run pytest -v --tb=short -m "integration and redshift" --reruns 2 --reruns-delay 5
+        timeout-minutes: 15
+
+      - name: Cleanup Redshift resources
+        if: always()
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_REGION: ${{ vars.AWS_REGION || 'us-west-2' }}
+          REDSHIFT_NAMESPACE: ${{ vars.REDSHIFT_NAMESPACE || 'sql-testing-ns' }}
+          REDSHIFT_WORKGROUP: ${{ vars.REDSHIFT_WORKGROUP || 'sql-testing-wg' }}
+        run: |
+          # Use the management script to destroy cluster
+          echo "Cleaning up Redshift resources using management script..."
+          poetry run python scripts/manage-redshift-cluster.py --region "$AWS_REGION" destroy
+
+      - name: Upload test artifacts
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: redshift-test-artifacts
+          path: |
+            pytest.ini
+            *.log
+          retention-days: 7

@@ -6,10 +6,10 @@ This directory contains integration tests that require real database connections
 
 ### Current Tests
 - **`test_athena_integration.py`**: AWS Athena integration tests
+- **`test_redshift_integration.py`**: AWS Redshift integration tests
+- **`test_bigquery_integration.py`**: Google BigQuery integration tests
 
 ### Future Tests
-- **`test_bigquery_integration.py`**: Google BigQuery integration tests
-- **`test_redshift_integration.py`**: AWS Redshift integration tests
 - **`test_trino_integration.py`**: Trino integration tests
 
 ## Running Integration Tests
@@ -21,12 +21,16 @@ pytest tests/integration/ -v -m integration
 
 # Run with specific adapter
 pytest tests/integration/ -v -m "integration and athena"
+pytest tests/integration/ -v -m "integration and redshift"
 ```
 
 ### Individual Test Files
 ```bash
 # Athena integration tests only
 pytest tests/integration/test_athena_integration.py -v
+
+# Redshift integration tests only
+pytest tests/integration/test_redshift_integration.py -v
 
 # Skip slow tests
 pytest tests/integration/ -v -m "integration and not slow"
@@ -66,6 +70,7 @@ def test_my_integration():
 - Set timeouts: `--timeout=300`
 - Limit failures: `--maxfail=3`
 - Run locally only when needed
+- Retry failed tests automatically: `--reruns 2 --reruns-delay 5`
 
 ## CI/CD Integration
 

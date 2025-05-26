@@ -283,6 +283,31 @@ class SQLTestFramework:
             # Combine the rows into the UNNEST format
             joined_rows = ",\n      ".join(struct_rows)
             return f"{alias} AS (\n  SELECT\n    *\n  FROM UNNEST([\n    STRUCT\n      {joined_rows}\n]))"  # noqa: E501
+        elif dialect == "redshift":
+            # Redshift-specific format using UNION ALL (VALUES not supported in CTEs)
+            columns = list(df.columns)
+            select_statements = []
+
+            for idx, (_, row) in enumerate(df.iterrows()):
+                if idx == 0:
+                    # First SELECT with column aliases
+                    select_expressions = []
+                    for col_name, value in row.items():
+                        col_type = column_types.get(col_name, str)
+                        formatted_value = self.adapter.format_value_for_cte(value, col_type)
+                        select_expressions.append(f"{formatted_value} AS {col_name}")
+                    select_statements.append(f"SELECT {', '.join(select_expressions)}")
+                else:
+                    # Subsequent SELECTs without aliases
+                    row_values = []
+                    for col_name, value in row.items():
+                        col_type = column_types.get(col_name, str)
+                        formatted_value = self.adapter.format_value_for_cte(value, col_type)
+                        row_values.append(formatted_value)
+                    select_statements.append(f"SELECT {', '.join(row_values)}")
+
+            union_query = "\n  UNION ALL\n  ".join(select_statements)
+            return f"{alias} AS (\n  {union_query}\n)"
         else:
             # Standard SQL format using VALUES clause
             values_rows = []

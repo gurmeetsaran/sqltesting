@@ -30,9 +30,14 @@ jobs:
     uses: ./.github/workflows/bigquery-integration.yml
     secrets: inherit
 
+  redshift-integration:
+    name: Redshift Integration Tests
+    uses: ./.github/workflows/redshift-integration.yml
+    secrets: inherit
+
   release:
     name: Create release
-    needs: [unit-tests, athena-integration, bigquery-integration]
+    needs: [unit-tests, athena-integration, bigquery-integration, redshift-integration]
     runs-on: ubuntu-latest
 
     steps:
