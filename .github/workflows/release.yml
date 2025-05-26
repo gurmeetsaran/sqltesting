@@ -66,11 +66,13 @@ jobs:
         run: |
           if [ "${{ github.event.inputs.version_type }}" = "auto" ]; then
             echo "🤖 Auto-determining version bump from conventional commits..."
-            poetry run cz bump --changelog --yes -- --changelog-increment-filename body.md
+            poetry run cz bump --yes
           else
             echo "📌 Manual version bump: ${{ github.event.inputs.version_type }}"
-            poetry run cz bump --increment ${{ github.event.inputs.version_type }} --changelog --yes -- --changelog-increment-filename body.md
+            poetry run cz bump --increment ${{ github.event.inputs.version_type }} --yes
           fi
+          # Generate changelog increment for release body
+          poetry run cz changelog --incremental > body.md
 
       - name: Get new version
         id: version
