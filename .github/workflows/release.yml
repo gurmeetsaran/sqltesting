@@ -87,7 +87,7 @@ jobs:
         with:
           tag_name: ${{ steps.version.outputs.version }}
           name: Release ${{ steps.version.outputs.version }}
-          body_path: "body.md"
+          body_path: "CHANGELOG.md"
           draft: false
           prerelease: ${{ startsWith(steps.version.outputs.version, '0.') }}
           make_latest: ${{ !startsWith(steps.version.outputs.version, '0.') }}
