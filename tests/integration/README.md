@@ -8,9 +8,7 @@ This directory contains integration tests that require real database connections
 - **`test_athena_integration.py`**: AWS Athena integration tests
 - **`test_redshift_integration.py`**: AWS Redshift integration tests
 - **`test_bigquery_integration.py`**: Google BigQuery integration tests
-
-### Future Tests
-- **`test_trino_integration.py`**: Trino integration tests
+- **`test_trino_integration.py`**: Trino integration tests (Docker-based)
 
 ## Running Integration Tests
 
@@ -22,6 +20,7 @@ pytest tests/integration/ -v -m integration
 # Run with specific adapter
 pytest tests/integration/ -v -m "integration and athena"
 pytest tests/integration/ -v -m "integration and redshift"
+pytest tests/integration/ -v -m "integration and trino"
 ```
 
 ### Individual Test Files
@@ -31,6 +30,9 @@ pytest tests/integration/test_athena_integration.py -v
 
 # Redshift integration tests only
 pytest tests/integration/test_redshift_integration.py -v
+
+# Trino integration tests only
+pytest tests/integration/test_trino_integration.py -v
 
 # Skip slow tests
 pytest tests/integration/ -v -m "integration and not slow"
@@ -44,7 +46,7 @@ Each adapter requires specific environment variables. See the main documentation
 - **Athena**: See [Athena CI/CD Setup](../../.github/ATHENA_CICD_SETUP.md)
 - **BigQuery**: `GOOGLE_APPLICATION_CREDENTIALS`, `GCP_PROJECT_ID`
 - **Redshift**: `REDSHIFT_HOST`, `REDSHIFT_USER`, etc.
-- **Trino**: `TRINO_HOST`, `TRINO_USER`, etc.
+- **Trino**: Docker-based (no external credentials needed)
 
 ### Markers
 All integration tests must use appropriate pytest markers:
@@ -52,6 +54,7 @@ All integration tests must use appropriate pytest markers:
 ```python
 @pytest.mark.integration
 @pytest.mark.athena  # or bigquery, redshift, trino
+@pytest.mark.trino   # for Trino tests
 def test_my_integration():
     # Test implementation
 ```
@@ -63,14 +66,36 @@ def test_my_integration():
 - **Athena**: ~$0.01-0.05 per test run
 - **BigQuery**: Varies by query complexity
 - **Redshift**: Cluster time charges
-- **Trino**: Depends on underlying storage
+- **Trino**: Free (Docker-based, no cloud costs)
 
 ### Cost Control
-- Use markers to run specific tests: `-m "athena and not slow"`
+- Use markers to run specific tests: `-m "athena and not slow"` or `-m "trino"`
 - Set timeouts: `--timeout=300`
 - Limit failures: `--maxfail=3`
 - Run locally only when needed
 - Retry failed tests automatically: `--reruns 2 --reruns-delay 5`
+
+## Trino Testing
+
+Trino integration tests use Docker for a completely free testing environment:
+
+**Local Development**:
+```bash
+# Start Trino locally
+docker run -d -p 8080:8080 --name trino trinodb/trino:457
+
+# Run tests
+pytest tests/integration/test_trino_integration.py -v
+
+# Stop Trino
+docker stop trino && docker rm trino
+```
+
+**Features**:
+- Uses Memory connector (no external storage needed)
+- Full SQL feature support (joins, aggregations, window functions)
+- Same test cases as Athena (since both are based on Trino/Presto)
+- Automatic setup and teardown in CI/CD
 
 ## CI/CD Integration
 

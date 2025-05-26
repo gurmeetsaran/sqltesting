@@ -9,7 +9,7 @@ from typing import Any, Dict, List, Optional, Type, Union, get_args
 import pandas as pd
 
 from ..mock_table import BaseMockTable
-from ..types import BaseTypeConverter
+from ..types import BaseTypeConverter, unwrap_optional_type
 from .base import DatabaseAdapter
 
 
@@ -149,21 +149,38 @@ class TrinoAdapter(DatabaseAdapter):
 
     def format_value_for_cte(self, value: Any, column_type: type) -> str:
         """Format value for Trino CTE VALUES clause."""
+        # Unwrap Optional types
+        actual_type = unwrap_optional_type(column_type)
+
         if value is None:
-            return "NULL"
-        elif column_type is str:
+            # Cast NULL values to appropriate types for Trino
+            if actual_type == Decimal:
+                return "CAST(NULL AS DECIMAL(38,9))"
+            elif actual_type is int:
+                return "CAST(NULL AS BIGINT)"
+            elif actual_type is float:
+                return "CAST(NULL AS DOUBLE)"
+            elif actual_type is bool:
+                return "CAST(NULL AS BOOLEAN)"
+            elif actual_type is date:
+                return "CAST(NULL AS DATE)"
+            elif actual_type == datetime:
+                return "CAST(NULL AS TIMESTAMP)"
+            else:
+                return "CAST(NULL AS VARCHAR)"
+        elif actual_type is str:
             # Escape single quotes for SQL
             escaped_value = str(value).replace("'", "''")
             return f"'{escaped_value}'"
-        elif column_type in (int, float):
+        elif actual_type in (int, float):
             return str(value)
-        elif column_type is bool:
+        elif actual_type is bool:
             return "TRUE" if value else "FALSE"
-        elif column_type is date:
+        elif actual_type is date:
             return f"DATE '{value}'"
-        elif column_type == datetime:
-            return f"TIMESTAMP '{value.isoformat()}'"
-        elif column_type == Decimal:
+        elif actual_type == datetime:
+            return f"TIMESTAMP '{value.isoformat(sep=' ')}'"
+        elif actual_type == Decimal:
             return str(value)
         else:
             # Default to string representation

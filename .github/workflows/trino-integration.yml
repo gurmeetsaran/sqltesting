@@ -1,0 +1,162 @@
+name: Trino Integration Tests
+
+on:
+  pull_request:
+    branches: [master, main]
+    paths:
+      - 'src/sql_testing_library/adapters/trino.py'
+      - 'src/sql_testing_library/core.py'
+      - 'src/sql_testing_library/mock_table.py'
+      - 'tests/test_trino*.py'
+      - 'tests/integration/test_trino_integration.py'
+      - '.github/workflows/trino-integration.yml'
+  push:
+    branches: [master, main]
+    paths:
+      - 'src/sql_testing_library/adapters/trino.py'
+      - 'src/sql_testing_library/core.py'
+      - 'src/sql_testing_library/mock_table.py'
+      - 'tests/test_trino*.py'
+      - 'tests/integration/test_trino_integration.py'
+      - '.github/workflows/trino-integration.yml'
+  workflow_dispatch:  # Allow manual trigger
+  workflow_call:      # Allow workflow reuse
+
+env:
+  PYTHON_VERSION: '3.10'
+  TRINO_VERSION: '457'  # Use specific version for reproducibility
+
+jobs:
+
+  real-integration:
+    name: Real Trino Integration Tests
+    runs-on: ubuntu-latest
+    if: |
+      (github.event_name == 'push' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main')) ||
+      (github.event_name == 'pull_request') ||
+      (github.event_name == 'workflow_dispatch') ||
+      (github.event_name == 'workflow_call')
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install dependencies
+        run: |
+          python -m pip install -U pip poetry
+          poetry install --with dev,trino
+
+      - name: Start Trino server
+        run: |
+          # Start Trino in background
+          echo "Starting Trino server..."
+          docker run -d \
+            --name trino \
+            -p 8080:8080 \
+            trinodb/trino:${{ env.TRINO_VERSION }}
+
+          # Wait for Trino HTTP endpoint to be ready
+          echo "Waiting for Trino HTTP endpoint..."
+          timeout 120 bash -c '
+            until curl -f -s http://localhost:8080/v1/info > /dev/null; do
+              echo "Waiting for HTTP endpoint..."
+              sleep 3
+            done
+          '
+
+          echo "✅ Trino HTTP endpoint is ready!"
+
+          # Additional wait for Trino query engine to fully initialize
+          echo "Waiting for Trino query engine to initialize..."
+          sleep 30
+
+          # Test connection
+          curl -s http://localhost:8080/v1/info | jq '.' || echo "JQ not available, but Trino is running"
+
+      - name: Configure Trino tests
+        run: |
+          # Generate pytest.ini file for Trino integration tests
+          echo "[sql_testing]" > pytest.ini
+          echo "adapter = trino" >> pytest.ini
+          echo "host = localhost" >> pytest.ini
+          echo "port = 8080" >> pytest.ini
+          echo "catalog = memory" >> pytest.ini
+          echo "schema = default" >> pytest.ini
+          echo "user = test" >> pytest.ini
+
+          echo "✅ Generated pytest.ini for Trino integration tests"
+          cat pytest.ini
+
+      - name: Test Trino connectivity
+        run: |
+          echo "Testing Trino connection..."
+          poetry run python -c "
+          import requests
+          import time
+
+          # Test basic connectivity
+          try:
+              response = requests.get('http://localhost:8080/v1/info', timeout=10)
+              print(f'✅ Trino info endpoint: {response.status_code}')
+              print(f'Response: {response.text[:200]}')
+          except Exception as e:
+              print(f'❌ Failed to connect to Trino info endpoint: {e}')
+              exit(1)
+
+          # Test SQL query with retry for startup
+          import time
+          max_retries = 5
+          for attempt in range(max_retries):
+              try:
+                  from trino.dbapi import connect
+                  conn = connect(
+                      host='localhost',
+                      port=8080,
+                      user='test',
+                      catalog='memory',
+                      schema='default'
+                  )
+                  cur = conn.cursor()
+                  cur.execute('SELECT 1 as test_value')
+                  result = cur.fetchone()
+                  print(f'✅ Test query successful: {result}')
+                  cur.close()
+                  conn.close()
+                  break
+              except Exception as e:
+                  if 'SERVER_STARTING_UP' in str(e) and attempt < max_retries - 1:
+                      print(f'⏳ Trino still starting up (attempt {attempt + 1}/{max_retries}), waiting 15 seconds...')
+                      time.sleep(15)
+                      continue
+                  else:
+                      print(f'❌ Failed to execute test query: {e}')
+                      exit(1)
+          "
+
+      - name: Run Trino integration tests
+        run: |
+          echo "Running Trino integration tests..."
+          poetry run pytest tests/integration/ -v --tb=short -m "integration and trino" --reruns 2 --reruns-delay 5
+        timeout-minutes: 15
+
+      - name: Stop Trino server
+        if: always()
+        run: |
+          echo "Stopping Trino server..."
+          docker stop trino || true
+          docker rm trino || true
+
+      - name: Upload test artifacts
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: trino-test-artifacts
+          path: |
+            pytest.ini
+            *.log
+          retention-days: 7

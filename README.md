@@ -6,6 +6,7 @@ A Python library for testing SQL queries with mock data injection across Athena,
 [![Athena Integration](https://github.com/gurmeetsaran/sqltesting/actions/workflows/athena-integration.yml/badge.svg)](https://github.com/gurmeetsaran/sqltesting/actions/workflows/athena-integration.yml)
 [![BigQuery Integration](https://github.com/gurmeetsaran/sqltesting/actions/workflows/bigquery-integration.yml/badge.svg)](https://github.com/gurmeetsaran/sqltesting/actions/workflows/bigquery-integration.yml)
 [![Redshift Integration](https://github.com/gurmeetsaran/sqltesting/actions/workflows/redshift-integration.yml/badge.svg)](https://github.com/gurmeetsaran/sqltesting/actions/workflows/redshift-integration.yml)
+[![Trino Integration](https://github.com/gurmeetsaran/sqltesting/actions/workflows/trino-integration.yml/badge.svg)](https://github.com/gurmeetsaran/sqltesting/actions/workflows/trino-integration.yml)
 [![GitHub license](https://img.shields.io/github/license/gurmeetsaran/sqltesting.svg)](https://github.com/gurmeetsaran/sqltesting/blob/master/LICENSE)
 [![codecov](https://codecov.io/gh/gurmeetsaran/sqltesting/branch/master/graph/badge.svg?token=CN3G5X5ZA5)](https://codecov.io/gh/gurmeetsaran/sqltesting)
 ![python version](https://img.shields.io/badge/python-3.9%2B-yellowgreen)
@@ -448,6 +449,21 @@ poetry run pytest tests/integration/test_redshift_integration.py -v
 
 # Clean up resources (automatically waits for proper deletion order)
 python scripts/manage-redshift-cluster.py destroy
+```
+
+### Trino Integration Tests
+- **Real Trino tests** using Docker with Memory connector
+- **Cost**: Free (runs locally with Docker)
+- **Setup Guide**: [Trino CI/CD Setup](.github/TRINO_CICD_SETUP.md)
+
+**Required Setup**:
+- Docker for containerized Trino server
+- No additional secrets or variables required
+
+**Manual Testing**:
+```bash
+# Run integration tests (automatically manages Docker containers)
+poetry run pytest tests/integration/test_trino_integration.py -v
 ```
 
 ## Documentation

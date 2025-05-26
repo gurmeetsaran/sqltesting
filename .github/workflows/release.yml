@@ -35,9 +35,14 @@ jobs:
     uses: ./.github/workflows/redshift-integration.yml
     secrets: inherit
 
+  trino-integration:
+    name: Trino Integration Tests
+    uses: ./.github/workflows/trino-integration.yml
+    secrets: inherit
+
   release:
     name: Create release
-    needs: [unit-tests, athena-integration, bigquery-integration, redshift-integration]
+    needs: [unit-tests, athena-integration, bigquery-integration, redshift-integration, trino-integration]
     runs-on: ubuntu-latest
 
     steps:
