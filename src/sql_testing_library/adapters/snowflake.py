@@ -94,12 +94,25 @@ class SnowflakeAdapter(DatabaseAdapter):
 
         # Execute query
         cursor = conn.cursor()
+
+        # Ensure we have an active warehouse if one is specified
+        if self.warehouse:
+            try:
+                cursor.execute(f"USE WAREHOUSE {self.warehouse}")
+            except Exception as e:
+                raise RuntimeError(
+                    f"Failed to use warehouse '{self.warehouse}'. "
+                    f"Please check that the warehouse exists and you have USAGE permission. "
+                    f"Original error: {e}"
+                ) from e
+
         cursor.execute(query)
 
         # If this is a SELECT query, return results
         if cursor.description:
-            # Get column names from cursor description
-            columns = [col[0] for col in cursor.description]
+            # Get column names from cursor description and normalize to lowercase
+            # Snowflake returns uppercase column names by default
+            columns = [col[0].lower() for col in cursor.description]
 
             # Fetch all rows
             rows = cursor.fetchall()

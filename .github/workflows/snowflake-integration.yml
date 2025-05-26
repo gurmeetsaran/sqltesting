@@ -1,0 +1,188 @@
+name: Snowflake Integration Tests
+
+on:
+  pull_request:
+    branches: [master, main]
+    paths:
+      - 'src/sql_testing_library/adapters/snowflake.py'
+      - 'src/sql_testing_library/core.py'
+      - 'src/sql_testing_library/mock_table.py'
+      - 'tests/test_snowflake*.py'
+      - 'tests/integration/test_snowflake_integration.py'
+      - '.github/workflows/snowflake-integration.yml'
+  push:
+    branches: [master, main]
+    paths:
+      - 'src/sql_testing_library/adapters/snowflake.py'
+      - 'src/sql_testing_library/core.py'
+      - 'src/sql_testing_library/mock_table.py'
+      - 'tests/test_snowflake*.py'
+      - 'tests/integration/test_snowflake_integration.py'
+      - '.github/workflows/snowflake-integration.yml'
+  workflow_dispatch:  # Allow manual trigger
+  workflow_call:      # Allow workflow reuse
+
+env:
+  PYTHON_VERSION: '3.10'
+
+jobs:
+
+  real-integration:
+    name: Real Snowflake Integration Tests
+    runs-on: ubuntu-latest
+    if: |
+      (github.event_name == 'push' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main')) ||
+      (github.event_name == 'pull_request') ||
+      (github.event_name == 'workflow_dispatch') ||
+      (github.event_name == 'workflow_call')
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install dependencies
+        run: |
+          python -m pip install -U pip poetry
+          poetry install --with dev,snowflake
+
+      - name: Validate Snowflake credentials
+        run: |
+          echo "Validating required Snowflake environment variables..."
+
+          if [ -z "${{ secrets.SNOWFLAKE_ACCOUNT }}" ]; then
+            echo "❌ SNOWFLAKE_ACCOUNT secret not set"
+            exit 1
+          fi
+
+          if [ -z "${{ secrets.SNOWFLAKE_USER }}" ]; then
+            echo "❌ SNOWFLAKE_USER secret not set"
+            exit 1
+          fi
+
+          if [ -z "${{ secrets.SNOWFLAKE_PASSWORD }}" ]; then
+            echo "❌ SNOWFLAKE_PASSWORD secret not set"
+            exit 1
+          fi
+
+          echo "✅ Required Snowflake secrets are configured"
+
+      - name: Configure Snowflake tests
+        run: |
+          # Generate pytest.ini file for Snowflake integration tests
+          echo "[sql_testing]" > pytest.ini
+          echo "adapter = snowflake" >> pytest.ini
+          echo "" >> pytest.ini
+          echo "[sql_testing.snowflake]" >> pytest.ini
+          echo "account = ${{ secrets.SNOWFLAKE_ACCOUNT }}" >> pytest.ini
+          echo "user = ${{ secrets.SNOWFLAKE_USER }}" >> pytest.ini
+          echo "password = ${{ secrets.SNOWFLAKE_PASSWORD }}" >> pytest.ini
+          echo "database = ${{ vars.SNOWFLAKE_DATABASE || 'TEST_DB' }}" >> pytest.ini
+          echo "schema = ${{ vars.SNOWFLAKE_SCHEMA || 'PUBLIC' }}" >> pytest.ini
+
+          # Add optional warehouse if provided
+          if [ -n "${{ vars.SNOWFLAKE_WAREHOUSE }}" ]; then
+            echo "warehouse = ${{ vars.SNOWFLAKE_WAREHOUSE }}" >> pytest.ini
+          fi
+
+          # Add optional role if provided
+          if [ -n "${{ vars.SNOWFLAKE_ROLE }}" ]; then
+            echo "role = ${{ vars.SNOWFLAKE_ROLE }}" >> pytest.ini
+          fi
+
+          echo "✅ Generated pytest.ini for Snowflake integration tests"
+          # Show config without sensitive data
+          echo "Configuration (secrets masked):"
+          sed 's/password = .*/password = ***MASKED***/g' pytest.ini
+
+      - name: Set Snowflake environment variables
+        run: |
+          echo "SNOWFLAKE_ACCOUNT=${{ secrets.SNOWFLAKE_ACCOUNT }}" >> $GITHUB_ENV
+          echo "SNOWFLAKE_USER=${{ secrets.SNOWFLAKE_USER }}" >> $GITHUB_ENV
+          echo "SNOWFLAKE_PASSWORD=${{ secrets.SNOWFLAKE_PASSWORD }}" >> $GITHUB_ENV
+          echo "SNOWFLAKE_DATABASE=${{ vars.SNOWFLAKE_DATABASE || 'TEST_DB' }}" >> $GITHUB_ENV
+          echo "SNOWFLAKE_SCHEMA=${{ vars.SNOWFLAKE_SCHEMA || 'PUBLIC' }}" >> $GITHUB_ENV
+
+          # Optional variables
+          if [ -n "${{ vars.SNOWFLAKE_WAREHOUSE }}" ]; then
+            echo "SNOWFLAKE_WAREHOUSE=${{ vars.SNOWFLAKE_WAREHOUSE }}" >> $GITHUB_ENV
+          fi
+
+          if [ -n "${{ vars.SNOWFLAKE_ROLE }}" ]; then
+            echo "SNOWFLAKE_ROLE=${{ vars.SNOWFLAKE_ROLE }}" >> $GITHUB_ENV
+          fi
+
+      - name: Test Snowflake connectivity
+        run: |
+          echo "Testing Snowflake connection..."
+          poetry run python -c "
+          import os
+          import sys
+
+          try:
+              import snowflake.connector
+
+              # Test connection
+              conn = snowflake.connector.connect(
+                  account=os.getenv('SNOWFLAKE_ACCOUNT'),
+                  user=os.getenv('SNOWFLAKE_USER'),
+                  password=os.getenv('SNOWFLAKE_PASSWORD'),
+                  database=os.getenv('SNOWFLAKE_DATABASE', 'TEST_DB'),
+                  schema=os.getenv('SNOWFLAKE_SCHEMA', 'PUBLIC'),
+                  warehouse=os.getenv('SNOWFLAKE_WAREHOUSE'),
+                  role=os.getenv('SNOWFLAKE_ROLE')
+              )
+
+              # Test simple query
+              cursor = conn.cursor()
+              cursor.execute('SELECT CURRENT_VERSION() as version')
+              result = cursor.fetchone()
+              print(f'✅ Snowflake connection successful. Version: {result[0]}')
+
+              # Test database and schema access
+              cursor.execute('SELECT CURRENT_DATABASE(), CURRENT_SCHEMA()')
+              db_schema = cursor.fetchone()
+              print(f'✅ Database: {db_schema[0]}, Schema: {db_schema[1]}')
+
+              cursor.close()
+              conn.close()
+
+          except Exception as e:
+              print(f'❌ Failed to connect to Snowflake: {e}')
+              sys.exit(1)
+          "
+
+      - name: Run Snowflake integration tests
+        run: |
+          echo "Running Snowflake integration tests..."
+          poetry run pytest tests/integration/ -v --tb=short -m "integration and snowflake" --reruns 2 --reruns-delay 5
+        timeout-minutes: 20
+
+      - name: Upload test artifacts
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: snowflake-test-artifacts
+          path: |
+            pytest.ini
+            *.log
+          retention-days: 7
+
+      - name: Cost estimation
+        if: always()
+        run: |
+          echo "📊 Snowflake Integration Test Cost Estimation:"
+          echo "• Test duration: ~3-5 minutes"
+          echo "• Warehouse size: X-Small (default)"
+          echo "• Estimated cost: ~$0.01-0.05 USD"
+          echo "• Queries executed: ~15-20 test queries"
+          echo "• Data processed: Minimal (mock data only)"
+          echo ""
+          echo "💡 Cost optimization tips:"
+          echo "• Tests use minimal mock data to reduce compute time"
+          echo "• Temporary tables are automatically cleaned up"
+          echo "• Warehouse auto-suspends after 1 minute of inactivity"

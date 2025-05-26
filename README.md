@@ -7,6 +7,7 @@ A Python library for testing SQL queries with mock data injection across Athena,
 [![BigQuery Integration](https://github.com/gurmeetsaran/sqltesting/actions/workflows/bigquery-integration.yml/badge.svg)](https://github.com/gurmeetsaran/sqltesting/actions/workflows/bigquery-integration.yml)
 [![Redshift Integration](https://github.com/gurmeetsaran/sqltesting/actions/workflows/redshift-integration.yml/badge.svg)](https://github.com/gurmeetsaran/sqltesting/actions/workflows/redshift-integration.yml)
 [![Trino Integration](https://github.com/gurmeetsaran/sqltesting/actions/workflows/trino-integration.yml/badge.svg)](https://github.com/gurmeetsaran/sqltesting/actions/workflows/trino-integration.yml)
+[![Snowflake Integration](https://github.com/gurmeetsaran/sqltesting/actions/workflows/snowflake-integration.yml/badge.svg)](https://github.com/gurmeetsaran/sqltesting/actions/workflows/snowflake-integration.yml)
 [![GitHub license](https://img.shields.io/github/license/gurmeetsaran/sqltesting.svg)](https://github.com/gurmeetsaran/sqltesting/blob/master/LICENSE)
 [![codecov](https://codecov.io/gh/gurmeetsaran/sqltesting/branch/master/graph/badge.svg?token=CN3G5X5ZA5)](https://codecov.io/gh/gurmeetsaran/sqltesting)
 ![python version](https://img.shields.io/badge/python-3.9%2B-yellowgreen)
@@ -83,9 +84,10 @@ poetry install --with bigquery
 poetry install --with athena
 poetry install --with redshift
 poetry install --with trino
+poetry install --with snowflake
 
 # Install with all database adapters and dev tools
-poetry install --with bigquery,athena,redshift,trino,dev
+poetry install --with bigquery,athena,redshift,trino,snowflake,dev
 ```
 
 ## Quick Start
@@ -143,7 +145,7 @@ credentials_path = <path to credentials json>
 # password = <snowflake_password>
 # database = <test_database>
 # schema = <PUBLIC>  # Optional: default schema is 'PUBLIC'
-# warehouse = <compute_wh>  # Optional: specify a warehouse
+# warehouse = <compute_wh>  # Required: specify a warehouse
 # role = <role_name>  # Optional: specify a role
 ```
 
@@ -372,7 +374,7 @@ To set up the development environment:
 1. Install development dependencies:
    ```bash
    # Install all dependencies including database adapters and dev tools
-   poetry install --with bigquery,athena,redshift,trino,dev
+   poetry install --with bigquery,athena,redshift,trino,snowflake,dev
    ```
 
 2. Set up pre-commit hooks:
@@ -466,6 +468,26 @@ python scripts/manage-redshift-cluster.py destroy
 poetry run pytest tests/integration/test_trino_integration.py -v
 ```
 
+### Snowflake Integration Tests
+- **Real Snowflake tests** using cloud data platform
+- **Cost**: Compute time charges based on warehouse size
+- **Setup Guide**: [Snowflake CI/CD Setup](.github/SNOWFLAKE_CICD_SETUP.md)
+
+**Required Setup**:
+- **Secrets**: `SNOWFLAKE_ACCOUNT`, `SNOWFLAKE_USER`, `SNOWFLAKE_PASSWORD`
+- **Variables**: `SNOWFLAKE_DATABASE`, `SNOWFLAKE_WAREHOUSE`, `SNOWFLAKE_ROLE` (optional)
+
+**Validation**:
+```bash
+python scripts/validate-snowflake-setup.py
+```
+
+**Manual Testing**:
+```bash
+# Run integration tests
+poetry run pytest tests/integration/test_snowflake_integration.py -v
+```
+
 ## Documentation
 
 The library automatically:
@@ -487,7 +509,6 @@ The library has a few known limitations that are planned to be addressed in futu
 ### Snowflake Support
 - Physical table tests for Snowflake are currently skipped due to complex mocking requirements
 - Need better support for Snowflake-specific data types (VARIANT, OBJECT, ARRAY)
-- Add integration tests with actual Snowflake connection
 
 ### General Improvements
 - Add support for more SQL dialects
