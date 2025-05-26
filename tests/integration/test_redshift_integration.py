@@ -63,8 +63,8 @@ class OrderSummaryResult(BaseModel):
     customer_id: int
     customer_name: str
     order_count: int
-    total_spent: Decimal
-    avg_order_value: Decimal
+    total_spent: Optional[Decimal]
+    avg_order_value: Optional[Decimal]
 
 
 class ProductAnalyticsResult(BaseModel):
@@ -200,7 +200,6 @@ class TestRedshiftIntegration(unittest.TestCase):
         assert results[0].customer_id == 1
         assert results[0].name == "Alice Johnson"
 
-    @pytest.mark.skip(reason="Skipping customer order join test")
     def test_customer_order_join(self):
         """Test joining customers with orders data."""
 
@@ -384,7 +383,6 @@ class TestRedshiftIntegration(unittest.TestCase):
         assert hasattr(results[0], "order_count")
         assert results[0].order_count >= 0
 
-    @pytest.mark.skip(reason="Skipping null handling test")
     def test_null_handling(self):
         """Test proper handling of NULL values."""
 
@@ -429,7 +427,6 @@ class TestRedshiftIntegration(unittest.TestCase):
         assert all(hasattr(result, "customer_id") for result in results)
         assert all(hasattr(result, "total_amount") for result in results)
 
-    @pytest.mark.skip(reason="Skipping string function test")
     def test_string_functions(self):
         """Test string manipulation functions."""
 
@@ -512,7 +509,6 @@ class TestRedshiftIntegration(unittest.TestCase):
         assert all(hasattr(result, "customer_id") for result in results)
         assert results[0].customer_id == 1
 
-    @pytest.mark.skip(reason="Skipping window function test")
     def test_window_functions(self):
         """Test window functions and ranking."""
 
@@ -593,7 +589,6 @@ class TestRedshiftIntegration(unittest.TestCase):
         assert all(hasattr(result, "avg_price") for result in results)
         assert all(result.product_count > 0 for result in results)
 
-    @pytest.mark.skip(reason="Skipping subquery test")
     def test_subquery_operations(self):
         """Test subquery operations and EXISTS clauses."""
 
