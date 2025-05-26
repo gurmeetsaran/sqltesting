@@ -8,14 +8,12 @@ from typing import (
     List,
     Optional,
     Type,
-    Union,
-    cast,
-    get_args,
-    get_origin,
     get_type_hints,
 )
 
 import pandas as pd
+
+from .types import unwrap_optional_type
 
 
 class BaseMockTable(ABC):
@@ -83,7 +81,7 @@ class BaseMockTable(ABC):
             # Unwrap Optional types (Union[T, None] -> T)
             unwrapped_types = {}
             for col_name, col_type in type_hints.items():
-                unwrapped_types[col_name] = self._unwrap_optional_type(col_type)
+                unwrapped_types[col_name] = unwrap_optional_type(col_type)
             return unwrapped_types
 
         # Fallback: infer from pandas dtypes (handles nulls better)
@@ -120,17 +118,6 @@ class BaseMockTable(ABC):
                     column_types[col_name] = str  # Default to string
 
         return column_types
-
-    def _unwrap_optional_type(self, col_type: Type[Any]) -> Type[Any]:
-        """Unwrap Optional[T] to T, leave other types unchanged."""
-        # Check if this is a Union type (which Optional[T] is)
-        if get_origin(col_type) is Union:
-            args = get_args(col_type)
-            # Optional[T] is Union[T, None], so filter out NoneType
-            non_none_types = [arg for arg in args if arg is not type(None)]
-            if non_none_types:
-                return cast(Type[Any], non_none_types[0])  # Return the first non-None type
-        return col_type
 
     def to_dataframe(self) -> pd.DataFrame:
         """Convert mock data to pandas DataFrame."""

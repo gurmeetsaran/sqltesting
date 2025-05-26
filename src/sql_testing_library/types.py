@@ -2,7 +2,7 @@
 
 from datetime import date, datetime
 from decimal import Decimal
-from typing import Any, Type, TypeVar, get_args, get_origin
+from typing import Any, Type, TypeVar, Union, cast, get_args, get_origin
 
 
 T = TypeVar("T")
@@ -67,3 +67,19 @@ class BaseTypeConverter:
         else:
             # For unsupported types, convert to string
             return str(value)
+
+
+def unwrap_optional_type(col_type: Type[Any]) -> Type[Any]:
+    """Unwrap Optional[T] to T, leave other types unchanged.
+
+    This is a utility function that can be used by adapters and mock tables
+    to handle Optional types consistently.
+    """
+    # Check if this is a Union type (which Optional[T] is)
+    if get_origin(col_type) is Union:
+        args = get_args(col_type)
+        # Optional[T] is Union[T, None], so filter out NoneType
+        non_none_types = [arg for arg in args if arg is not type(None)]
+        if non_none_types:
+            return cast(Type[Any], non_none_types[0])  # Return the first non-None type
+    return col_type

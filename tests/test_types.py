@@ -5,7 +5,7 @@ from datetime import date, datetime
 from decimal import Decimal
 from typing import Optional, Union
 
-from sql_testing_library.types import BaseTypeConverter
+from sql_testing_library.types import BaseTypeConverter, unwrap_optional_type
 
 
 class TestBaseTypeConverter(unittest.TestCase):
@@ -225,6 +225,23 @@ class TestBaseTypeConverter(unittest.TestCase):
         for value in large_values[:10]:  # Test subset for speed
             result = self.converter.convert(value, int)
             self.assertEqual(result, value)
+
+
+class TestUnwrapOptionalType(unittest.TestCase):
+    """Test cases for unwrap_optional_type function."""
+
+    def test_unwrap_optional_type(self):
+        """Test unwrap_optional_type function."""
+
+        # Test Optional types
+        self.assertEqual(unwrap_optional_type(Optional[str]), str)
+        self.assertEqual(unwrap_optional_type(Optional[int]), int)
+        self.assertEqual(unwrap_optional_type(Optional[date]), date)
+
+        # Test non-Optional types
+        self.assertEqual(unwrap_optional_type(str), str)
+        self.assertEqual(unwrap_optional_type(int), int)
+        self.assertEqual(unwrap_optional_type(date), date)
 
 
 if __name__ == "__main__":

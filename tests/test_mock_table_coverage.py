@@ -184,19 +184,6 @@ class TestBaseMockTable(unittest.TestCase):
         self.assertIn("name", column_types)
         self.assertIn("score", column_types)
 
-    def test_unwrap_optional_type(self):
-        """Test _unwrap_optional_type method."""
-        table = TestMockTable([])
-
-        # Test Optional types
-        self.assertEqual(table._unwrap_optional_type(Optional[str]), str)
-        self.assertEqual(table._unwrap_optional_type(Optional[int]), int)
-        self.assertEqual(table._unwrap_optional_type(Optional[date]), date)
-
-        # Test non-Optional types
-        self.assertEqual(table._unwrap_optional_type(str), str)
-        self.assertEqual(table._unwrap_optional_type(int), int)
-
     def test_dataclass_to_dict(self):
         """Test _dataclass_to_dict method."""
         user = TestUser(1, "Alice", "alice@test.com", True, date(2023, 1, 1))
