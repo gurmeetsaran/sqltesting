@@ -86,7 +86,9 @@ def format_sql_value(value: Any, column_type: Type, dialect: str = "standard") -
     import pandas as pd
 
     # Handle NULL values
-    if value is None or pd.isna(value):
+    # Note: pd.isna() doesn't work on lists/arrays, so check for None first
+    # and only use pd.isna() on scalar values
+    if value is None or (not isinstance(value, (list, tuple)) and pd.isna(value)):
         if dialect == "redshift":
             # Redshift needs type-specific NULL casting
             if column_type == Decimal:
@@ -105,6 +107,59 @@ def format_sql_value(value: Any, column_type: Type, dialect: str = "standard") -
                 return "NULL::VARCHAR(1024)"
         else:
             return "NULL"
+
+    # Handle array/list types
+    if hasattr(column_type, "__origin__") and column_type.__origin__ is list:
+        from typing import get_args
+
+        # Get the element type from List[T]
+        element_type = get_args(column_type)[0] if get_args(column_type) else str
+
+        # Return database-specific array syntax
+        if dialect == "bigquery":
+            # Format each element in the array for BigQuery
+            formatted_elements = []
+            for element in value:
+                formatted_element = format_sql_value(element, element_type, dialect)
+                formatted_elements.append(formatted_element)
+            return f"[{', '.join(formatted_elements)}]"
+        elif dialect in ("athena", "trino"):
+            # Format each element in the array for Athena/Trino
+            formatted_elements = []
+            for element in value:
+                formatted_element = format_sql_value(element, element_type, dialect)
+                formatted_elements.append(formatted_element)
+            return f"ARRAY[{', '.join(formatted_elements)}]"
+        elif dialect == "redshift":
+            # Redshift uses JSON-like syntax for SUPER arrays
+            # Format elements as JSON (double quotes for strings)
+            import json
+            from decimal import Decimal
+
+            # Convert elements to JSON-serializable types
+            json_elements = []
+            for element in value:
+                if isinstance(element, Decimal):
+                    json_elements.append(float(element))
+                else:
+                    json_elements.append(element)
+
+            json_array = json.dumps(json_elements)
+            return f"JSON_PARSE('{json_array}')"
+        elif dialect == "snowflake":
+            # Format each element in the array for Snowflake
+            formatted_elements = []
+            for element in value:
+                formatted_element = format_sql_value(element, element_type, dialect)
+                formatted_elements.append(formatted_element)
+            return f"ARRAY_CONSTRUCT({', '.join(formatted_elements)})"
+        else:
+            # Default to generic array syntax
+            formatted_elements = []
+            for element in value:
+                formatted_element = format_sql_value(element, element_type, dialect)
+                formatted_elements.append(formatted_element)
+            return f"ARRAY[{', '.join(formatted_elements)}]"
 
     # Handle string types
     if column_type is str:

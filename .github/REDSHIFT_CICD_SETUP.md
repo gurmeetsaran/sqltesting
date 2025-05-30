@@ -48,6 +48,7 @@ Create an IAM policy with the following permissions:
                 "ec2:DescribeSubnets",
                 "ec2:DescribeSecurityGroups",
                 "ec2:AuthorizeSecurityGroupIngress",
+                "ec2:RevokeSecurityGroupIngress",
                 "ec2:DescribeInternetGateways",
                 "ec2:DescribeAddresses",
                 "ec2:DescribeAvailabilityZones"
@@ -69,6 +70,15 @@ Create an IAM policy with the following permissions:
     ]
 }
 ```
+
+**Important Permissions Explained:**
+
+- **`ec2:AuthorizeSecurityGroupIngress`**: Allows the script to automatically add security group rules during cluster creation to enable Redshift connectivity (port 5439 access)
+- **`ec2:RevokeSecurityGroupIngress`**: ⚠️ **NEW REQUIREMENT** - Allows the script to automatically remove security group rules during cluster destruction to clean up open inbound traffic from 0.0.0.0/0 for enhanced security
+- **`ec2:DescribeSecurityGroups`**: Required to identify which security groups are associated with the Redshift workgroup and to check existing rules
+
+**Security Benefits:**
+The enhanced `manage-redshift-cluster.py` script now automatically removes security group rules that allow traffic from all IP addresses (0.0.0.0/0) when destroying clusters. This prevents leaving behind insecure inbound rules after testing is complete.
 
 ### 3. Service Account Setup
 
@@ -169,8 +179,10 @@ The Redshift integration workflow:
    - Tests various SQL operations and edge cases
 
 5. **Cleanup**:
+   - Removes auto-created security group rules (enhanced security)
    - Destroys all Redshift resources
    - Ensures no ongoing costs
+   - Prevents security risks from leftover open inbound rules
 
 ## Local Development
 
@@ -208,6 +220,31 @@ This script will:
 - ✅ Validate existing resources (if any)
 - ✅ Test direct connection (if resources exist)
 - ✅ Display cost information and setup guidance
+
+### Enhanced Security Features
+
+The `manage-redshift-cluster.py` script now includes enhanced security features:
+
+**Automatic Security Group Management:**
+```bash
+# Create cluster (adds security rules for port 5439 access)
+python scripts/manage-redshift-cluster.py create
+
+# Destroy cluster (automatically removes open security rules)
+python scripts/manage-redshift-cluster.py destroy
+
+# Manual security group cleanup (if needed)
+python scripts/manage-redshift-cluster.py cleanup-sg
+
+# Skip security cleanup during destroy (if you want to preserve rules)
+python scripts/manage-redshift-cluster.py destroy --skip-sg-cleanup
+```
+
+**Security Benefits:**
+- Automatically removes inbound rules allowing traffic from 0.0.0.0/0
+- Only removes auto-created rules (identified by description)
+- Prevents leaving behind insecure access after testing
+- Follows AWS security best practices
 
 ### Manual Testing
 
@@ -259,6 +296,13 @@ poetry run pytest tests/integration/test_redshift_integration.py -v
 Error: AccessDenied: User is not authorized to perform redshift-serverless:CreateNamespace
 ```
 **Solution**: Verify IAM permissions include all required Redshift Serverless actions
+
+**1b. Security Group Permission Denied**
+```
+Warning: Could not remove rules from security group: UnauthorizedOperation:
+You are not authorized to perform: ec2:RevokeSecurityGroupIngress
+```
+**Solution**: Ensure IAM permissions include `ec2:RevokeSecurityGroupIngress` for security group cleanup during cluster destruction. This is required for the enhanced security features that automatically remove open inbound rules.
 
 **2. Resource Creation Timeout**
 ```

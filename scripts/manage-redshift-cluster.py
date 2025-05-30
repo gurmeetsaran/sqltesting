@@ -10,6 +10,11 @@ Usage:
     python scripts/manage-redshift-cluster.py status --namespace test-ns --workgroup test-wg
     python scripts/manage-redshift-cluster.py destroy --namespace test-ns --workgroup test-wg
     python scripts/manage-redshift-cluster.py endpoint --workgroup test-wg
+    python scripts/manage-redshift-cluster.py configure-sg --workgroup test-wg
+    python scripts/manage-redshift-cluster.py cleanup-sg --workgroup test-wg
+
+Note: The 'destroy' command now automatically removes security group rules that
+      allow traffic from all IP addresses (0.0.0.0/0) for enhanced security.
 """
 
 import argparse
@@ -481,6 +486,134 @@ port = {endpoint_info['port']}"""
         except Exception as e:
             print(f"⚠️  Warning: Unexpected error configuring security group {security_group_id}: {e}")
 
+    def cleanup_security_group_for_workgroup(self, workgroup_name: str) -> bool:
+        """Remove Redshift access rules from security group when destroying workgroup."""
+        try:
+            print(f"🧹 Cleaning up security group rules for workgroup: {workgroup_name}")
+
+            # Get workgroup details to find security group IDs
+            workgroup_info = self.client.get_workgroup(workgroupName=workgroup_name)
+            workgroup = workgroup_info['workgroup']
+
+            # Check if workgroup has custom security groups
+            config_parameters = workgroup.get('configParameters', [])
+            security_group_ids = []
+
+            # Look for security group configuration
+            for param in config_parameters:
+                if param.get('parameterKey') == 'security_group_ids':
+                    security_group_ids = param.get('parameterValue', '').split(',')
+                    break
+
+            # If no custom security groups, use default VPC security group
+            if not security_group_ids:
+                print("ℹ️  No custom security groups found, checking default VPC security group")
+
+                # Get default VPC
+                vpcs = self.ec2_client.describe_vpcs(Filters=[{'Name': 'is-default', 'Values': ['true']}])
+                if not vpcs['Vpcs']:
+                    print("❌ No default VPC found")
+                    return False
+
+                default_vpc_id = vpcs['Vpcs'][0]['VpcId']
+
+                # Get default security group for the VPC
+                security_groups = self.ec2_client.describe_security_groups(
+                    Filters=[
+                        {'Name': 'vpc-id', 'Values': [default_vpc_id]},
+                        {'Name': 'group-name', 'Values': ['default']}
+                    ]
+                )
+
+                if not security_groups['SecurityGroups']:
+                    print("❌ No default security group found")
+                    return False
+
+                security_group_ids = [security_groups['SecurityGroups'][0]['GroupId']]
+
+            # Remove rules from each security group
+            cleanup_success = True
+            for sg_id in security_group_ids:
+                if not self._remove_security_group_rules(sg_id.strip()):
+                    cleanup_success = False
+
+            if cleanup_success:
+                print(f"✅ Security group cleanup completed for workgroup: {workgroup_name}")
+            else:
+                print(f"⚠️  Some security group rules could not be removed")
+            return cleanup_success
+
+        except ClientError as e:
+            error_code = e.response['Error']['Code']
+            if error_code == 'ResourceNotFoundException':
+                print(f"ℹ️  Workgroup {workgroup_name} not found, skipping security group cleanup")
+                return True
+            else:
+                print(f"❌ Failed to cleanup security group: {e}")
+                return False
+        except Exception as e:
+            print(f"❌ Unexpected error cleaning up security group: {e}")
+            return False
+
+    def _remove_security_group_rules(self, security_group_id: str) -> bool:
+        """Remove auto-created inbound rules from security group for Redshift access."""
+        try:
+            print(f"🗑️  Removing Redshift rules from security group: {security_group_id}")
+
+            # Get current security group rules
+            sg_info = self.ec2_client.describe_security_groups(GroupIds=[security_group_id])
+            existing_rules = sg_info['SecurityGroups'][0]['IpPermissions']
+
+            # Find and remove auto-created Redshift rules (port 5439 with 0.0.0.0/0)
+            rules_to_remove = []
+            for rule in existing_rules:
+                if (rule.get('FromPort') == 5439 and
+                    rule.get('ToPort') == 5439 and
+                    rule.get('IpProtocol') == 'tcp'):
+
+                    # Check if this rule allows access from 0.0.0.0/0 (our auto-created rule)
+                    for ip_range in rule.get('IpRanges', []):
+                        if ip_range.get('CidrIp') == '0.0.0.0/0':
+                            # Check if this was our auto-created rule
+                            description = ip_range.get('Description', '')
+                            if 'SQL testing' in description or 'auto-created' in description:
+                                # This is our rule, mark it for removal
+                                rules_to_remove.append({
+                                    'IpProtocol': rule['IpProtocol'],
+                                    'FromPort': rule['FromPort'],
+                                    'ToPort': rule['ToPort'],
+                                    'IpRanges': [ip_range]
+                                })
+                                print(f"ℹ️  Found auto-created Redshift rule to remove: {description}")
+                                break
+
+            # Remove the identified rules
+            if rules_to_remove:
+                self.ec2_client.revoke_security_group_ingress(
+                    GroupId=security_group_id,
+                    IpPermissions=rules_to_remove
+                )
+                print(f"✅ Removed {len(rules_to_remove)} auto-created Redshift rule(s) from security group: {security_group_id}")
+            else:
+                print(f"ℹ️  No auto-created Redshift rules found to remove in security group: {security_group_id}")
+
+            return True
+
+        except ClientError as e:
+            error_code = e.response['Error']['Code']
+            if error_code == 'InvalidGroup.NotFound':
+                print(f"ℹ️  Security group {security_group_id} not found, skipping rule removal")
+                return True
+            elif error_code == 'InvalidGroupId.NotFound':
+                print(f"ℹ️  Security group rule not found, may have been already removed")
+                return True
+            else:
+                print(f"⚠️  Warning: Could not remove rules from security group {security_group_id}: {e}")
+                return False
+        except Exception as e:
+            print(f"⚠️  Warning: Unexpected error removing rules from security group {security_group_id}: {e}")
+            return False
+
 
 def main():
     """Main CLI interface."""
@@ -519,11 +652,16 @@ def main():
     sg_parser = subparsers.add_parser("configure-sg", help="Configure security group for Redshift access")
     sg_parser.add_argument("--workgroup", default="sql-testing-wg", help="Workgroup name (default: sql-testing-wg)")
 
+    # Cleanup Security Group command
+    cleanup_sg_parser = subparsers.add_parser("cleanup-sg", help="Remove auto-created Redshift security group rules")
+    cleanup_sg_parser.add_argument("--workgroup", default="sql-testing-wg", help="Workgroup name (default: sql-testing-wg)")
+
     # Destroy command
     destroy_parser = subparsers.add_parser("destroy", help="Destroy workgroup and namespace")
     destroy_parser.add_argument("--namespace", default="sql-testing-ns", help="Namespace name (default: sql-testing-ns)")
     destroy_parser.add_argument("--workgroup", default="sql-testing-wg", help="Workgroup name (default: sql-testing-wg)")
     destroy_parser.add_argument("--wait", action="store_true", help="Wait for resources to be deleted")
+    destroy_parser.add_argument("--skip-sg-cleanup", action="store_true", help="Skip security group rules cleanup")
 
     args = parser.parse_args()
 
@@ -648,8 +786,20 @@ def main():
         print(f"🔧 Configuring security group for workgroup: {args.workgroup}")
         success = manager.configure_security_group_for_workgroup(args.workgroup)
 
+    elif args.command == "cleanup-sg":
+        print(f"🧹 Cleaning up security group for workgroup: {args.workgroup}")
+        success = manager.cleanup_security_group_for_workgroup(args.workgroup)
+
     elif args.command == "destroy":
         print(f"🗑️  Destroying Redshift Serverless resources")
+
+        # First, clean up security group rules while workgroup still exists (unless skipped)
+        if not args.skip_sg_cleanup:
+            print(f"🧹 Cleaning up security group rules...")
+            if not manager.cleanup_security_group_for_workgroup(args.workgroup):
+                print(f"⚠️  Warning: Security group cleanup failed, but continuing with resource deletion")
+        else:
+            print(f"ℹ️  Skipping security group cleanup (--skip-sg-cleanup specified)")
 
         # Delete workgroup first
         if not manager.delete_workgroup(args.workgroup):
