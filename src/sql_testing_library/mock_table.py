@@ -2,6 +2,7 @@
 
 from abc import ABC, abstractmethod
 from dataclasses import is_dataclass
+from decimal import Decimal
 from typing import (
     Any,
     Dict,
@@ -121,7 +122,46 @@ class BaseMockTable(ABC):
 
     def to_dataframe(self) -> pd.DataFrame:
         """Convert mock data to pandas DataFrame."""
-        return pd.DataFrame(self.data)
+        if not self.data:
+            return pd.DataFrame()
+
+        df = pd.DataFrame(self.data)
+
+        # STEP 2: Convert pandas-generated NaN values to Python None
+        #
+        # WHY THIS IS NEEDED:
+        # - Original data may contain explicit None values for optional fields
+        # - pandas DataFrame creation may convert None → NaN during dtype inference
+        # - Subsequent nullable dtype conversion (Int64, boolean) may introduce more NaN
+        # - We need to preserve None for SQL NULL generation in CTE queries
+        #
+        # DIFFERENCE FROM core.py NaN HANDLING:
+        # - mock_table.py: Converts NaN → None on mock data going INTO SQL queries
+        # - core.py: Converts NaN → None on real data coming OUT OF SQL queries
+        # - Uses df.where() for efficiency during bulk DataFrame dtype operations
+        df = df.where(pd.notnull(df), None)
+
+        # Apply proper nullable types based on dataclass type hints
+        if hasattr(self, "_original_dataclass") and self._original_dataclass:
+            type_hints = get_type_hints(self._original_dataclass)
+
+            # Type mapping for nullable pandas dtypes
+            type_mapping = {
+                int: "Int64",  # Nullable integer
+                bool: "boolean",  # Nullable boolean
+                str: "object",  # Object type for strings
+                Decimal: "object",  # Object type for decimals
+            }
+
+            for col_name, col_type in type_hints.items():
+                if col_name in df.columns:
+                    unwrapped_type = unwrap_optional_type(col_type)
+                    target_dtype = type_mapping.get(unwrapped_type)
+
+                    if target_dtype:
+                        df[col_name] = df[col_name].astype(target_dtype)
+
+        return df
 
     def get_cte_alias(self) -> str:
         """Get the CTE alias name (database__tablename)."""

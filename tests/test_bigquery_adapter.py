@@ -107,8 +107,8 @@ class TestBigQueryAdapter(unittest.TestCase):
         # Test string formatting
         self.assertEqual(adapter.format_value_for_cte("test", str), "'test'")
         self.assertEqual(
-            adapter.format_value_for_cte("test's", str), "'test\\'s'"
-        )  # Note the escaped quote
+            adapter.format_value_for_cte("test's", str), '''"""test's"""'''
+        )  # BigQuery uses triple-quoted strings for strings with quotes
 
         # Test numeric formatting
         self.assertEqual(adapter.format_value_for_cte(123, int), "123")

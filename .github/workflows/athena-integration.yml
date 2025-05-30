@@ -111,7 +111,7 @@ jobs:
           AWS_REGION: ${{ vars.AWS_REGION || 'us-west-2' }}
         run: |
           # Run only tests marked with both 'integration' and 'athena' markers
-          poetry run pytest -v \
+          poetry run pytest tests/integration/ -v \
             --tb=short \
             --maxfail=3 \
             -m "integration and athena" \

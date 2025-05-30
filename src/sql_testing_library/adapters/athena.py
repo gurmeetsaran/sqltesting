@@ -144,27 +144,10 @@ class AthenaAdapter(DatabaseAdapter):
                 logging.warning(f"Warning: Failed to drop table {full_table_name}: {e}")
 
     def format_value_for_cte(self, value: Any, column_type: type) -> str:
-        """Format value for Athena/Presto CTE VALUES clause."""
-        if value is None:
-            return "NULL"
-        elif column_type is str:
-            # Escape single quotes
-            escaped_value = str(value).replace("'", "''")
-            return f"'{escaped_value}'"
-        elif column_type in (int, float):
-            return str(value)
-        elif column_type is bool:
-            return "TRUE" if value else "FALSE"
-        elif column_type is date:
-            return f"DATE '{value}'"
-        elif column_type == datetime:
-            return f"TIMESTAMP '{value.isoformat(sep=' ')}'"
-        elif column_type == Decimal:
-            return str(value)
-        else:
-            # Default to string representation
-            escaped_value = str(value).replace("'", "''")
-            return f"'{escaped_value}'"
+        """Format value for Athena CTE VALUES clause."""
+        from ..sql_utils import format_sql_value
+
+        return format_sql_value(value, column_type, dialect="athena")
 
     def get_type_converter(self) -> BaseTypeConverter:
         """Get Athena-specific type converter."""

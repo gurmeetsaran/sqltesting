@@ -13,6 +13,7 @@ from typing import (
     get_type_hints,
 )
 
+import numpy as np
 import pandas as pd
 import sqlglot
 from sqlglot import exp
@@ -257,32 +258,30 @@ class SQLTestFramework:
         dialect = self.adapter.get_sqlglot_dialect()
 
         if dialect == "bigquery":
-            # BigQuery-specific format using UNNEST + STRUCT
-            struct_rows = []
+            # BigQuery-specific format using UNION ALL (same as Redshift)
             columns = list(df.columns)
+            select_statements = []
 
-            # Process each row
             for idx, (_, row) in enumerate(df.iterrows()):
-                # For the first row, include column names
                 if idx == 0:
-                    first_row_values = []
+                    # First SELECT with column aliases
+                    select_expressions = []
                     for col_name, value in row.items():
                         col_type = column_types.get(col_name, str)
                         formatted_value = self.adapter.format_value_for_cte(value, col_type)
-                        first_row_values.append(f"{formatted_value} as {col_name}")
-                    struct_rows.append(f"({', '.join(first_row_values)})")
+                        select_expressions.append(f"{formatted_value} AS {col_name}")
+                    select_statements.append(f"SELECT {', '.join(select_expressions)}")
                 else:
-                    # For subsequent rows, only include values
+                    # Subsequent SELECTs without aliases
                     row_values = []
                     for col_name, value in row.items():
                         col_type = column_types.get(col_name, str)
                         formatted_value = self.adapter.format_value_for_cte(value, col_type)
                         row_values.append(formatted_value)
-                    struct_rows.append(f"({', '.join(row_values)})")
+                    select_statements.append(f"SELECT {', '.join(row_values)}")
 
-            # Combine the rows into the UNNEST format
-            joined_rows = ",\n      ".join(struct_rows)
-            return f"{alias} AS (\n  SELECT\n    *\n  FROM UNNEST([\n    STRUCT\n      {joined_rows}\n]))"  # noqa: E501
+            union_query = "\n  UNION ALL\n  ".join(select_statements)
+            return f"{alias} AS (\n  {union_query}\n)"
         elif dialect == "redshift":
             # Redshift-specific format using UNION ALL (VALUES not supported in CTEs)
             columns = list(df.columns)
@@ -393,6 +392,19 @@ class SQLTestFramework:
         if result_df.empty:
             return []
 
+        # STEP 1: Convert database-returned NaN values to Python None
+        #
+        # WHY THIS IS NEEDED:
+        # - SQL databases return NULL values which pandas converts to NaN
+        # - Different database adapters may return NaN for null numeric/float columns
+        # - NaN values break object serialization (dataclass/Pydantic instantiation)
+        # - Python None is the correct representation for nullable/optional fields
+        #
+        # RELATIONSHIP TO mock_table.py NaN HANDLING:
+        # - mock_table.py: Handles NaN created during DataFrame dtype conversion (input side)
+        # - core.py (here): Handles NaN returned from actual database queries (output side)
+        # - Both are needed because NaN can appear at different pipeline stages
+        result_df = result_df.replace([np.nan], [None])
         # Get type hints from the result class
         type_hints = get_type_hints(result_class)
 
