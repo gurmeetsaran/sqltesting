@@ -116,6 +116,11 @@ fixable = ["ALL"]
 # Prevent autofix of print statements - they should be manually reviewed and removed.
 unfixable = ["T201", "T203"]
 
+[tool.ruff.lint.per-file-ignores]
+# Allow print statements in test files for debugging and output
+"tests/test_*.py" = ["T201"]
+"tests/*/test_*.py" = ["T201"]
+
 [tool.ruff.lint.isort]
 lines-after-imports = 2
 known-first-party = ["sql_testing_library"]

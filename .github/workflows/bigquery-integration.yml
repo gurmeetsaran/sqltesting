@@ -143,7 +143,7 @@ jobs:
           BIGQUERY_DATABASE: ${{ env.BIGQUERY_DATABASE }}
         run: |
           # Run only tests marked with both 'integration' and 'bigquery' markers
-          poetry run pytest -v \
+          poetry run pytest tests/integration/ -v \
             --tb=short \
             --maxfail=3 \
             -m "integration and bigquery" \

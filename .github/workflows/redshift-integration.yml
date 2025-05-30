@@ -141,7 +141,7 @@ jobs:
           AWS_REGION: ${{ vars.AWS_REGION || 'us-west-2' }}
         run: |
           echo "Running Redshift integration tests..."
-          poetry run pytest -v --tb=short -m "integration and redshift" --reruns 2 --reruns-delay 5
+          poetry run pytest tests/integration/ -v --tb=short -m "integration and redshift" --reruns 2 --reruns-delay 5
         timeout-minutes: 15
 
       - name: Cleanup Redshift resources
