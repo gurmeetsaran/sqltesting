@@ -39,6 +39,63 @@ class BaseTypeConverter:
                 return None
             target_type = self.get_optional_inner_type(target_type)
 
+        # Handle array/list types
+        if hasattr(target_type, "__origin__") and target_type.__origin__ is list:
+            # If value is already a list, return it
+            if isinstance(value, list):
+                return value
+
+            # Handle numpy arrays (BigQuery returns arrays as numpy arrays)
+            import numpy as np
+
+            if isinstance(value, np.ndarray):
+                # Convert numpy array to list, then process each element
+                elements = value.tolist()
+                # Get the element type from List[T]
+                element_type = get_args(target_type)[0] if get_args(target_type) else str
+                # Convert each element to the proper type
+                converted_elements = []
+                for element in elements:
+                    converted_element = self.convert(element, element_type)
+                    converted_elements.append(converted_element)
+                return converted_elements
+
+            # If value is a string representation of an array, parse it
+            if isinstance(value, str):
+                # Parse string array format like '[hello, world, athena]' or '[1, 2, 3]'
+                # Remove outer brackets and split by comma
+                if value.startswith("[") and value.endswith("]"):
+                    inner_value = value[1:-1].strip()
+                    if not inner_value:  # Empty array
+                        return []
+
+                    # Split by comma and clean up each element
+                    elements = [elem.strip() for elem in inner_value.split(",")]
+
+                    # Get the element type from List[T]
+                    element_type = get_args(target_type)[0] if get_args(target_type) else str
+
+                    # Convert each element to the proper type
+                    converted_elements = []
+                    for element in elements:
+                        # Remove quotes if present (for string elements)
+                        if element.startswith(("'", '"')) and element.endswith(("'", '"')):
+                            element = element[1:-1]
+
+                        # Recursively convert each element
+                        converted_element = self.convert(element, element_type)
+                        converted_elements.append(converted_element)
+
+                    return converted_elements
+                else:
+                    # If it doesn't look like array format, try to convert as single element list
+                    element_type = get_args(target_type)[0] if get_args(target_type) else str
+                    converted_element = self.convert(value, element_type)
+                    return [converted_element]
+
+            # For other types, try to convert to list
+            return [value] if value is not None else []
+
         # Handle basic types
         if target_type is str:
             return str(value)

@@ -17,6 +17,22 @@ import pandas as pd
 from .types import unwrap_optional_type
 
 
+try:
+    from pydantic import BaseModel
+
+    PYDANTIC_AVAILABLE = True
+except ImportError:
+    BaseModel = None  # type: ignore
+    PYDANTIC_AVAILABLE = False
+
+
+def _is_pydantic_model(obj: Any) -> bool:
+    """Check if an object is a Pydantic model instance."""
+    if not PYDANTIC_AVAILABLE or BaseModel is None:
+        return False
+    return isinstance(obj, BaseModel)
+
+
 class BaseMockTable(ABC):
     """Base class for mock table implementations."""
 
@@ -25,24 +41,27 @@ class BaseMockTable(ABC):
         Initialize mock table with data.
 
         Args:
-            data: List of dataclass instances or dictionaries
+            data: List of dataclass instances, Pydantic models, or dictionaries
         """
-        # Store the original dataclass type if available for type hints
-        self._original_dataclass: Optional[Type[Any]]
-        if data and is_dataclass(data[0]):
-            self._original_dataclass = type(data[0])
+        # Store the original model type if available for type hints
+        self._original_model_class: Optional[Type[Any]]
+        if data and (is_dataclass(data[0]) or _is_pydantic_model(data[0])):
+            self._original_model_class = type(data[0])
         else:
-            self._original_dataclass = None
+            self._original_model_class = None
 
         self.data = self._normalize_data(data)
 
     def _normalize_data(self, data: List[Any]) -> List[Dict[str, Any]]:
-        """Convert dataclass instances to dictionaries."""
+        """Convert dataclass instances or Pydantic models to dictionaries."""
         if not data:
             return []
 
-        if is_dataclass(data[0]):
+        first_item = data[0]
+        if is_dataclass(first_item):
             return [self._dataclass_to_dict(item) for item in data]
+        elif _is_pydantic_model(first_item):
+            return [self._pydantic_to_dict(item) for item in data]
         return data
 
     def _dataclass_to_dict(self, obj: Any) -> Dict[str, Any]:
@@ -52,6 +71,13 @@ class BaseMockTable(ABC):
                 field.name: getattr(obj, field.name) for field in obj.__dataclass_fields__.values()
             }
             return result
+        return obj  # type: ignore  # This should be a dict already
+
+    def _pydantic_to_dict(self, obj: Any) -> Dict[str, Any]:
+        """Convert Pydantic model instance to dictionary."""
+        if _is_pydantic_model(obj):
+            result = obj.model_dump()
+            return result  # type: ignore[no-any-return]
         return obj  # type: ignore  # This should be a dict already
 
     @abstractmethod
@@ -70,15 +96,15 @@ class BaseMockTable(ABC):
 
     def get_column_types(self) -> Dict[str, Type[Any]]:
         """
-        Extract column types from the dataclass type hints or infer from pandas dtypes.
+        Extract column types from dataclass/Pydantic model type hints or infer from pandas dtypes.
         Returns a mapping of column name to Python type.
         """
         if not self.data:
             return {}
 
-        # Try to get types from dataclass type hints first
-        if hasattr(self, "_original_dataclass") and self._original_dataclass:
-            type_hints = get_type_hints(self._original_dataclass)
+        # Try to get types from model class type hints first
+        if hasattr(self, "_original_model_class") and self._original_model_class:
+            type_hints = get_type_hints(self._original_model_class)
             # Unwrap Optional types (Union[T, None] -> T)
             unwrapped_types = {}
             for col_name, col_type in type_hints.items():
@@ -141,9 +167,9 @@ class BaseMockTable(ABC):
         # - Uses df.where() for efficiency during bulk DataFrame dtype operations
         df = df.where(pd.notnull(df), None)
 
-        # Apply proper nullable types based on dataclass type hints
-        if hasattr(self, "_original_dataclass") and self._original_dataclass:
-            type_hints = get_type_hints(self._original_dataclass)
+        # Apply proper nullable types based on model class type hints
+        if hasattr(self, "_original_model_class") and self._original_model_class:
+            type_hints = get_type_hints(self._original_model_class)
 
             # Type mapping for nullable pandas dtypes
             type_mapping = {
