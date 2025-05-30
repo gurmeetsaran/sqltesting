@@ -8,7 +8,7 @@ Redshift Serverless resources for testing purposes.
 Usage:
     python scripts/manage-redshift-cluster.py create --namespace test-ns --workgroup test-wg
     python scripts/manage-redshift-cluster.py status --namespace test-ns --workgroup test-wg
-    python scripts/manage-redshift-cluster.py destroy --namespace test-ns --workgroup test-wg
+    python scripts/manage-redshift-cluster.py destroy --namespace test-ns --workgroup test-wg  # Always waits for deletion completion
     python scripts/manage-redshift-cluster.py endpoint --workgroup test-wg
     python scripts/manage-redshift-cluster.py configure-sg --workgroup test-wg
     python scripts/manage-redshift-cluster.py cleanup-sg --workgroup test-wg
@@ -660,8 +660,8 @@ def main():
     destroy_parser = subparsers.add_parser("destroy", help="Destroy workgroup and namespace")
     destroy_parser.add_argument("--namespace", default="sql-testing-ns", help="Namespace name (default: sql-testing-ns)")
     destroy_parser.add_argument("--workgroup", default="sql-testing-wg", help="Workgroup name (default: sql-testing-wg)")
-    destroy_parser.add_argument("--wait", action="store_true", help="Wait for resources to be deleted")
     destroy_parser.add_argument("--skip-sg-cleanup", action="store_true", help="Skip security group rules cleanup")
+    # Note: destroy command always waits for deletion completion to ensure proper cleanup
 
     args = parser.parse_args()
 
@@ -816,8 +816,9 @@ def main():
             if not manager.delete_namespace(args.namespace):
                 success = False
 
-        # Wait for namespace deletion if requested
-        if success and args.wait:
+        # Always wait for namespace deletion to complete (just like workgroup deletion)
+        if success:
+            print(f"⏳ Waiting for namespace deletion to complete...")
             success = manager.wait_for_namespace_deletion(args.namespace)
 
     # Exit with appropriate code

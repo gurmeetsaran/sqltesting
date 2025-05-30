@@ -17,6 +17,48 @@ coverage:
         target: auto
         threshold: 1%
 
+  # Define coverage flags for different test types
+  flags:
+    unit-tests:
+      paths:
+        - src/sql_testing_library/
+      # Unit tests should cover core functionality
+
+    integration:
+      paths:
+        - src/sql_testing_library/
+      # Integration tests cover adapter-specific code
+
+    bigquery:
+      paths:
+        - src/sql_testing_library/adapters/bigquery.py
+        - src/sql_testing_library/core.py
+        - src/sql_testing_library/mock_table.py
+
+    athena:
+      paths:
+        - src/sql_testing_library/adapters/athena.py
+        - src/sql_testing_library/core.py
+        - src/sql_testing_library/mock_table.py
+
+    redshift:
+      paths:
+        - src/sql_testing_library/adapters/redshift.py
+        - src/sql_testing_library/core.py
+        - src/sql_testing_library/mock_table.py
+
+    snowflake:
+      paths:
+        - src/sql_testing_library/adapters/snowflake.py
+        - src/sql_testing_library/core.py
+        - src/sql_testing_library/mock_table.py
+
+    trino:
+      paths:
+        - src/sql_testing_library/adapters/trino.py
+        - src/sql_testing_library/core.py
+        - src/sql_testing_library/mock_table.py
+
 parsers:
   gcov:
     branch_detection:
@@ -29,3 +71,5 @@ comment:
   layout: "reach,diff,flags,files,footer"
   behavior: default
   require_changes: no
+  # Show coverage flags in the comment
+  show_carryforward_flags: true

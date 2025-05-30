@@ -156,11 +156,22 @@ jobs:
               sys.exit(1)
           "
 
-      - name: Run Snowflake integration tests
+      - name: Run Snowflake integration tests with coverage
         run: |
           echo "Running Snowflake integration tests..."
-          poetry run pytest tests/integration/ -v --tb=short -m "integration and snowflake" --reruns 2 --reruns-delay 5
+          poetry run pytest tests/integration/ -v --tb=short -m "integration and snowflake" --reruns 2 --reruns-delay 5 \
+            --cov=src/sql_testing_library \
+            --cov-report=xml:coverage-snowflake-integration.xml
         timeout-minutes: 20
+
+      - name: Upload Snowflake integration coverage to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          file: ./coverage-snowflake-integration.xml
+          flags: integration,snowflake
+          name: snowflake-integration-coverage
+          fail_ci_if_error: false
 
       - name: Upload test artifacts
         if: failure()

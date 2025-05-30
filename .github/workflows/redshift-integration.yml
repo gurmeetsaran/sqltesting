@@ -134,15 +134,24 @@ jobs:
             fi
           done
 
-      - name: Run Redshift integration tests
+      - name: Run Redshift integration tests with coverage
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_REGION: ${{ vars.AWS_REGION || 'us-west-2' }}
         run: |
           echo "Running Redshift integration tests..."
-          poetry run pytest tests/integration/ -v --tb=short -m "integration and redshift" --reruns 2 --reruns-delay 5
+          poetry run pytest tests/integration/ -v --tb=short -m "integration and redshift" --reruns 2 --reruns-delay 5 --cov=src/sql_testing_library --cov-report=xml:coverage-redshift-integration.xml
         timeout-minutes: 15
+
+      - name: Upload Redshift integration coverage to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          file: ./coverage-redshift-integration.xml
+          flags: integration,redshift
+          name: redshift-integration-coverage
+          fail_ci_if_error: false
 
       - name: Cleanup Redshift resources
         if: always()
