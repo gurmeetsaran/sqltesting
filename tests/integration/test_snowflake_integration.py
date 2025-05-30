@@ -108,17 +108,6 @@ class ProductsMockTable(BaseMockTable):
 
 @pytest.mark.integration
 @pytest.mark.snowflake
-@pytest.mark.skipif(
-    not all(
-        [
-            os.getenv("SNOWFLAKE_ACCOUNT"),
-            os.getenv("SNOWFLAKE_USER"),
-            os.getenv("SNOWFLAKE_PASSWORD"),
-            os.getenv("SNOWFLAKE_DATABASE"),
-        ]
-    ),
-    reason="Snowflake environment variables not set",
-)
 class TestSnowflakeIntegration(unittest.TestCase):
     """Integration tests for Snowflake adapter using real database connections."""
 
