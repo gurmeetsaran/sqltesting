@@ -141,8 +141,17 @@ jobs:
       - name: Run Trino integration tests
         run: |
           echo "Running Trino integration tests..."
-          poetry run pytest tests/integration/ -v --tb=short -m "integration and trino" --reruns 2 --reruns-delay 5
+          poetry run pytest tests/integration/ -v --tb=short -m "integration and trino" --reruns 2 --reruns-delay 5 --cov=src/sql_testing_library --cov-report=xml:coverage-trino-integration.xml
         timeout-minutes: 15
+
+      - name: Upload Trino integration coverage to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          file: ./coverage-trino-integration.xml
+          flags: integration,trino
+          name: trino-integration-coverage
+          fail_ci_if_error: false
 
       - name: Stop Trino server
         if: always()

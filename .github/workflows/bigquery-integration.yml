@@ -136,7 +136,7 @@ jobs:
               exit(1)
           "
 
-      - name: Run BigQuery integration tests
+      - name: Run BigQuery integration tests with coverage
         env:
           GOOGLE_APPLICATION_CREDENTIALS: ${{ env.GOOGLE_APPLICATION_CREDENTIALS }}
           BIGQUERY_PROJECT_ID: ${{ env.BIGQUERY_PROJECT_ID }}
@@ -147,7 +147,18 @@ jobs:
             --tb=short \
             --maxfail=3 \
             -m "integration and bigquery" \
-            --durations=10
+            --durations=10 \
+            --cov=src/sql_testing_library \
+            --cov-report=xml:coverage-bigquery-integration.xml
+
+      - name: Upload BigQuery integration coverage to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          file: ./coverage-bigquery-integration.xml
+          flags: integration,bigquery
+          name: bigquery-integration-coverage
+          fail_ci_if_error: false
 
       - name: Cleanup test resources
         if: always()

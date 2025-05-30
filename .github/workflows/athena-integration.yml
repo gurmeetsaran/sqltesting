@@ -102,7 +102,7 @@ jobs:
           echo "s3_output_location = ${AWS_ATHENA_OUTPUT_LOCATION}" >> pytest.ini
           echo "region = ${AWS_REGION}" >> pytest.ini
 
-      - name: Run Athena integration tests
+      - name: Run Athena integration tests with coverage
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
@@ -115,7 +115,18 @@ jobs:
             --tb=short \
             --maxfail=3 \
             -m "integration and athena" \
-            --durations=10
+            --durations=10 \
+            --cov=src/sql_testing_library \
+            --cov-report=xml:coverage-athena-integration.xml
+
+      - name: Upload Athena integration coverage to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          file: ./coverage-athena-integration.xml
+          flags: integration,athena
+          name: athena-integration-coverage
+          fail_ci_if_error: false
 
       - name: Cleanup test resources
         if: always()
