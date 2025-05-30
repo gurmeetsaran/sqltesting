@@ -257,8 +257,9 @@ class SQLTestFramework:
         # Get dialect to determine the correct CTE format
         dialect = self.adapter.get_sqlglot_dialect()
 
-        if dialect == "bigquery":
-            # BigQuery-specific format using UNION ALL (same as Redshift)
+        if dialect in ["bigquery", "snowflake"]:
+            # BigQuery and Snowflake-specific format using UNION ALL
+            # (Snowflake VALUES clauses don't support complex expressions like ARRAY_CONSTRUCT)
             columns = list(df.columns)
             select_statements = []
 
