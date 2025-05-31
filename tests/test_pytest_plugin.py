@@ -864,13 +864,32 @@ adapter = bigquery
 
                 # Mock _get_project_root to return our temp directory
                 with mock.patch.object(self.decorator, "_get_project_root", return_value=temp_dir):
-                    # Mock os.chdir to avoid actual directory changes in test
+                    # Mock os.chdir and os.getcwd to simulate directory changes
                     with mock.patch("os.chdir") as mock_chdir:
-                        config_parser = self.decorator._get_config_parser()
-                        self.assertIn("sql_testing", config_parser)
+                        with mock.patch("os.getcwd", return_value=original_cwd):
+                            # Mock os.path.exists to return True for pytest.ini in temp_dir
+                            def mock_exists(path):
+                                if path == "pytest.ini":
+                                    return True
+                                return os.path.exists(path)
 
-                        # Verify chdir was called to go to project root and back
-                        self.assertTrue(mock_chdir.called)
+                            with mock.patch("os.path.exists", side_effect=mock_exists):
+                                # Mock ConfigParser.read to actually read our file
+                                original_read = configparser.ConfigParser.read
+
+                                def mock_read(self, filenames, encoding=None):
+                                    if isinstance(filenames, str) and filenames == "pytest.ini":
+                                        return original_read(self, [pytest_ini_path], encoding)
+                                    return original_read(self, filenames, encoding)
+
+                                with mock.patch.object(
+                                    configparser.ConfigParser, "read", mock_read
+                                ):
+                                    config_parser = self.decorator._get_config_parser()
+                                    self.assertIn("sql_testing", config_parser)
+
+                                    # Verify chdir was called to go to project root and back
+                                    self.assertTrue(mock_chdir.called)
             finally:
                 # Ensure we're in the original directory
                 os.chdir(original_cwd)
