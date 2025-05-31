@@ -4,6 +4,7 @@ import unittest
 from datetime import date, datetime
 from decimal import Decimal
 from typing import List, Optional, Union
+from unittest import mock
 
 import numpy as np
 
@@ -585,6 +586,175 @@ class TestUnwrapOptionalTypeExtended(unittest.TestCase):
         # Test with empty args (shouldn't happen in practice)
         result = unwrap_optional_type(str)
         self.assertEqual(result, str)
+
+
+class TestBaseTypeConverterSpecialCases(unittest.TestCase):
+    """Test special cases and edge conditions for BaseTypeConverter."""
+
+    def setUp(self):
+        """Set up test converter."""
+        self.converter = BaseTypeConverter()
+
+    def test_is_optional_type_edge_cases(self):
+        """Test is_optional_type with edge cases."""
+        # Test with non-generic types
+        self.assertFalse(self.converter.is_optional_type(str))
+        self.assertFalse(self.converter.is_optional_type(int))
+
+        # Test with Union that has more than 2 args but includes None
+        from typing import Union
+
+        multi_union = Union[str, int, float, type(None)]
+        self.assertFalse(self.converter.is_optional_type(multi_union))  # Not exactly 2 args
+
+        # Test with Union that has exactly 2 args but no None
+        two_arg_union = Union[str, int]
+        self.assertFalse(self.converter.is_optional_type(two_arg_union))
+
+    def test_get_optional_inner_type_edge_cases(self):
+        """Test get_optional_inner_type with edge cases."""
+        from typing import Union
+
+        # Test with multiple non-None types - should return first
+        multi_optional = Union[str, int, type(None)]
+        result = self.converter.get_optional_inner_type(multi_optional)
+        self.assertEqual(result, str)
+
+        # Test with different order
+        different_order = Union[type(None), int, str]
+        result = self.converter.get_optional_inner_type(different_order)
+        # Should return first non-None type
+        self.assertIn(result, [int, str])
+
+    def test_convert_with_none_value_special_cases(self):
+        """Test convert with None for various target types."""
+        # Test None with all basic types
+        self.assertIsNone(self.converter.convert(None, str))
+        self.assertIsNone(self.converter.convert(None, int))
+        self.assertIsNone(self.converter.convert(None, float))
+        self.assertIsNone(self.converter.convert(None, bool))
+        self.assertIsNone(self.converter.convert(None, date))
+        self.assertIsNone(self.converter.convert(None, datetime))
+        self.assertIsNone(self.converter.convert(None, Decimal))
+
+    def test_convert_optional_type_with_none_twice(self):
+        """Test Optional type handling returns None when value is None."""
+        # Test double None check in Optional handling
+        result = self.converter.convert(None, Optional[str])
+        self.assertIsNone(result)
+
+        result = self.converter.convert(None, Optional[int])
+        self.assertIsNone(result)
+
+    def test_list_conversion_without_origin_attribute(self):
+        """Test list conversion with types that don't have __origin__."""
+        # Test with regular list type (plain `list` type falls back to string conversion)
+        result = self.converter.convert([1, 2, 3], list)
+        self.assertEqual(result, "[1, 2, 3]")  # Falls back to string conversion
+
+        # Test with single value for non-List type - should work normally
+        result = self.converter.convert("test", str)
+        self.assertEqual(result, "test")
+
+        # Test converting string to plain list type (fallback behavior)
+        result = self.converter.convert("not_a_list", list)
+        self.assertEqual(result, "not_a_list")  # Falls back to string conversion
+
+    def test_numpy_array_edge_cases(self):
+        """Test numpy array handling edge cases."""
+        # Test empty numpy array
+        empty_array = np.array([])
+        result = self.converter.convert(empty_array, List[int])
+        self.assertEqual(result, [])
+
+        # Test numpy array with mixed types
+        mixed_array = np.array([1, 2.5, 3])
+        result = self.converter.convert(mixed_array, List[float])
+        self.assertEqual(result, [1.0, 2.5, 3.0])
+
+    def test_string_array_parsing_edge_cases(self):
+        """Test string array parsing edge cases."""
+        # Test with whitespace-only content
+        result = self.converter.convert("[   ]", List[str])
+        self.assertEqual(result, [])
+
+        # Test with single element, no commas
+        result = self.converter.convert("[hello]", List[str])
+        self.assertEqual(result, ["hello"])
+
+        # Test with escaped quotes in strings
+        result = self.converter.convert('["he\\"llo", "world"]', List[str])
+        self.assertEqual(result, ['he\\"llo', "world"])
+
+    def test_type_conversion_edge_cases(self):
+        """Test type conversion edge cases."""
+        # Test int conversion from boolean
+        self.assertEqual(self.converter.convert(True, int), 1)
+        self.assertEqual(self.converter.convert(False, int), 0)
+
+        # Test float conversion from boolean
+        self.assertEqual(self.converter.convert(True, float), 1.0)
+        self.assertEqual(self.converter.convert(False, float), 0.0)
+
+
+class TestUnwrapOptionalTypeSpecialCases(unittest.TestCase):
+    """Test special cases for unwrap_optional_type function."""
+
+    def test_unwrap_optional_type_non_union(self):
+        """Test unwrap_optional_type with non-Union types."""
+        # Test with regular types (no origin)
+        self.assertEqual(unwrap_optional_type(str), str)
+        self.assertEqual(unwrap_optional_type(int), int)
+        self.assertEqual(unwrap_optional_type(list), list)
+
+    def test_unwrap_optional_type_empty_union(self):
+        """Test unwrap_optional_type with edge case unions."""
+        from typing import Union
+
+        # Test Union with only None type
+        none_only = Union[type(None)]
+        result = unwrap_optional_type(none_only)
+        # Should return the type unchanged if no non-None types
+        self.assertEqual(result, none_only)
+
+    def test_unwrap_optional_type_no_none_types(self):
+        """Test unwrap_optional_type when no non-None types found."""
+        from typing import Union
+
+        # Create a Union with only None (edge case)
+        # This tests the case where non_none_types list is empty
+        # We'll mock this scenario
+        with mock.patch("sql_testing_library._types.get_args") as mock_get_args:
+            with mock.patch("sql_testing_library._types.get_origin") as mock_get_origin:
+                mock_get_origin.return_value = Union
+                mock_get_args.return_value = [type(None)]  # Only None type
+
+                result = unwrap_optional_type(Union[type(None)])
+                # Should return the original type since no non-None types
+                self.assertEqual(result, Union[type(None)])
+
+    def test_unwrap_optional_type_complex_generic(self):
+        """Test unwrap_optional_type with complex generic types."""
+        from typing import Dict, List
+
+        # Test with complex nested generics
+        complex_optional = Optional[Dict[str, List[int]]]
+        result = unwrap_optional_type(complex_optional)
+        self.assertEqual(result, Dict[str, List[int]])
+
+    def test_unwrap_optional_type_preserve_generic_info(self):
+        """Test that unwrap_optional_type preserves generic type information."""
+        from typing import Dict, List, Tuple
+
+        # Test various generic types
+        list_optional = Optional[List[str]]
+        self.assertEqual(unwrap_optional_type(list_optional), List[str])
+
+        dict_optional = Optional[Dict[str, int]]
+        self.assertEqual(unwrap_optional_type(dict_optional), Dict[str, int])
+
+        tuple_optional = Optional[Tuple[str, int]]
+        self.assertEqual(unwrap_optional_type(tuple_optional), Tuple[str, int])
 
 
 if __name__ == "__main__":
