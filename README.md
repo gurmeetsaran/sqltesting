@@ -51,6 +51,44 @@ For more details on our journey and the engineering challenges we solved, read t
 - **Type-Safe Results**: Deserialize results to Pydantic models
 - **Pytest Integration**: Seamless testing with `@sql_test` decorator
 
+## Data Types Support
+
+The library supports different data types across database engines. All checkmarks indicate comprehensive test coverage with verified functionality.
+
+### Primitive Types
+
+| Data Type | Python Type | BigQuery | Athena | Redshift | Trino | Snowflake |
+|-----------|-------------|----------|--------|----------|-------|-----------|
+| **String** | `str` | ✅ | ✅ | ✅ | ✅ | ✅ |
+| **Integer** | `int` | ✅ | ✅ | ✅ | ✅ | ✅ |
+| **Float** | `float` | ✅ | ✅ | ✅ | ✅ | ✅ |
+| **Boolean** | `bool` | ✅ | ✅ | ✅ | ✅ | ✅ |
+| **Date** | `date` | ✅ | ✅ | ✅ | ✅ | ✅ |
+| **Datetime** | `datetime` | ✅ | ✅ | ✅ | ✅ | ✅ |
+| **Decimal** | `Decimal` | ✅ | ✅ | ✅ | ✅ | ✅ |
+| **Optional** | `Optional[T]` | ✅ | ✅ | ✅ | ✅ | ✅ |
+
+### Complex Types
+
+| Data Type | Python Type | BigQuery | Athena | Redshift | Trino | Snowflake |
+|-----------|-------------|----------|--------|----------|-------|-----------|
+| **String Array** | `List[str]` | ✅ | ✅ | ✅ | ✅ | ✅ |
+| **Integer Array** | `List[int]` | ✅ | ✅ | ✅ | ✅ | ✅ |
+| **Decimal Array** | `List[Decimal]` | ✅ | ✅ | ✅ | ✅ | ✅ |
+| **Optional Array** | `Optional[List[T]]` | ✅ | ✅ | ✅ | ✅ | ✅ |
+| **Struct/Record** | `dict`/`dataclass` | ❌ | ❌ | ❌ | ❌ | ❌ |
+| **Map/Object** | `Dict[str, T]` | ❌ | ❌ | ❌ | ❌ | ❌ |
+| **Nested Arrays** | `List[List[T]]` | ❌ | ❌ | ❌ | ❌ | ❌ |
+| **JSON Objects** | `JSON` | ❌ | ❌ | ❌ | ❌ | ❌ |
+
+### Database-Specific Notes
+
+- **BigQuery**: NULL arrays become empty arrays `[]`; uses scientific notation for large decimals
+- **Athena**: 256KB query size limit; uses Presto SQL dialect for arrays
+- **Redshift**: Arrays implemented via JSON parsing; 16MB query size limit
+- **Trino**: Memory catalog for testing; excellent decimal precision
+- **Snowflake**: Column names normalized to lowercase; 1MB query size limit
+
 ## Installation
 
 ### For End Users (pip)
