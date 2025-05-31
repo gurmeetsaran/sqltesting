@@ -1,0 +1,176 @@
+name: 🐛 Bug Report
+description: Report a bug or unexpected behavior in the SQL Testing Library
+title: "[Bug]: "
+labels: ["bug", "needs-triage"]
+assignees: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for reporting a bug! Please fill out this form to help us understand and reproduce the issue.
+
+        **Before submitting**, please:
+        - Search existing issues to avoid duplicates
+        - Try to reproduce the issue with the latest version
+        - Test with a minimal example if possible
+
+  - type: input
+    id: version
+    attributes:
+      label: SQL Testing Library Version
+      description: What version of the SQL Testing Library are you using?
+      placeholder: e.g., 0.3.0
+    validations:
+      required: true
+
+  - type: dropdown
+    id: database-adapter
+    attributes:
+      label: Database Adapter
+      description: Which database adapter are you using?
+      options:
+        - BigQuery
+        - Athena
+        - Redshift
+        - Snowflake
+        - Trino
+        - Multiple adapters
+        - Not applicable
+    validations:
+      required: true
+
+  - type: dropdown
+    id: python-version
+    attributes:
+      label: Python Version
+      description: What version of Python are you using?
+      options:
+        - "3.8"
+        - "3.9"
+        - "3.10"
+        - "3.11"
+        - "3.12"
+        - Other (specify in description)
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Bug Description
+      description: A clear and concise description of what the bug is.
+      placeholder: Describe what happened and what you expected to happen
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to Reproduce
+      description: Provide step-by-step instructions to reproduce the issue
+      placeholder: |
+        1. Set up test with...
+        2. Run query...
+        3. Observe error...
+      value: |
+        1.
+        2.
+        3.
+    validations:
+      required: true
+
+  - type: textarea
+    id: minimal-example
+    attributes:
+      label: Minimal Reproducible Example
+      description: Provide the smallest possible code example that reproduces the issue
+      placeholder: |
+        ```python
+        from sql_testing_library import sql_test, TestCase
+
+        @sql_test()
+        def test_example():
+            return TestCase(
+                query="SELECT 1 as result",
+                execution_database="test_db"
+            )
+        ```
+      render: python
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected-behavior
+    attributes:
+      label: Expected Behavior
+      description: What did you expect to happen?
+      placeholder: Describe the expected behavior
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual-behavior
+    attributes:
+      label: Actual Behavior
+      description: What actually happened? Include error messages and stack traces.
+      placeholder: |
+        Include the full error message and stack trace if available:
+        ```
+        Traceback (most recent call last):
+          ...
+        ```
+      render: shell
+    validations:
+      required: true
+
+  - type: textarea
+    id: configuration
+    attributes:
+      label: Configuration
+      description: Share your pytest.ini or configuration setup (remove sensitive information)
+      placeholder: |
+        ```ini
+        [sql_testing]
+        adapter = bigquery
+
+        [sql_testing.bigquery]
+        project_id = my-project
+        dataset_id = test_dataset
+        ```
+      render: ini
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment Details
+      description: Additional environment information that might be relevant
+      placeholder: |
+        - Operating System: (e.g., macOS 13.0, Ubuntu 22.04, Windows 11)
+        - Docker: (if applicable)
+        - CI/CD: (e.g., GitHub Actions, Jenkins)
+        - Dependencies: (any relevant package versions)
+
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: Additional Context
+      description: Add any other context about the problem here
+      placeholder: |
+        - Does this happen consistently or intermittently?
+        - Any workarounds you've found?
+        - Related issues or discussions?
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Checklist
+      description: Please confirm the following
+      options:
+        - label: I have searched existing issues to ensure this is not a duplicate
+          required: true
+        - label: I have tested with the latest version of the SQL Testing Library
+          required: true
+        - label: I have provided a minimal reproducible example
+          required: true
+        - label: I have removed any sensitive information from my examples
+          required: true

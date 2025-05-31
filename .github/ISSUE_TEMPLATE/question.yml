@@ -1,0 +1,132 @@
+name: ❓ Question / Help
+description: Ask a question or get help with using the SQL Testing Library
+title: "[Question]: "
+labels: ["question", "needs-triage"]
+assignees: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for your question! Please fill out this form to help us provide the best assistance.
+
+        **Before submitting**, please:
+        - Check the documentation and examples
+        - Search existing issues and discussions
+        - Try to provide a specific example of what you're trying to achieve
+
+  - type: dropdown
+    id: question-type
+    attributes:
+      label: Question Type
+      description: What type of help do you need?
+      options:
+        - Setup and configuration
+        - Writing tests
+        - Database adapter usage
+        - Performance optimization
+        - Best practices
+        - Troubleshooting
+        - Integration with other tools
+        - Other
+    validations:
+      required: true
+
+  - type: dropdown
+    id: database-adapter
+    attributes:
+      label: Database Adapter
+      description: Which database adapter are you working with? (if applicable)
+      options:
+        - BigQuery
+        - Athena
+        - Redshift
+        - Snowflake
+        - Trino
+        - Multiple adapters
+        - Not sure
+        - Not applicable
+
+  - type: textarea
+    id: question
+    attributes:
+      label: Your Question
+      description: What would you like help with?
+      placeholder: |
+        Please describe your question clearly:
+        - What are you trying to achieve?
+        - What specific challenge are you facing?
+        - What have you already tried?
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Context and Code
+      description: Provide relevant code, configuration, or examples
+      placeholder: |
+        ```python
+        # Your current code or configuration
+        @sql_test()
+        def my_test():
+            return TestCase(
+                query="SELECT ...",
+                execution_database="..."
+            )
+        ```
+
+        ```ini
+        # Your pytest.ini configuration
+        [sql_testing]
+        adapter = ...
+        ```
+      render: python
+
+  - type: textarea
+    id: expected-outcome
+    attributes:
+      label: Expected Outcome
+      description: What result or behavior are you hoping to achieve?
+      placeholder: Describe what you want to accomplish
+
+  - type: textarea
+    id: current-behavior
+    attributes:
+      label: Current Behavior
+      description: What's happening now? Include any error messages.
+      placeholder: |
+        Describe what's currently happening:
+        - Error messages (if any)
+        - Unexpected behavior
+        - Performance issues
+
+  - type: input
+    id: version
+    attributes:
+      label: SQL Testing Library Version
+      description: What version are you using?
+      placeholder: e.g., 0.3.0
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Relevant environment details
+      placeholder: |
+        - Python version:
+        - Operating System:
+        - Database environment:
+        - CI/CD system (if applicable):
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Checklist
+      description: Please confirm the following
+      options:
+        - label: I have searched existing issues and discussions
+          required: true
+        - label: I have checked the documentation
+          required: true
+        - label: I have provided relevant code examples
+          required: false
