@@ -434,6 +434,127 @@ pytest test_users.py::test_user_query
 poetry run pytest test_users.py::test_user_query
 ```
 
+## Troubleshooting
+
+### "No [sql_testing] section found" Error
+
+If you encounter the error `No [sql_testing] section found in pytest.ini, setup.cfg, or tox.ini`, this typically happens when using IDEs like PyCharm, VS Code, or other development environments that run pytest from a different working directory.
+
+**Problem**: The library looks for configuration files (`pytest.ini`, `setup.cfg`, `tox.ini`) in the current working directory, but IDEs may run tests from a different location.
+
+#### Solution 1: Set Environment Variable (Recommended)
+
+Set the `SQL_TESTING_PROJECT_ROOT` environment variable to point to your project root directory:
+
+**In PyCharm:**
+1. Go to **Run/Debug Configurations**
+2. Select your test configuration
+3. In **Environment variables**, add:
+   - Name: `SQL_TESTING_PROJECT_ROOT`
+   - Value: `/path/to/your/project/root` (where your `pytest.ini` is located)
+
+**In VS Code:**
+Add to your `.vscode/settings.json`:
+```json
+{
+    "python.testing.pytestArgs": [
+        "--rootdir=/path/to/your/project/root"
+    ],
+    "python.envFile": "${workspaceFolder}/.env"
+}
+```
+
+Create a `.env` file in your project root:
+```bash
+SQL_TESTING_PROJECT_ROOT=/path/to/your/project/root
+```
+
+#### Solution 2: Use conftest.py (Automatic)
+
+Create a `conftest.py` file in your project root directory:
+
+```python
+"""
+PyTest configuration file to ensure SQL Testing Library can find config
+"""
+import os
+import pytest
+
+def pytest_configure(config):
+    """Ensure SQL_TESTING_PROJECT_ROOT is set for IDE compatibility"""
+    if not os.environ.get('SQL_TESTING_PROJECT_ROOT'):
+        # Set to current working directory where conftest.py is located
+        project_root = os.path.dirname(os.path.abspath(__file__))
+        os.environ['SQL_TESTING_PROJECT_ROOT'] = project_root
+        print(f"Setting SQL_TESTING_PROJECT_ROOT to: {project_root}")
+```
+
+This automatically sets the project root when pytest runs, regardless of the IDE or working directory.
+
+#### Solution 3: Alternative Configuration File
+
+Create a `setup.cfg` file alongside your `pytest.ini`:
+
+```ini
+[tool:pytest]
+testpaths = tests
+
+[sql_testing]
+adapter = bigquery
+
+[sql_testing.bigquery]
+project_id = your-project-id
+dataset_id = your_dataset
+credentials_path = /path/to/credentials.json
+```
+
+#### Solution 4: Set Working Directory in IDE
+
+**In PyCharm:**
+1. Go to **Run/Debug Configurations**
+2. Set **Working directory** to your project root (where `pytest.ini` is located)
+
+**In VS Code:**
+Ensure your workspace is opened at the project root level where `pytest.ini` exists.
+
+#### Verification
+
+To verify your configuration is working, run this Python snippet:
+
+```python
+from sql_testing_library._pytest_plugin import SQLTestDecorator
+
+decorator = SQLTestDecorator()
+try:
+    project_root = decorator._get_project_root()
+    print(f"Project root: {project_root}")
+
+    config_parser = decorator._get_config_parser()
+    print(f"Config sections: {config_parser.sections()}")
+
+    if 'sql_testing' in config_parser:
+        adapter = config_parser.get('sql_testing', 'adapter')
+        print(f"✅ Configuration found! Adapter: {adapter}")
+    else:
+        print("❌ No sql_testing section found")
+except Exception as e:
+    print(f"❌ Error: {e}")
+```
+
+### Common IDE-Specific Issues
+
+**PyCharm**: Often runs pytest from the project parent directory instead of the project root.
+- **Solution**: Set working directory or use `conftest.py`
+
+**VS Code**: May not respect the pytest.ini location when using the Python extension.
+- **Solution**: Use `.env` file or set `python.testing.pytestArgs` in settings
+
+**Jupyter Notebooks**: Running tests in notebooks may not find configuration files.
+- **Solution**: Set `SQL_TESTING_PROJECT_ROOT` environment variable in the notebook
+
+**Docker/Containers**: Configuration files may not be mounted or accessible.
+- **Solution**: Ensure config files are included in your Docker build context and set the environment variable
+
 ## Usage Patterns
 
 The library supports flexible ways to configure your tests:
