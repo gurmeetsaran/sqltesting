@@ -1,5 +1,9 @@
 name: Redshift Integration Tests
 
+concurrency:
+  group: redshift-integration-queue
+  cancel-in-progress: false  # Queue runs instead of canceling to avoid wasting expensive Redshift resources
+
 on:
   pull_request:
     branches: [master, main]
