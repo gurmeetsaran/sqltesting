@@ -111,9 +111,9 @@ The CI/CD workflow runs automatically on:
 ### Pull Requests
 - **Triggers**: Any PR to `master` or `main` branch
 - **File changes**: Only when Athena-related files are modified:
-  - `src/sql_testing_library/adapters/athena.py`
-  - `src/sql_testing_library/core.py`
-  - `src/sql_testing_library/mock_table.py`
+  - `src/sql_testing_library/_adapters/athena.py`
+  - `src/sql_testing_library/_core.py`
+  - `src/sql_testing_library/_mock_table.py`
   - `tests/test_athena*.py`
   - `tests/integration/test_athena_integration.py`
   - Workflow file itself

@@ -4,18 +4,18 @@ on:
   pull_request:
     branches: [master, main]
     paths:
-      - 'src/sql_testing_library/adapters/trino.py'
-      - 'src/sql_testing_library/core.py'
-      - 'src/sql_testing_library/mock_table.py'
+      - 'src/sql_testing_library/_adapters/trino.py'
+      - 'src/sql_testing_library/_core.py'
+      - 'src/sql_testing_library/_mock_table.py'
       - 'tests/test_trino*.py'
       - 'tests/integration/test_trino_integration.py'
       - '.github/workflows/trino-integration.yml'
   push:
     branches: [master, main]
     paths:
-      - 'src/sql_testing_library/adapters/trino.py'
-      - 'src/sql_testing_library/core.py'
-      - 'src/sql_testing_library/mock_table.py'
+      - 'src/sql_testing_library/_adapters/trino.py'
+      - 'src/sql_testing_library/_core.py'
+      - 'src/sql_testing_library/_mock_table.py'
       - 'tests/test_trino*.py'
       - 'tests/integration/test_trino_integration.py'
       - '.github/workflows/trino-integration.yml'
@@ -28,9 +28,14 @@ env:
 
 jobs:
 
+  unit-tests:
+    name: Unit Tests (Prerequisite)
+    uses: ./.github/workflows/tests.yaml
+
   real-integration:
     name: Real Trino Integration Tests
     runs-on: ubuntu-latest
+    needs: unit-tests  # Wait for unit tests to pass
     if: |
       (github.event_name == 'push' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main')) ||
       (github.event_name == 'pull_request') ||

@@ -3,9 +3,13 @@
 import logging
 from datetime import date, datetime
 from decimal import Decimal
-from typing import Any, List, Optional, Type, Union, get_args
+from typing import TYPE_CHECKING, Any, List, Optional, Type, Union, get_args
 
-import pandas as pd
+
+if TYPE_CHECKING:
+    import pandas as pd
+
+# Heavy imports moved to function level for better performance
 from google.cloud import bigquery
 
 from .._mock_table import BaseMockTable
@@ -59,7 +63,7 @@ class BigQueryAdapter(DatabaseAdapter):
         """Return BigQuery dialect for sqlglot."""
         return "bigquery"
 
-    def execute_query(self, query: str) -> pd.DataFrame:
+    def execute_query(self, query: str) -> "pd.DataFrame":
         """Execute query and return results as DataFrame."""
         job = self.client.query(query)
         return job.to_dataframe()

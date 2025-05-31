@@ -4,11 +4,15 @@ import logging
 import time
 from datetime import date, datetime
 from decimal import Decimal
-from typing import Any, List, Optional, Type, Union, get_args
+from typing import TYPE_CHECKING, Any, List, Optional, Type, Union, get_args
+
+
+if TYPE_CHECKING:
+    import pandas as pd
 
 import boto3
-import pandas as pd
 
+# Heavy import moved to function level for better performance
 from .._mock_table import BaseMockTable
 from .._types import BaseTypeConverter
 from .base import DatabaseAdapter
@@ -74,8 +78,10 @@ class AthenaAdapter(DatabaseAdapter):
         """Return Presto dialect for sqlglot (Athena uses Presto SQL)."""
         return "presto"
 
-    def execute_query(self, query: str) -> pd.DataFrame:
+    def execute_query(self, query: str) -> "pd.DataFrame":
         """Execute query and return results as DataFrame."""
+        import pandas as pd
+
         # Start query execution
         response = self.client.start_query_execution(
             QueryString=query,

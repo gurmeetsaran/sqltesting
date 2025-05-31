@@ -119,9 +119,9 @@ This is the simplest integration to set up - no configuration needed!
 The workflow runs automatically when changes are made to:
 ```yaml
 paths:
-  - 'src/sql_testing_library/adapters/trino.py'
-  - 'src/sql_testing_library/core.py'
-  - 'src/sql_testing_library/mock_table.py'
+  - 'src/sql_testing_library/_adapters/trino.py'
+  - 'src/sql_testing_library/_core.py'
+  - 'src/sql_testing_library/_mock_table.py'
   - 'tests/test_trino*.py'
   - 'tests/integration/test_trino_integration.py'
   - '.github/workflows/trino-integration.yml'

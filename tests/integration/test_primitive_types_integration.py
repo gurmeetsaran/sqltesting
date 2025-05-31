@@ -486,6 +486,78 @@ class TestPrimitiveTypesIntegration:
         assert min_row.optional_date is None
         assert min_row.optional_timestamp is None
 
+    def test_all_optional_fields_none(self, adapter_type, use_physical_tables):
+        """Test model with all optional fields set to None values."""
+
+        @dataclass
+        class AllOptionalModel:
+            """Model with all fields as optional - used for both input data and results."""
+
+            optional_int: Optional[int] = None
+            optional_float: Optional[float] = None
+            optional_string: Optional[str] = None
+            optional_bool: Optional[bool] = None
+            optional_date: Optional[date] = None
+            optional_timestamp: Optional[datetime] = None
+            optional_decimal: Optional[Decimal] = None
+
+        class AllOptionalMockTable(BaseMockTable):
+            """Mock table for all optional fields test."""
+
+            def __init__(self, data, database_name: str):
+                super().__init__(data)
+                self._database_name = database_name
+
+            def get_database_name(self) -> str:
+                return self._database_name
+
+            def get_table_name(self) -> str:
+                return "all_optional_table"
+
+        # Create test data with all None values
+        test_data = [
+            AllOptionalModel(),  # All fields default to None
+            AllOptionalModel(),  # Second row, also all None
+        ]
+
+        @sql_test(
+            adapter_type=adapter_type,
+            mock_tables=[AllOptionalMockTable(test_data, self.database_name)],
+            result_class=AllOptionalModel,  # Reuse the same model for results
+        )
+        def query_all_optional_none():
+            return TestCase(
+                query="""
+                    SELECT
+                        optional_int,
+                        optional_float,
+                        optional_string,
+                        optional_bool,
+                        optional_date,
+                        optional_timestamp,
+                        optional_decimal
+                    FROM all_optional_table
+                    ORDER BY optional_int
+                """,
+                execution_database=self.database_name,
+                use_physical_tables=use_physical_tables,
+            )
+
+        results = query_all_optional_none()
+
+        # Should return 2 rows
+        assert len(results) == 2
+
+        # Verify both rows have all None values
+        for row in results:
+            assert row.optional_int is None
+            assert row.optional_float is None
+            assert row.optional_string is None
+            assert row.optional_bool is None
+            assert row.optional_date is None
+            assert row.optional_timestamp is None
+            assert row.optional_decimal is None
+
 
 # Snowflake primitive types test - separate class without parametrization
 @pytest.mark.integration
@@ -609,3 +681,75 @@ class TestSnowflakePrimitiveTypesIntegration:
         assert min_row.optional_bool is None
         assert min_row.optional_date is None
         assert min_row.optional_timestamp is None
+
+    def test_snowflake_all_optional_fields_none(self, use_physical_tables):
+        """Test Snowflake model with all optional fields set to None values."""
+
+        @dataclass
+        class AllOptionalModel:
+            """Model with all fields as optional - used for both input data and results."""
+
+            optional_int: Optional[int] = None
+            optional_float: Optional[float] = None
+            optional_string: Optional[str] = None
+            optional_bool: Optional[bool] = None
+            optional_date: Optional[date] = None
+            optional_timestamp: Optional[datetime] = None
+            optional_decimal: Optional[Decimal] = None
+
+        class AllOptionalMockTable(BaseMockTable):
+            """Mock table for all optional fields test."""
+
+            def __init__(self, data, database_name: str):
+                super().__init__(data)
+                self._database_name = database_name
+
+            def get_database_name(self) -> str:
+                return self._database_name
+
+            def get_table_name(self) -> str:
+                return "all_optional_table"
+
+        # Create test data with all None values
+        test_data = [
+            AllOptionalModel(),  # All fields default to None
+            AllOptionalModel(),  # Second row, also all None
+        ]
+
+        @sql_test(
+            adapter_type="snowflake",
+            mock_tables=[AllOptionalMockTable(test_data, self.database_name)],
+            result_class=AllOptionalModel,  # Reuse the same model for results
+        )
+        def query_snowflake_all_optional_none():
+            return TestCase(
+                query="""
+                    SELECT
+                        optional_int,
+                        optional_float,
+                        optional_string,
+                        optional_bool,
+                        optional_date,
+                        optional_timestamp,
+                        optional_decimal
+                    FROM all_optional_table
+                    ORDER BY optional_int
+                """,
+                execution_database=self.database_name,
+                use_physical_tables=use_physical_tables,
+            )
+
+        results = query_snowflake_all_optional_none()
+
+        # Should return 2 rows
+        assert len(results) == 2
+
+        # Verify both rows have all None values
+        for row in results:
+            assert row.optional_int is None
+            assert row.optional_float is None
+            assert row.optional_string is None
+            assert row.optional_bool is None
+            assert row.optional_date is None
+            assert row.optional_timestamp is None
+            assert row.optional_decimal is None

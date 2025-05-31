@@ -3,10 +3,13 @@
 import time
 from datetime import date, datetime
 from decimal import Decimal
-from typing import Any, List, Optional, Type, Union, get_args
+from typing import TYPE_CHECKING, Any, List, Optional, Type, Union, get_args
 
-import pandas as pd
 
+if TYPE_CHECKING:
+    import pandas as pd
+
+# Heavy import moved to function level for better performance
 from .._mock_table import BaseMockTable
 from .._types import BaseTypeConverter
 from .base import DatabaseAdapter
@@ -75,8 +78,10 @@ class RedshiftAdapter(DatabaseAdapter):
         """Return Redshift dialect for sqlglot."""
         return "redshift"
 
-    def execute_query(self, query: str) -> pd.DataFrame:
+    def execute_query(self, query: str) -> "pd.DataFrame":
         """Execute query and return results as DataFrame."""
+        import pandas as pd
+
         conn = self._get_connection()
 
         # Use cursor with dictionary-like results

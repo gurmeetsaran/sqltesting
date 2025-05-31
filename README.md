@@ -700,10 +700,6 @@ For detailed usage and configuration options, see the example files included.
 
 The library has a few known limitations that are planned to be addressed in future updates:
 
-### Core Functionality
-- The `mock_table` function is not exposed in the public API but is used in tests
-- TestCase interface could be streamlined for better usability
-
 ### Snowflake Support
 - Physical table tests for Snowflake are currently skipped due to complex mocking requirements
 - Need better support for Snowflake-specific data types (VARIANT, OBJECT, ARRAY)

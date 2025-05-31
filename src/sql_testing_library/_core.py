@@ -2,6 +2,7 @@
 
 from dataclasses import dataclass
 from typing import (
+    TYPE_CHECKING,
     Any,
     Dict,
     Generic,
@@ -13,11 +14,11 @@ from typing import (
     get_type_hints,
 )
 
-import numpy as np
-import pandas as pd
-import sqlglot
-from sqlglot import exp
 
+if TYPE_CHECKING:
+    import pandas as pd
+
+# Heavy imports moved to function level for better performance
 from ._adapters.base import DatabaseAdapter
 from ._exceptions import (
     MockTableNotFoundError,
@@ -128,6 +129,9 @@ class SQLTestFramework:
     def _parse_sql_tables(self, query: str) -> List[str]:
         """Parse SQL query to extract table references."""
         try:
+            import sqlglot
+            from sqlglot import exp
+
             dialect = self.adapter.get_sqlglot_dialect()
             parsed = sqlglot.parse_one(query, dialect=dialect)
 
@@ -327,6 +331,9 @@ class SQLTestFramework:
     def _replace_table_names_in_query(self, query: str, replacement_mapping: Dict[str, str]) -> str:
         """Replace table names in query using sqlglot AST transformation."""
         try:
+            import sqlglot
+            from sqlglot import exp
+
             dialect = self.adapter.get_sqlglot_dialect()
 
             # Parse the query to an AST
@@ -388,8 +395,10 @@ class SQLTestFramework:
         # Replace table names and return modified query
         return self._replace_table_names_in_query(query, replacement_mapping)
 
-    def _deserialize_results(self, result_df: pd.DataFrame, result_class: Type[T]) -> List[T]:
+    def _deserialize_results(self, result_df: "pd.DataFrame", result_class: Type[T]) -> List[T]:
         """Deserialize query results to typed objects."""
+        import numpy as np
+
         if result_df.empty:
             return []
 

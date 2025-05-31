@@ -76,24 +76,22 @@ class TestAdapterImports(unittest.TestCase):
         from sql_testing_library._adapters import __all__
 
         self.assertIsInstance(__all__, list)
-        self.assertGreater(len(__all__), 0)
+        # After lazy loading optimization, __all__ is empty by design
+        # Individual adapters are imported directly when needed
+        self.assertEqual(len(__all__), 0)
 
     def test_conditional_adapter_imports(self):
         """Test that adapters are conditionally imported."""
         # Test BigQuery adapter import if available
         try:
-            from sql_testing_library._adapters import BigQueryAdapter
+            from sql_testing_library._adapters.bigquery import BigQueryAdapter
 
             self.assertIsNotNone(BigQueryAdapter)
-
-            from sql_testing_library._adapters import __all__
-
-            self.assertIn("BigQueryAdapter", __all__)
+            # After lazy loading optimization, adapters are imported directly
+            # No longer tracked in _adapters.__all__
         except ImportError:
-            # BigQuery not available, should not be in __all__
-            from sql_testing_library._adapters import __all__
-
-            self.assertNotIn("BigQueryAdapter", __all__)
+            # BigQuery not available - this is expected in some environments
+            pass
 
     def test_base_adapter_import(self):
         """Test base adapter import."""
@@ -110,11 +108,9 @@ class TestAdapterImports(unittest.TestCase):
         from sql_testing_library._adapters import __all__
 
         self.assertIsInstance(__all__, list)
-
-        # Test that available adapters are in __all__
-        if __all__:
-            for adapter in __all__:
-                self.assertIn("Adapter", adapter)  # All should end with "Adapter"
+        # After lazy loading optimization, __all__ is empty by design
+        # This reduces import time and prevents loading all database SDKs
+        self.assertEqual(len(__all__), 0)
 
 
 if __name__ == "__main__":

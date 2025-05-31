@@ -4,6 +4,7 @@ from abc import ABC, abstractmethod
 from dataclasses import is_dataclass
 from decimal import Decimal
 from typing import (
+    TYPE_CHECKING,
     Any,
     Dict,
     List,
@@ -12,8 +13,11 @@ from typing import (
     get_type_hints,
 )
 
-import pandas as pd
 
+if TYPE_CHECKING:
+    import pandas as pd
+
+# Heavy import moved to function level for better performance
 from ._types import unwrap_optional_type
 
 
@@ -146,8 +150,10 @@ class BaseMockTable(ABC):
 
         return column_types
 
-    def to_dataframe(self) -> pd.DataFrame:
+    def to_dataframe(self) -> "pd.DataFrame":
         """Convert mock data to pandas DataFrame."""
+        import pandas as pd
+
         if not self.data:
             return pd.DataFrame()
 

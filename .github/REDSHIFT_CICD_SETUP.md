@@ -143,9 +143,9 @@ The `REDSHIFT_ADMIN_PASSWORD` must meet these criteria:
 The Redshift integration tests run automatically when:
 
 1. **Pull Requests** that modify:
-   - `src/sql_testing_library/adapters/redshift.py`
-   - `src/sql_testing_library/core.py`
-   - `src/sql_testing_library/mock_table.py`
+   - `src/sql_testing_library/_adapters/redshift.py`
+   - `src/sql_testing_library/_core.py`
+   - `src/sql_testing_library/_mock_table.py`
    - `tests/test_redshift*.py`
    - `tests/integration/test_redshift_integration.py`
    - `.github/workflows/redshift-integration.yml`
