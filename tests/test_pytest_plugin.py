@@ -660,3 +660,279 @@ class TestPytestHooks(unittest.TestCase):
             pytest_runtest_call(mock_item)
 
         self.assertIn("SQL test failed: Test error", str(context.exception))
+
+
+class TestSQLTestDecoratorAdditionalCoverage(unittest.TestCase):
+    """Additional tests to improve coverage."""
+
+    def setUp(self):
+        """Set up test decorator."""
+        self.decorator = SQLTestDecorator()
+
+    def test_get_framework_no_adapter_type_uses_default(self):
+        """Test get_framework with no adapter_type uses default from config."""
+        mock_config = configparser.ConfigParser()
+        mock_config["sql_testing"] = {"adapter": "bigquery"}
+        mock_config["sql_testing.bigquery"] = {
+            "project_id": "test-project",
+            "dataset_id": "test-dataset",
+        }
+
+        self.decorator._config_parser = mock_config
+
+        with mock.patch("sql_testing_library._adapters.bigquery.BigQueryAdapter"):
+            framework = self.decorator.get_framework()
+            self.assertIsNotNone(framework)
+
+    def test_get_framework_no_adapter_type_with_explicit_adapter_type(self):
+        """Test get_framework with explicit adapter_type parameter."""
+        mock_config = configparser.ConfigParser()
+        mock_config["sql_testing"] = {"adapter": "bigquery"}
+        mock_config["sql_testing.athena"] = {
+            "database": "test_db",
+            "s3_output_location": "s3://test-bucket/",
+        }
+
+        self.decorator._config_parser = mock_config
+
+        with mock.patch("sql_testing_library._adapters.athena.AthenaAdapter"):
+            framework = self.decorator.get_framework("athena")
+            self.assertIsNotNone(framework)
+
+    def test_create_framework_athena_success(self):
+        """Test successful Athena framework creation."""
+        mock_config = configparser.ConfigParser()
+        mock_config["sql_testing"] = {"adapter": "athena"}
+        mock_config["sql_testing.athena"] = {
+            "database": "test_db",
+            "s3_output_location": "s3://test-bucket/",
+            "region": "us-west-2",
+            "aws_access_key_id": "test_key",
+            "aws_secret_access_key": "test_secret",
+        }
+
+        self.decorator._config_parser = mock_config
+
+        with mock.patch("sql_testing_library._adapters.athena.AthenaAdapter") as mock_adapter:
+            self.decorator._create_framework_from_config("athena")
+
+            mock_adapter.assert_called_once_with(
+                database="test_db",
+                s3_output_location="s3://test-bucket/",
+                region="us-west-2",
+                aws_access_key_id="test_key",
+                aws_secret_access_key="test_secret",
+            )
+
+    def test_create_framework_redshift_success(self):
+        """Test successful Redshift framework creation."""
+        mock_config = configparser.ConfigParser()
+        mock_config["sql_testing"] = {"adapter": "redshift"}
+        mock_config["sql_testing.redshift"] = {
+            "host": "test-host",
+            "database": "test_db",
+            "user": "test_user",
+            "password": "test_password",
+            "port": "5439",
+        }
+
+        self.decorator._config_parser = mock_config
+
+        with mock.patch("sql_testing_library._adapters.redshift.RedshiftAdapter") as mock_adapter:
+            self.decorator._create_framework_from_config("redshift")
+
+            mock_adapter.assert_called_once_with(
+                host="test-host",
+                database="test_db",
+                user="test_user",
+                password="test_password",
+                port=5439,
+            )
+
+    def test_create_framework_snowflake_success(self):
+        """Test successful Snowflake framework creation."""
+        mock_config = configparser.ConfigParser()
+        mock_config["sql_testing"] = {"adapter": "snowflake"}
+        mock_config["sql_testing.snowflake"] = {
+            "account": "test-account",
+            "user": "test_user",
+            "password": "test_password",
+            "database": "test_db",
+            "warehouse": "test_warehouse",
+            "schema": "test_schema",
+            "role": "test_role",
+        }
+
+        self.decorator._config_parser = mock_config
+
+        with mock.patch("sql_testing_library._adapters.snowflake.SnowflakeAdapter") as mock_adapter:
+            self.decorator._create_framework_from_config("snowflake")
+
+            mock_adapter.assert_called_once_with(
+                account="test-account",
+                user="test_user",
+                password="test_password",
+                database="test_db",
+                schema="test_schema",
+                warehouse="test_warehouse",
+                role="test_role",
+            )
+
+    def test_create_framework_trino_success_no_auth(self):
+        """Test successful Trino framework creation without auth."""
+        mock_config = configparser.ConfigParser()
+        mock_config["sql_testing"] = {"adapter": "trino"}
+        mock_config["sql_testing.trino"] = {
+            "host": "localhost",
+            "port": "8080",
+            "user": "test_user",
+            "catalog": "hive",
+            "schema": "test_schema",
+            "http_scheme": "https",
+        }
+
+        self.decorator._config_parser = mock_config
+
+        with mock.patch("sql_testing_library._adapters.trino.TrinoAdapter") as mock_adapter:
+            self.decorator._create_framework_from_config("trino")
+
+            mock_adapter.assert_called_once_with(
+                host="localhost",
+                port=8080,
+                user="test_user",
+                catalog="hive",
+                schema="test_schema",
+                http_scheme="https",
+                auth=None,
+            )
+
+    def test_create_framework_bigquery_success_absolute_path(self):
+        """Test BigQuery framework creation with absolute credentials path."""
+        mock_config = configparser.ConfigParser()
+        mock_config["sql_testing"] = {"adapter": "bigquery"}
+        mock_config["sql_testing.bigquery"] = {
+            "project_id": "test-project",
+            "dataset_id": "test-dataset",
+            "credentials_path": "/absolute/path/creds.json",
+        }
+
+        self.decorator._config_parser = mock_config
+
+        with mock.patch("sql_testing_library._adapters.bigquery.BigQueryAdapter") as mock_adapter:
+            self.decorator._create_framework_from_config("bigquery")
+
+            mock_adapter.assert_called_once_with(
+                project_id="test-project",
+                dataset_id="test-dataset",
+                credentials_path="/absolute/path/creds.json",
+            )
+
+    def test_create_framework_bigquery_success_no_credentials(self):
+        """Test BigQuery framework creation without credentials path."""
+        mock_config = configparser.ConfigParser()
+        mock_config["sql_testing"] = {"adapter": "bigquery"}
+        mock_config["sql_testing.bigquery"] = {
+            "project_id": "test-project",
+            "dataset_id": "test-dataset",
+        }
+
+        self.decorator._config_parser = mock_config
+
+        with mock.patch("sql_testing_library._adapters.bigquery.BigQueryAdapter") as mock_adapter:
+            self.decorator._create_framework_from_config("bigquery")
+
+            mock_adapter.assert_called_once_with(
+                project_id="test-project", dataset_id="test-dataset", credentials_path=None
+            )
+
+    def test_get_config_parser_with_project_root_change(self):
+        """Test config parser when project root changes directory."""
+        with tempfile.TemporaryDirectory() as temp_dir:
+            # Create pytest.ini file
+            pytest_ini_path = os.path.join(temp_dir, "pytest.ini")
+            with open(pytest_ini_path, "w") as f:
+                f.write("""
+[sql_testing]
+adapter = bigquery
+                """)
+
+            original_cwd = os.getcwd()
+            try:
+                # Clear cached values
+                self.decorator._config_parser = None
+                self.decorator._project_root = None
+
+                # Mock _get_project_root to return our temp directory
+                with mock.patch.object(self.decorator, "_get_project_root", return_value=temp_dir):
+                    # Mock os.chdir to avoid actual directory changes in test
+                    with mock.patch("os.chdir") as mock_chdir:
+                        config_parser = self.decorator._get_config_parser()
+                        self.assertIn("sql_testing", config_parser)
+
+                        # Verify chdir was called to go to project root and back
+                        self.assertTrue(mock_chdir.called)
+            finally:
+                # Ensure we're in the original directory
+                os.chdir(original_cwd)
+
+    def test_project_root_detection_traversal(self):
+        """Test project root detection traverses up directories."""
+        with tempfile.TemporaryDirectory() as temp_dir:
+            # Create nested directory structure
+            nested_dir = os.path.join(temp_dir, "level1", "level2")
+            os.makedirs(nested_dir)
+
+            # Create pyproject.toml in root
+            pyproject_path = os.path.join(temp_dir, "pyproject.toml")
+            with open(pyproject_path, "w") as f:
+                f.write("[tool.poetry]\nname = 'test'\n")
+
+            # Clear cached project root
+            self.decorator._project_root = None
+
+            # Start from nested directory
+            with mock.patch("os.getcwd", return_value=nested_dir):
+                root = self.decorator._get_project_root()
+                self.assertEqual(root, temp_dir)
+
+    def test_project_root_detection_invalid_env_var(self):
+        """Test project root detection with invalid environment variable."""
+        with mock.patch.dict(os.environ, {"SQL_TESTING_PROJECT_ROOT": "/nonexistent/path"}):
+            # Clear cached project root
+            self.decorator._project_root = None
+
+            with tempfile.TemporaryDirectory() as temp_dir:
+                with mock.patch("os.getcwd", return_value=temp_dir):
+                    root = self.decorator._get_project_root()
+                    # Should fall back to current directory
+                    self.assertEqual(root, temp_dir)
+
+    def test_config_caching(self):
+        """Test that config is cached after first load."""
+        mock_config = configparser.ConfigParser()
+        mock_config["sql_testing"] = {"adapter": "bigquery"}
+
+        self.decorator._config_parser = mock_config
+
+        # First call should load and cache
+        config1 = self.decorator._load_config()
+
+        # Second call should return cached version
+        config2 = self.decorator._load_config()
+
+        self.assertEqual(config1, config2)
+        self.assertIs(config1, config2)
+
+    def test_load_adapter_config_no_adapter_type_provided(self):
+        """Test loading adapter config when no adapter_type is provided."""
+        mock_config = configparser.ConfigParser()
+        mock_config["sql_testing"] = {"adapter": "athena"}
+        mock_config["sql_testing.athena"] = {"database": "test_db"}
+
+        self.decorator._config_parser = mock_config
+        self.decorator._config = dict(mock_config["sql_testing"])
+
+        # Call without providing adapter_type
+        adapter_config = self.decorator._load_adapter_config()
+
+        self.assertEqual(adapter_config["database"], "test_db")
