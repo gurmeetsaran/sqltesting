@@ -3,7 +3,9 @@
 import unittest
 from datetime import date, datetime
 from decimal import Decimal
-from typing import Optional, Union
+from typing import List, Optional, Union
+
+import numpy as np
 
 from sql_testing_library._types import BaseTypeConverter, unwrap_optional_type
 
@@ -242,6 +244,347 @@ class TestUnwrapOptionalType(unittest.TestCase):
         self.assertEqual(unwrap_optional_type(str), str)
         self.assertEqual(unwrap_optional_type(int), int)
         self.assertEqual(unwrap_optional_type(date), date)
+
+        # Test Union types with multiple non-None types
+        union_type = Union[str, int, float]
+        result = unwrap_optional_type(union_type)
+        # Should return the first non-None type when Union doesn't contain None
+        self.assertEqual(result, str)
+
+        # Test complex Optional with custom types
+        self.assertEqual(unwrap_optional_type(Optional[Decimal]), Decimal)
+
+
+class TestBaseTypeConverterArrays(unittest.TestCase):
+    """Test BaseTypeConverter array/list functionality."""
+
+    def setUp(self):
+        """Set up test converter."""
+        self.converter = BaseTypeConverter()
+
+    def test_list_conversion_already_list(self):
+        """Test list conversion when value is already a list."""
+        test_list = [1, 2, 3]
+        result = self.converter.convert(test_list, List[int])
+        self.assertEqual(result, test_list)
+
+    def test_list_conversion_numpy_array(self):
+        """Test list conversion from numpy array."""
+        numpy_array = np.array([1, 2, 3])
+        result = self.converter.convert(numpy_array, List[int])
+        self.assertEqual(result, [1, 2, 3])
+
+    def test_list_conversion_numpy_array_with_strings(self):
+        """Test list conversion from numpy array with strings."""
+        numpy_array = np.array(["hello", "world", "test"])
+        result = self.converter.convert(numpy_array, List[str])
+        self.assertEqual(result, ["hello", "world", "test"])
+
+    def test_list_conversion_string_array_format(self):
+        """Test list conversion from string array format."""
+        # Test with integers
+        result = self.converter.convert("[1, 2, 3]", List[int])
+        self.assertEqual(result, [1, 2, 3])
+
+        # Test with strings
+        result = self.converter.convert("['hello', 'world']", List[str])
+        self.assertEqual(result, ["hello", "world"])
+
+        # Test with double quotes
+        result = self.converter.convert('["hello", "world"]', List[str])
+        self.assertEqual(result, ["hello", "world"])
+
+    def test_list_conversion_empty_array_string(self):
+        """Test list conversion from empty array string."""
+        result = self.converter.convert("[]", List[int])
+        self.assertEqual(result, [])
+
+        result = self.converter.convert("[ ]", List[str])
+        self.assertEqual(result, [])
+
+    def test_list_conversion_string_non_array_format(self):
+        """Test list conversion from string that's not array format."""
+        # Should convert single value to single-element list
+        result = self.converter.convert("hello", List[str])
+        self.assertEqual(result, ["hello"])
+
+        result = self.converter.convert("42", List[int])
+        self.assertEqual(result, [42])
+
+    def test_list_conversion_none_value(self):
+        """Test list conversion with None value."""
+        result = self.converter.convert(None, List[int])
+        self.assertIsNone(result)
+
+    def test_list_conversion_single_value_to_list(self):
+        """Test converting single value to list."""
+        result = self.converter.convert(42, List[int])
+        self.assertEqual(result, [42])
+
+        result = self.converter.convert("hello", List[str])
+        self.assertEqual(result, ["hello"])
+
+    def test_list_conversion_nested_type_conversion(self):
+        """Test list conversion with nested type conversion."""
+        # Convert string numbers to int list
+        result = self.converter.convert("[1.0, 2.0, 3.0]", List[int])
+        self.assertEqual(result, [1, 2, 3])
+
+        # Convert string booleans to bool list
+        result = self.converter.convert("[true, false, 1, 0]", List[bool])
+        self.assertEqual(result, [True, False, True, False])
+
+    def test_list_conversion_mixed_quotes(self):
+        """Test list conversion with mixed quote styles."""
+        result = self.converter.convert("['hello', \"world\", test]", List[str])
+        self.assertEqual(result, ["hello", "world", "test"])
+
+    def test_list_conversion_with_spaces(self):
+        """Test list conversion with various spacing."""
+        result = self.converter.convert("[ 1 , 2 , 3 ]", List[int])
+        self.assertEqual(result, [1, 2, 3])
+
+        result = self.converter.convert("[  'hello'  ,  'world'  ]", List[str])
+        self.assertEqual(result, ["hello", "world"])
+
+    def test_list_conversion_decimal_elements(self):
+        """Test list conversion with Decimal elements."""
+        result = self.converter.convert("[123.45, 678.90]", List[Decimal])
+        expected = [Decimal("123.45"), Decimal("678.90")]
+        self.assertEqual(result, expected)
+
+    def test_list_conversion_date_elements(self):
+        """Test list conversion with date elements."""
+        result = self.converter.convert("['2023-12-25', '2024-01-01']", List[date])
+        expected = [date(2023, 12, 25), date(2024, 1, 1)]
+        self.assertEqual(result, expected)
+
+    def test_list_conversion_optional_elements(self):
+        """Test list conversion with Optional element types."""
+        # Test numpy array with Optional elements
+        numpy_array = np.array([1, 2, None, 3])
+        result = self.converter.convert(numpy_array, List[Optional[int]])
+        self.assertEqual(result, [1, 2, None, 3])
+
+
+class TestBaseTypeConverterEdgeCases(unittest.TestCase):
+    """Test BaseTypeConverter edge cases and error conditions."""
+
+    def setUp(self):
+        """Set up test converter."""
+        self.converter = BaseTypeConverter()
+
+    def test_string_to_int_with_float_string(self):
+        """Test converting float string to int."""
+        result = self.converter.convert("123.45", int)
+        self.assertEqual(result, 123)
+
+        result = self.converter.convert("999.99", int)
+        self.assertEqual(result, 999)
+
+    def test_boolean_conversion_case_insensitive(self):
+        """Test boolean conversion is case insensitive."""
+        # Test various case combinations for true
+        self.assertTrue(self.converter.convert("TRUE", bool))
+        self.assertTrue(self.converter.convert("True", bool))
+        self.assertTrue(self.converter.convert("tRuE", bool))
+        self.assertTrue(self.converter.convert("YES", bool))
+        self.assertTrue(self.converter.convert("T", bool))
+
+        # Test various case combinations for false
+        self.assertFalse(self.converter.convert("FALSE", bool))
+        self.assertFalse(self.converter.convert("False", bool))
+        self.assertFalse(self.converter.convert("fAlSe", bool))
+        self.assertFalse(self.converter.convert("NO", bool))
+        self.assertFalse(self.converter.convert("F", bool))
+
+    def test_date_conversion_edge_cases(self):
+        """Test date conversion edge cases."""
+        # Test with microseconds (should work)
+        result = self.converter.convert("2023-12-25T15:30:45.123456", date)
+        self.assertEqual(result, date(2023, 12, 25))
+
+        # Test with timezone info
+        result = self.converter.convert("2023-12-25T15:30:45+00:00", date)
+        self.assertEqual(result, date(2023, 12, 25))
+
+    def test_datetime_conversion_edge_cases(self):
+        """Test datetime conversion edge cases."""
+        # Test with microseconds
+        result = self.converter.convert("2023-12-25T15:30:45.123456", datetime)
+        expected = datetime(2023, 12, 25, 15, 30, 45, 123456)
+        self.assertEqual(result, expected)
+
+        # Test already datetime object
+        test_datetime = datetime(2023, 12, 25, 15, 30, 45)
+        result = self.converter.convert(test_datetime, datetime)
+        self.assertEqual(result, test_datetime)
+
+    def test_decimal_conversion_edge_cases(self):
+        """Test Decimal conversion edge cases."""
+        # Test with very large numbers
+        large_number = "999999999999999999999999999.123456789"
+        result = self.converter.convert(large_number, Decimal)
+        self.assertEqual(result, Decimal(large_number))
+
+        # Test with scientific notation
+        result = self.converter.convert("1.23e10", Decimal)
+        self.assertEqual(result, Decimal("1.23e10"))
+
+    def test_optional_type_with_none_value(self):
+        """Test Optional type handling with None value."""
+        # Test with None for various Optional types
+        self.assertIsNone(self.converter.convert(None, Optional[str]))
+        self.assertIsNone(self.converter.convert(None, Optional[int]))
+        self.assertIsNone(self.converter.convert(None, Optional[Decimal]))
+        self.assertIsNone(self.converter.convert(None, Optional[List[str]]))
+
+    def test_optional_type_with_valid_value(self):
+        """Test Optional type handling with valid value."""
+        # Test conversion to Optional with valid values
+        result = self.converter.convert("hello", Optional[str])
+        self.assertEqual(result, "hello")
+
+        result = self.converter.convert("42", Optional[int])
+        self.assertEqual(result, 42)
+
+    def test_unsupported_type_fallback(self):
+        """Test fallback behavior for unsupported types."""
+
+        # Create a custom type
+        class CustomType:
+            pass
+
+        # Should fall back to string conversion
+        result = self.converter.convert(42, CustomType)
+        self.assertEqual(result, "42")
+
+        result = self.converter.convert("hello", CustomType)
+        self.assertEqual(result, "hello")
+
+    def test_conversion_with_malformed_list_strings(self):
+        """Test conversion with malformed list strings."""
+        # Missing closing bracket - should be treated as single element
+        result = self.converter.convert("[1, 2, 3", List[str])
+        self.assertEqual(result, ["[1, 2, 3"])
+
+        # Missing opening bracket - should be treated as single element
+        result = self.converter.convert("1, 2, 3]", List[str])
+        self.assertEqual(result, ["1, 2, 3]"])
+
+    def test_type_conversion_with_complex_nested_types(self):
+        """Test type conversion with complex nested types."""
+        # Test List of Optional types
+        result = self.converter.convert([1, None, 3], List[Optional[int]])
+        self.assertEqual(result, [1, None, 3])
+
+    def test_zero_and_empty_value_handling(self):
+        """Test handling of zero and empty values."""
+        # Zero should convert properly
+        self.assertEqual(self.converter.convert(0, str), "0")
+        self.assertEqual(self.converter.convert("0", int), 0)
+        self.assertEqual(self.converter.convert(0.0, int), 0)
+
+        # Empty string handling
+        self.assertEqual(self.converter.convert("", str), "")
+        self.assertFalse(self.converter.convert("", bool))
+
+    def test_list_with_no_type_args(self):
+        """Test list conversion when List has no type arguments."""
+        # Test with basic list type (no generics)
+        result = self.converter.convert("[1, 2, 3]", list)
+        # When list has no type args, it returns the string as-is (fallback behavior)
+        self.assertEqual(result, "[1, 2, 3]")
+
+    def test_numpy_array_with_different_dtypes(self):
+        """Test numpy array conversion with different dtypes."""
+        # Test with different numpy dtypes
+        float_array = np.array([1.1, 2.2, 3.3], dtype=np.float64)
+        result = self.converter.convert(float_array, List[float])
+        self.assertEqual(result, [1.1, 2.2, 3.3])
+
+        int_array = np.array([1, 2, 3], dtype=np.int32)
+        result = self.converter.convert(int_array, List[int])
+        self.assertEqual(result, [1, 2, 3])
+
+    def test_recursive_type_conversion_in_lists(self):
+        """Test recursive type conversion in list elements."""
+        # Test converting string representations to proper types
+        result = self.converter.convert("['123.45', '678.90']", List[Decimal])
+        expected = [Decimal("123.45"), Decimal("678.90")]
+        self.assertEqual(result, expected)
+
+        # Test boolean strings in lists
+        result = self.converter.convert("['true', 'false', '1', '0']", List[bool])
+        self.assertEqual(result, [True, False, True, False])
+
+    def test_list_conversion_error_handling(self):
+        """Test error handling in list conversion."""
+        # Test invalid conversions within lists
+        with self.assertRaises(ValueError):
+            self.converter.convert("['not_a_number']", List[int])
+
+        with self.assertRaises(ValueError):
+            self.converter.convert("['invalid_date']", List[date])
+
+
+class TestUnwrapOptionalTypeExtended(unittest.TestCase):
+    """Extended test cases for unwrap_optional_type function."""
+
+    def test_unwrap_nested_optional_types(self):
+        """Test unwrapping nested Optional types."""
+        # Test deeply nested Optional
+        nested_optional = Optional[Optional[str]]
+        result = unwrap_optional_type(nested_optional)
+        # Should return the first non-None type found
+        self.assertIn(result, [Optional[str], str])
+
+    def test_unwrap_complex_union_types(self):
+        """Test unwrapping complex Union types."""
+        # Test Union with multiple types including None
+        complex_union = Union[str, int, type(None)]
+        result = unwrap_optional_type(complex_union)
+        self.assertEqual(result, str)  # Should return first non-None type
+
+        # Test Union with no None type
+        non_optional_union = Union[str, int, float]
+        result = unwrap_optional_type(non_optional_union)
+        self.assertEqual(result, str)  # Should return first type when no None
+
+    def test_unwrap_with_generic_types(self):
+        """Test unwrapping with generic types."""
+        # Test Optional[List[str]]
+        optional_list = Optional[List[str]]
+        result = unwrap_optional_type(optional_list)
+        self.assertEqual(result, List[str])
+
+        # Test Optional[Dict[str, int]]
+        from typing import Dict
+
+        optional_dict = Optional[Dict[str, int]]
+        result = unwrap_optional_type(optional_dict)
+        self.assertEqual(result, Dict[str, int])
+
+    def test_unwrap_with_custom_types(self):
+        """Test unwrapping with custom types."""
+
+        class CustomClass:
+            pass
+
+        optional_custom = Optional[CustomClass]
+        result = unwrap_optional_type(optional_custom)
+        self.assertEqual(result, CustomClass)
+
+    def test_unwrap_edge_cases(self):
+        """Test edge cases for unwrap_optional_type."""
+        # Test with just None type
+        none_type = type(None)
+        result = unwrap_optional_type(none_type)
+        self.assertEqual(result, none_type)
+
+        # Test with empty args (shouldn't happen in practice)
+        result = unwrap_optional_type(str)
+        self.assertEqual(result, str)
 
 
 if __name__ == "__main__":
