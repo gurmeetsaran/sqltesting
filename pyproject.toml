@@ -4,7 +4,7 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
 name = "sql-testing-library"
-version = "0.3.0"
+version = "0.4.0"
 description = "A Python library for testing SQL queries with mock data injection"
 authors = ["Gurmeet Saran <gurmeetx@gmail.com>"]
 readme = "README.md"

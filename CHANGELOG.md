@@ -5,6 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 0.4.0 (2025-05-31)
+
+### Feat
+
+- implement lazy loading for heavy dependencies to improve import… (#82)
+- add comprehensive GitHub issue templates (#80)
+- parametrize integration tests and standardize SQL across adapters (#75)
+- add comprehensive test coverage for core framework functionality (#68)
+- enhance Codecov reporting and fix Redshift namespace deletion wait (#67)
+- add comprehensive Pydantic model support for mock data (#66)
+- add comprehensive array support and enhance Redshift security cleanup (#64)
+- unify SQL string escaping and fix database-specific issues (#62)
+
+### Fix
+
+- update all test imports after private module refactoring (#69)
+
 ## 0.3.0 (2025-05-26)
 
 ### Feat
