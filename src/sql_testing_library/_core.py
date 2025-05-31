@@ -18,14 +18,14 @@ import pandas as pd
 import sqlglot
 from sqlglot import exp
 
-from .adapters.base import DatabaseAdapter
-from .exceptions import (
+from ._adapters.base import DatabaseAdapter
+from ._exceptions import (
     MockTableNotFoundError,
     QuerySizeLimitExceeded,
     SQLParseError,
     TypeConversionError,
 )
-from .mock_table import BaseMockTable
+from ._mock_table import BaseMockTable
 
 
 # Type for adapter types

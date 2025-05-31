@@ -9,9 +9,9 @@ from typing import Any, Callable, Dict, List, Optional, Type, TypeVar, cast
 import pytest
 from _pytest.nodes import Item
 
-from .adapters.base import DatabaseAdapter
-from .core import AdapterType, SQLTestCase, SQLTestFramework
-from .mock_table import BaseMockTable
+from ._adapters.base import DatabaseAdapter
+from ._core import AdapterType, SQLTestCase, SQLTestFramework
+from ._mock_table import BaseMockTable
 
 
 T = TypeVar("T")
@@ -59,7 +59,7 @@ class SQLTestDecorator:
         database_adapter: DatabaseAdapter
 
         if adapter_type == "bigquery":
-            from .adapters.bigquery import BigQueryAdapter
+            from ._adapters.bigquery import BigQueryAdapter
 
             project_id = adapter_config.get("project_id")
             dataset_id = adapter_config.get("dataset_id")
@@ -81,7 +81,7 @@ class SQLTestDecorator:
                 credentials_path=credentials_path,
             )
         elif adapter_type == "athena":
-            from .adapters.athena import AthenaAdapter
+            from ._adapters.athena import AthenaAdapter
 
             database = adapter_config.get("database")
             s3_output_location = adapter_config.get("s3_output_location")
@@ -102,7 +102,7 @@ class SQLTestDecorator:
                 aws_secret_access_key=aws_secret_access_key,
             )
         elif adapter_type == "redshift":
-            from .adapters.redshift import RedshiftAdapter
+            from ._adapters.redshift import RedshiftAdapter
 
             host = adapter_config.get("host")
             database = adapter_config.get("database")
@@ -130,7 +130,7 @@ class SQLTestDecorator:
                 port=port,
             )
         elif adapter_type == "trino":
-            from .adapters.trino import TrinoAdapter
+            from ._adapters.trino import TrinoAdapter
 
             host = adapter_config.get("host")
             port = int(adapter_config.get("port", "8080"))
@@ -167,7 +167,7 @@ class SQLTestDecorator:
                 auth=auth,
             )
         elif adapter_type == "snowflake":
-            from .adapters.snowflake import SnowflakeAdapter
+            from ._adapters.snowflake import SnowflakeAdapter
 
             account = adapter_config.get("account")
             user = adapter_config.get("user")

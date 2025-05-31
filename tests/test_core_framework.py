@@ -11,14 +11,14 @@ import pandas as pd
 import pytest
 from pydantic import BaseModel
 
-from sql_testing_library.core import SQLTestCase, SQLTestFramework
-from sql_testing_library.exceptions import (
+from sql_testing_library._core import SQLTestCase, SQLTestFramework
+from sql_testing_library._exceptions import (
     MockTableNotFoundError,
     QuerySizeLimitExceeded,
     SQLParseError,
     TypeConversionError,
 )
-from sql_testing_library.mock_table import BaseMockTable
+from sql_testing_library._mock_table import BaseMockTable
 
 
 @dataclass

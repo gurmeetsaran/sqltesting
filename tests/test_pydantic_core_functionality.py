@@ -9,7 +9,7 @@ from unittest.mock import MagicMock
 from pydantic import BaseModel, Field
 
 from sql_testing_library import TestCase, sql_test
-from sql_testing_library.mock_table import BaseMockTable
+from sql_testing_library._mock_table import BaseMockTable
 
 
 class Product(BaseModel):

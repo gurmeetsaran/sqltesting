@@ -3,7 +3,7 @@
 import unittest
 from typing import Optional
 
-from sql_testing_library.exceptions import (
+from sql_testing_library._exceptions import (
     MockTableNotFoundError,
     QuerySizeLimitExceeded,
     SQLParseError,

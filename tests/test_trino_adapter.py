@@ -8,8 +8,8 @@ from unittest import mock
 
 import pandas as pd
 
-from sql_testing_library.adapters.trino import TrinoAdapter, TrinoTypeConverter
-from sql_testing_library.mock_table import BaseMockTable
+from sql_testing_library._adapters.trino import TrinoAdapter, TrinoTypeConverter
+from sql_testing_library._mock_table import BaseMockTable
 
 
 # Mock trino for testing

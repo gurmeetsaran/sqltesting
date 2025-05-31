@@ -8,8 +8,8 @@ from typing import Any, Dict, List, Optional, Type, Union, get_args
 
 import pandas as pd
 
-from ..mock_table import BaseMockTable
-from ..types import BaseTypeConverter
+from .._mock_table import BaseMockTable
+from .._types import BaseTypeConverter
 from .base import DatabaseAdapter
 
 
@@ -149,7 +149,7 @@ class TrinoAdapter(DatabaseAdapter):
 
     def format_value_for_cte(self, value: Any, column_type: type) -> str:
         """Format value for Trino CTE VALUES clause."""
-        from ..sql_utils import format_sql_value
+        from .._sql_utils import format_sql_value
 
         return format_sql_value(value, column_type, dialect="trino")
 

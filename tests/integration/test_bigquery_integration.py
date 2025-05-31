@@ -11,8 +11,8 @@ import pytest
 from pydantic import BaseModel
 
 from sql_testing_library import TestCase, sql_test
-from sql_testing_library.exceptions import MockTableNotFoundError
-from sql_testing_library.mock_table import BaseMockTable
+from sql_testing_library._exceptions import MockTableNotFoundError
+from sql_testing_library._mock_table import BaseMockTable
 
 
 @dataclass

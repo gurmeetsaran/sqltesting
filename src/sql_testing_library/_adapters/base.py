@@ -5,8 +5,8 @@ from typing import Any, List, Optional
 
 import pandas as pd
 
-from ..mock_table import BaseMockTable
-from ..types import BaseTypeConverter
+from .._mock_table import BaseMockTable
+from .._types import BaseTypeConverter
 
 
 class DatabaseAdapter(ABC):

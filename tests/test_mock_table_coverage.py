@@ -6,7 +6,7 @@ from datetime import date, datetime
 from decimal import Decimal
 from typing import Optional
 
-from sql_testing_library.mock_table import BaseMockTable
+from sql_testing_library._mock_table import BaseMockTable
 
 
 @dataclass

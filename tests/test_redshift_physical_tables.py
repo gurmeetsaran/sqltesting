@@ -8,8 +8,8 @@ from unittest import mock
 from pydantic import BaseModel
 
 from sql_testing_library import TestCase, sql_test
-from sql_testing_library.mock_table import BaseMockTable
-from sql_testing_library.pytest_plugin import SQLTestDecorator
+from sql_testing_library._mock_table import BaseMockTable
+from sql_testing_library._pytest_plugin import SQLTestDecorator
 
 
 @dataclass
@@ -92,12 +92,13 @@ class TestRedshiftPhysicalTables(unittest.TestCase):
         decorator._config_parser = self.mock_config
 
         # Save original decorator instance
+        from sql_testing_library import _pytest_plugin as pytest_plugin
+
+        original_decorator_instance = pytest_plugin._sql_test_decorator
 
         try:
             # Mock the global decorator instance
-            from sql_testing_library import pytest_plugin
 
-            original_decorator_instance = pytest_plugin._sql_test_decorator
             pytest_plugin._sql_test_decorator = decorator
 
             # The test uses the global instance
@@ -172,12 +173,13 @@ class TestRedshiftPhysicalTables(unittest.TestCase):
         decorator._config_parser = self.mock_config
 
         # Save original decorator instance
+        from sql_testing_library import _pytest_plugin as pytest_plugin
+
+        original_decorator_instance = pytest_plugin._sql_test_decorator
 
         try:
             # Mock the global decorator instance
-            from sql_testing_library import pytest_plugin
 
-            original_decorator_instance = pytest_plugin._sql_test_decorator
             pytest_plugin._sql_test_decorator = decorator
 
             # The test uses the global instance
