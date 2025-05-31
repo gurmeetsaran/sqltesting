@@ -199,7 +199,7 @@ class TestSnowflakeAdapter(unittest.TestCase):
         with mock.patch("time.time", return_value=1234567890.123):
             table_name = adapter.create_temp_table(mock_table)
 
-        self.assertEqual(table_name, "test_db.test_schema.TEMP_users_1234567890123")
+        self.assertEqual(table_name, "test_schema.TEMP_users_1234567890123")
 
         # Check that execute_query was called with CTAS
         mock_cursor.execute.assert_called_once()

@@ -144,11 +144,11 @@ class TestAthenaAdapter(unittest.TestCase):
         test_datetime = datetime(2023, 1, 15, 10, 30, 45)
         self.assertEqual(
             adapter.format_value_for_cte(test_datetime, datetime),
-            "TIMESTAMP '2023-01-15 10:30:45'",
+            "TIMESTAMP '2023-01-15 10:30:45.000'",
         )
 
         # Test None
-        self.assertEqual(adapter.format_value_for_cte(None, str), "NULL")
+        self.assertEqual(adapter.format_value_for_cte(None, str), "CAST(NULL AS VARCHAR)")
 
     def test_create_temp_table(self, mock_boto3_client):
         """Test temp table creation."""

@@ -1,6 +1,5 @@
 """Integration tests for Redshift adapter with pytest configuration."""
 
-import unittest
 from dataclasses import dataclass
 from datetime import date, datetime
 from decimal import Decimal
@@ -115,10 +114,13 @@ class ProductsMockTable(BaseMockTable):
 
 @pytest.mark.integration
 @pytest.mark.redshift
-class TestRedshiftIntegration(unittest.TestCase):
+@pytest.mark.parametrize(
+    "use_physical_tables", [False, True], ids=["cte_mode", "physical_tables_mode"]
+)
+class TestRedshiftIntegration:
     """Integration tests for Redshift adapter functionality."""
 
-    def setUp(self):
+    def setup_method(self):
         """Set up test data for all integration tests."""
         self.customers_data = [
             Customer(
@@ -150,7 +152,7 @@ class TestRedshiftIntegration(unittest.TestCase):
             Product(5, "Old Monitor", "Electronics", Decimal("150.00"), False),
         ]
 
-    def test_simple_customer_query(self):
+    def test_simple_customer_query(self, use_physical_tables):
         """Test basic customer data retrieval."""
 
         @sql_test(
@@ -192,6 +194,7 @@ class TestRedshiftIntegration(unittest.TestCase):
                     WHERE customer_id = 1
                 """,
                 execution_database="sqltesting_db",
+                use_physical_tables=use_physical_tables,
             )
 
         # Execute the test
@@ -200,7 +203,7 @@ class TestRedshiftIntegration(unittest.TestCase):
         assert results[0].customer_id == 1
         assert results[0].name == "Alice Johnson"
 
-    def test_customer_order_join(self):
+    def test_customer_order_join(self, use_physical_tables):
         """Test joining customers with orders data."""
 
         @sql_test(
@@ -227,6 +230,7 @@ class TestRedshiftIntegration(unittest.TestCase):
                     ORDER BY total_amount DESC
                 """,
                 execution_database="sqltesting_db",
+                use_physical_tables=use_physical_tables,
             )
 
         # Execute the test
@@ -235,7 +239,7 @@ class TestRedshiftIntegration(unittest.TestCase):
         assert all(hasattr(result, "customer_id") for result in results)
         assert all(hasattr(result, "total_orders") for result in results)
 
-    def test_order_summary_analytics(self):
+    def test_order_summary_analytics(self, use_physical_tables):
         """Test order summary analytics with aggregations."""
 
         @sql_test(
@@ -305,6 +309,7 @@ class TestRedshiftIntegration(unittest.TestCase):
                     ORDER BY total_spent DESC
                 """,
                 execution_database="sqltesting_db",
+                use_physical_tables=use_physical_tables,
             )
 
         # Execute the test
@@ -314,7 +319,7 @@ class TestRedshiftIntegration(unittest.TestCase):
         assert all(hasattr(result, "order_count") for result in results)
         assert all(result.order_count >= 1 for result in results)
 
-    def test_product_category_analytics(self):
+    def test_product_category_analytics(self, use_physical_tables):
         """Test product analytics by category."""
 
         @sql_test(
@@ -345,6 +350,7 @@ class TestRedshiftIntegration(unittest.TestCase):
                     ORDER BY total_revenue DESC
                 """,
                 execution_database="sqltesting_db",
+                use_physical_tables=use_physical_tables,
             )
 
         # Execute the test
@@ -354,7 +360,7 @@ class TestRedshiftIntegration(unittest.TestCase):
         assert all(hasattr(result, "product_count") for result in results)
         assert all(result.product_count > 0 for result in results)
 
-    def test_complex_date_filtering(self):
+    def test_complex_date_filtering(self, use_physical_tables):
         """Test complex date-based filtering and aggregations."""
 
         @sql_test(
@@ -374,6 +380,7 @@ class TestRedshiftIntegration(unittest.TestCase):
                       AND status IN ('completed', 'pending')
                 """,
                 execution_database="sqltesting_db",
+                use_physical_tables=use_physical_tables,
             )
 
         # Execute the test
@@ -383,7 +390,7 @@ class TestRedshiftIntegration(unittest.TestCase):
         assert hasattr(results[0], "order_count")
         assert results[0].order_count >= 0
 
-    def test_null_handling(self):
+    def test_null_handling(self, use_physical_tables):
         """Test proper handling of NULL values."""
 
         @sql_test(
@@ -419,6 +426,7 @@ class TestRedshiftIntegration(unittest.TestCase):
                     ORDER BY customer_id
                 """,
                 execution_database="sqltesting_db",
+                use_physical_tables=use_physical_tables,
             )
 
         # Execute the test
@@ -427,7 +435,7 @@ class TestRedshiftIntegration(unittest.TestCase):
         assert all(hasattr(result, "customer_id") for result in results)
         assert all(hasattr(result, "total_amount") for result in results)
 
-    def test_string_functions(self):
+    def test_string_functions(self, use_physical_tables):
         """Test string manipulation functions."""
 
         @sql_test(
@@ -449,6 +457,7 @@ class TestRedshiftIntegration(unittest.TestCase):
                     ORDER BY customer_id
                 """,
                 execution_database="sqltesting_db",
+                use_physical_tables=use_physical_tables,
             )
 
         # Execute the test
@@ -458,7 +467,7 @@ class TestRedshiftIntegration(unittest.TestCase):
         assert all(hasattr(result, "name") for result in results)
         assert all(len(result.name) > 0 for result in results)
 
-    def test_boolean_operations(self):
+    def test_boolean_operations(self, use_physical_tables):
         """Test boolean field operations and filtering."""
 
         @sql_test(
@@ -501,6 +510,7 @@ class TestRedshiftIntegration(unittest.TestCase):
                     ORDER BY customer_id
                 """,
                 execution_database="sqltesting_db",
+                use_physical_tables=use_physical_tables,
             )
 
         # Execute the test
@@ -509,7 +519,7 @@ class TestRedshiftIntegration(unittest.TestCase):
         assert all(hasattr(result, "customer_id") for result in results)
         assert results[0].customer_id == 1
 
-    def test_window_functions(self):
+    def test_window_functions(self, use_physical_tables):
         """Test window functions and ranking."""
 
         @sql_test(
@@ -535,6 +545,7 @@ class TestRedshiftIntegration(unittest.TestCase):
                     ORDER BY total_spent DESC NULLS LAST
                 """,
                 execution_database="sqltesting_db",
+                use_physical_tables=use_physical_tables,
             )
 
         # Execute the test
@@ -544,7 +555,7 @@ class TestRedshiftIntegration(unittest.TestCase):
         assert all(hasattr(result, "customer_name") for result in results)
         assert all(hasattr(result, "order_count") for result in results)
 
-    def test_case_statements(self):
+    def test_case_statements(self, use_physical_tables):
         """Test CASE statements and conditional logic."""
 
         @sql_test(
@@ -580,6 +591,7 @@ class TestRedshiftIntegration(unittest.TestCase):
                     ORDER BY avg_price DESC
                 """,
                 execution_database="sqltesting_db",
+                use_physical_tables=use_physical_tables,
             )
 
         # Execute the test
@@ -589,7 +601,7 @@ class TestRedshiftIntegration(unittest.TestCase):
         assert all(hasattr(result, "avg_price") for result in results)
         assert all(result.product_count > 0 for result in results)
 
-    def test_subquery_operations(self):
+    def test_subquery_operations(self, use_physical_tables):
         """Test subquery operations and EXISTS clauses."""
 
         @sql_test(
@@ -618,6 +630,7 @@ class TestRedshiftIntegration(unittest.TestCase):
                     ORDER BY customer_id
                 """,
                 execution_database="sqltesting_db",
+                use_physical_tables=use_physical_tables,
             )
 
         # Execute the test
@@ -627,7 +640,7 @@ class TestRedshiftIntegration(unittest.TestCase):
         assert all(hasattr(result, "name") for result in results)
         assert all(hasattr(result, "email") for result in results)
 
-    def test_date_functions(self):
+    def test_date_functions(self, use_physical_tables):
         """Test date extraction and manipulation functions."""
 
         @sql_test(
@@ -661,6 +674,7 @@ class TestRedshiftIntegration(unittest.TestCase):
                       AND status = 'completed'
                 """,
                 execution_database="sqltesting_db",
+                use_physical_tables=use_physical_tables,
             )
 
         # Execute the test
@@ -669,7 +683,3 @@ class TestRedshiftIntegration(unittest.TestCase):
         assert hasattr(results[0], "total_revenue")
         assert hasattr(results[0], "order_count")
         assert results[0].order_count >= 0
-
-
-if __name__ == "__main__":
-    unittest.main()

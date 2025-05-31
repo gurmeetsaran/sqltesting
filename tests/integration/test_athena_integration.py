@@ -1,7 +1,6 @@
 """Integration tests for Athena adapter with pytest configuration."""
 
 import os
-import unittest
 from dataclasses import dataclass
 from datetime import date, datetime
 from decimal import Decimal
@@ -120,10 +119,13 @@ class OrderMockTable(BaseMockTable):
 
 @pytest.mark.integration
 @pytest.mark.athena
-class TestAthenaIntegration(unittest.TestCase):
+@pytest.mark.parametrize(
+    "use_physical_tables", [False, True], ids=["cte_mode", "physical_tables_mode"]
+)
+class TestAthenaIntegration:
     """Integration tests for Athena adapter using pytest configuration."""
 
-    def test_simple_customer_query(self):
+    def test_simple_customer_query(self, use_physical_tables):
         """Test simple customer query with Athena adapter."""
 
         @sql_test(
@@ -171,6 +173,7 @@ class TestAthenaIntegration(unittest.TestCase):
                     ORDER BY lifetime_value DESC
                 """,
                 execution_database=os.getenv("AWS_ATHENA_DATABASE", "test_db"),
+                use_physical_tables=use_physical_tables,
             )
 
         results = query_premium_customers()
@@ -181,7 +184,7 @@ class TestAthenaIntegration(unittest.TestCase):
         assert results[1].name == "Alice Johnson"
         assert results[1].lifetime_value == Decimal("2500.00")
 
-    def test_customer_order_join_query(self):
+    def test_customer_order_join_query(self, use_physical_tables):
         """Test join query between customers and orders."""
 
         @sql_test(
@@ -249,6 +252,7 @@ class TestAthenaIntegration(unittest.TestCase):
                     ORDER BY total_amount DESC
                 """,
                 execution_database=os.getenv("AWS_ATHENA_DATABASE", "test_db"),
+                use_physical_tables=use_physical_tables,
             )
 
         results = query_customer_order_summary()
@@ -261,7 +265,7 @@ class TestAthenaIntegration(unittest.TestCase):
         assert results[1].order_count == 1
         assert results[1].total_amount == Decimal("79.99")
 
-    def test_aggregation_with_date_functions(self):
+    def test_aggregation_with_date_functions(self, use_physical_tables):
         """Test aggregation queries with date functions."""
 
         @sql_test(
@@ -325,6 +329,7 @@ class TestAthenaIntegration(unittest.TestCase):
                     ORDER BY order_year, order_month
                 """,
                 execution_database=os.getenv("AWS_ATHENA_DATABASE", "test_db"),
+                use_physical_tables=use_physical_tables,
             )
 
         results = query_monthly_sales()
@@ -342,7 +347,7 @@ class TestAthenaIntegration(unittest.TestCase):
         assert feb_result.total_sales == Decimal("279.98")
 
     @pytest.mark.slow
-    def test_complex_analytical_query(self):
+    def test_complex_analytical_query(self, use_physical_tables):
         """Test complex analytical query with window functions."""
 
         @sql_test(
@@ -424,6 +429,7 @@ class TestAthenaIntegration(unittest.TestCase):
                     ORDER BY spending_rank
                 """,
                 execution_database=os.getenv("AWS_ATHENA_DATABASE", "test_db"),
+                use_physical_tables=use_physical_tables,
             )
 
         results = query_customer_analytics()
@@ -436,7 +442,7 @@ class TestAthenaIntegration(unittest.TestCase):
         assert top_spender.total_spent == Decimal("550")
         assert top_spender.customer_tier == "Top Spender"
 
-    def test_null_handling_and_edge_cases(self):
+    def test_null_handling_and_edge_cases(self, use_physical_tables):
         """Test handling of NULL values and edge cases."""
 
         @sql_test(
@@ -486,6 +492,7 @@ class TestAthenaIntegration(unittest.TestCase):
                     ORDER BY customer_id
                 """,
                 execution_database=os.getenv("AWS_ATHENA_DATABASE", "test_db"),
+                use_physical_tables=use_physical_tables,
             )
 
         results = query_null_handling()
@@ -512,7 +519,10 @@ class TestAthenaIntegration(unittest.TestCase):
 class TestAthenaPerformance:
     """Performance-related integration tests for Athena."""
 
-    def test_large_dataset_simulation(self):
+    @pytest.mark.parametrize(
+        "use_physical_tables", [False, True], ids=["cte_mode", "physical_tables_mode"]
+    )
+    def test_large_dataset_simulation(self, use_physical_tables):
         """Test with simulated large dataset."""
 
         # Generate larger test dataset
@@ -561,6 +571,7 @@ class TestAthenaPerformance:
                     WHERE c.is_premium = TRUE
                 """,
                 execution_database=os.getenv("AWS_ATHENA_DATABASE", "test_db"),
+                use_physical_tables=use_physical_tables,
             )
 
         results = query_large_dataset()

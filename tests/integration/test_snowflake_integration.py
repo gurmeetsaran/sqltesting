@@ -1,7 +1,6 @@
 """Integration tests for Snowflake adapter with pytest configuration."""
 
 import os
-import unittest
 from dataclasses import dataclass
 from datetime import date, datetime
 from decimal import Decimal
@@ -80,7 +79,9 @@ class CustomersMockTable(BaseMockTable):
     """Mock table for customers data."""
 
     def get_database_name(self) -> str:
-        return os.getenv("SNOWFLAKE_DATABASE", "TEST_DB")
+        database = os.getenv("SNOWFLAKE_DATABASE", "TEST_DB")
+        schema = os.getenv("SNOWFLAKE_SCHEMA", "SQLTESTING")
+        return f"{database}.{schema}"
 
     def get_table_name(self) -> str:
         return "customers"
@@ -90,7 +91,9 @@ class OrdersMockTable(BaseMockTable):
     """Mock table for orders data."""
 
     def get_database_name(self) -> str:
-        return os.getenv("SNOWFLAKE_DATABASE", "TEST_DB")
+        database = os.getenv("SNOWFLAKE_DATABASE", "TEST_DB")
+        schema = os.getenv("SNOWFLAKE_SCHEMA", "SQLTESTING")
+        return f"{database}.{schema}"
 
     def get_table_name(self) -> str:
         return "orders"
@@ -100,7 +103,9 @@ class ProductsMockTable(BaseMockTable):
     """Mock table for products data."""
 
     def get_database_name(self) -> str:
-        return os.getenv("SNOWFLAKE_DATABASE", "TEST_DB")
+        database = os.getenv("SNOWFLAKE_DATABASE", "TEST_DB")
+        schema = os.getenv("SNOWFLAKE_SCHEMA", "SQLTESTING")
+        return f"{database}.{schema}"
 
     def get_table_name(self) -> str:
         return "products"
@@ -108,10 +113,16 @@ class ProductsMockTable(BaseMockTable):
 
 @pytest.mark.integration
 @pytest.mark.snowflake
-class TestSnowflakeIntegration(unittest.TestCase):
+@pytest.mark.parametrize(
+    "use_physical_tables",
+    [False],  # Physical tables disabled due to environment limitations
+    ids=["cte_mode"],
+)
+class TestSnowflakeIntegration:
     """Integration tests for Snowflake adapter using real database connections."""
 
-    def setUp(self):
+    @pytest.fixture(autouse=True)
+    def setup_test_data(self):
         """Set up test data for integration tests."""
         self.customers_data = [
             Customer(
@@ -142,7 +153,7 @@ class TestSnowflakeIntegration(unittest.TestCase):
             Product(5, "Old Monitor", "Electronics", Decimal("150.00"), False),
         ]
 
-    def test_simple_customer_query(self):
+    def test_simple_customer_query(self, use_physical_tables):
         """Test basic customer data retrieval."""
 
         @sql_test(
@@ -182,7 +193,8 @@ class TestSnowflakeIntegration(unittest.TestCase):
                         CAST(0.00 AS DECIMAL(10,2)) as total_amount
                     FROM customers WHERE customer_id = 1
                 """,
-                execution_database=os.getenv("SNOWFLAKE_DATABASE", "TEST_DB"),
+                execution_database="TEST_DB.SQLTESTING",
+                use_physical_tables=use_physical_tables,
             )
 
         # Execute the test
@@ -191,7 +203,7 @@ class TestSnowflakeIntegration(unittest.TestCase):
         assert results[0].customer_id == 1
         assert results[0].name == "Alice Johnson"
 
-    def test_customer_order_join(self):
+    def test_customer_order_join(self, use_physical_tables):
         """Test joining customers with orders data."""
 
         @sql_test(
@@ -217,7 +229,8 @@ class TestSnowflakeIntegration(unittest.TestCase):
                     GROUP BY c.customer_id, c.name
                     ORDER BY total_spent DESC
                 """,
-                execution_database=os.getenv("SNOWFLAKE_DATABASE", "TEST_DB"),
+                execution_database="TEST_DB.SQLTESTING",
+                use_physical_tables=use_physical_tables,
             )
 
         # Execute the test
@@ -226,7 +239,7 @@ class TestSnowflakeIntegration(unittest.TestCase):
         assert all(hasattr(result, "customer_id") for result in results)
         assert all(hasattr(result, "order_count") for result in results)
 
-    def test_date_functions(self):
+    def test_date_functions(self, use_physical_tables):
         """Test date functions and filtering."""
 
         @sql_test(
@@ -247,7 +260,8 @@ class TestSnowflakeIntegration(unittest.TestCase):
                     WHERE signup_date >= DATE '2023-02-01'
                     ORDER BY signup_date DESC
                 """,
-                execution_database=os.getenv("SNOWFLAKE_DATABASE", "TEST_DB"),
+                execution_database="TEST_DB.SQLTESTING",
+                use_physical_tables=use_physical_tables,
             )
 
         # Execute the test
@@ -255,7 +269,7 @@ class TestSnowflakeIntegration(unittest.TestCase):
         assert len(results) >= 1
         assert all(hasattr(result, "customer_id") for result in results)
 
-    def test_complex_date_filtering(self):
+    def test_complex_date_filtering(self, use_physical_tables):
         """Test complex date operations and filtering."""
 
         @sql_test(
@@ -276,7 +290,8 @@ class TestSnowflakeIntegration(unittest.TestCase):
                     WHERE DATE(order_date) >= DATE '2023-04-01'
                     AND status IN ('completed', 'pending')
                 """,
-                execution_database=os.getenv("SNOWFLAKE_DATABASE", "TEST_DB"),
+                execution_database="TEST_DB.SQLTESTING",
+                use_physical_tables=use_physical_tables,
             )
 
         # Execute the test
@@ -286,7 +301,7 @@ class TestSnowflakeIntegration(unittest.TestCase):
         assert hasattr(results[0], "order_count")
         assert results[0].order_count >= 0
 
-    def test_null_handling(self):
+    def test_null_handling(self, use_physical_tables):
         """Test proper handling of NULL values."""
 
         @sql_test(
@@ -321,7 +336,8 @@ class TestSnowflakeIntegration(unittest.TestCase):
                     WHERE lifetime_value IS NOT NULL OR customer_id = 2
                     ORDER BY customer_id
                 """,
-                execution_database=os.getenv("SNOWFLAKE_DATABASE", "TEST_DB"),
+                execution_database="TEST_DB.SQLTESTING",
+                use_physical_tables=use_physical_tables,
             )
 
         # Execute the test
@@ -330,7 +346,7 @@ class TestSnowflakeIntegration(unittest.TestCase):
         assert all(hasattr(result, "customer_id") for result in results)
         assert all(hasattr(result, "total_amount") for result in results)
 
-    def test_string_functions(self):
+    def test_string_functions(self, use_physical_tables):
         """Test string manipulation functions."""
 
         @sql_test(
@@ -351,7 +367,8 @@ class TestSnowflakeIntegration(unittest.TestCase):
                     WHERE LENGTH(name) > 8
                     ORDER BY name
                 """,
-                execution_database=os.getenv("SNOWFLAKE_DATABASE", "TEST_DB"),
+                execution_database="TEST_DB.SQLTESTING",
+                use_physical_tables=use_physical_tables,
             )
 
         # Execute the test
@@ -359,7 +376,7 @@ class TestSnowflakeIntegration(unittest.TestCase):
         assert len(results) >= 1
         assert all(hasattr(result, "customer_id") for result in results)
 
-    def test_aggregation_functions(self):
+    def test_aggregation_functions(self, use_physical_tables):
         """Test aggregation and grouping operations."""
 
         @sql_test(
@@ -380,7 +397,8 @@ class TestSnowflakeIntegration(unittest.TestCase):
                     HAVING COUNT(*) >= 1
                     ORDER BY avg_price DESC
                 """,
-                execution_database=os.getenv("SNOWFLAKE_DATABASE", "TEST_DB"),
+                execution_database="TEST_DB.SQLTESTING",
+                use_physical_tables=use_physical_tables,
             )
 
         # Execute the test
@@ -389,7 +407,7 @@ class TestSnowflakeIntegration(unittest.TestCase):
         assert all(hasattr(result, "category") for result in results)
         assert all(hasattr(result, "avg_price") for result in results)
 
-    def test_boolean_operations(self):
+    def test_boolean_operations(self, use_physical_tables):
         """Test boolean logic and conditions."""
 
         @sql_test(
@@ -411,7 +429,8 @@ class TestSnowflakeIntegration(unittest.TestCase):
                     AND lifetime_value > CAST(1000.00 AS DECIMAL(10,2))
                     ORDER BY lifetime_value DESC
                 """,
-                execution_database=os.getenv("SNOWFLAKE_DATABASE", "TEST_DB"),
+                execution_database="TEST_DB.SQLTESTING",
+                use_physical_tables=use_physical_tables,
             )
 
         # Execute the test
@@ -420,7 +439,7 @@ class TestSnowflakeIntegration(unittest.TestCase):
         assert all(hasattr(result, "customer_id") for result in results)
         assert results[0].customer_id == 3
 
-    def test_window_functions(self):
+    def test_window_functions(self, use_physical_tables):
         """Test window functions and ranking."""
 
         @sql_test(
@@ -455,7 +474,8 @@ class TestSnowflakeIntegration(unittest.TestCase):
                     WHERE total_spent > CAST(0.00 AS DECIMAL(10,2))
                     ORDER BY total_spent DESC
                 """,
-                execution_database=os.getenv("SNOWFLAKE_DATABASE", "TEST_DB"),
+                execution_database="TEST_DB.SQLTESTING",
+                use_physical_tables=use_physical_tables,
             )
 
         # Execute the test
@@ -463,7 +483,7 @@ class TestSnowflakeIntegration(unittest.TestCase):
         assert len(results) >= 1
         assert all(hasattr(result, "customer_id") for result in results)
 
-    def test_case_statements(self):
+    def test_case_statements(self, use_physical_tables):
         """Test CASE statements and conditional logic."""
 
         @sql_test(
@@ -491,7 +511,8 @@ class TestSnowflakeIntegration(unittest.TestCase):
                         END
                     ORDER BY avg_price DESC
                 """,
-                execution_database=os.getenv("SNOWFLAKE_DATABASE", "TEST_DB"),
+                execution_database="TEST_DB.SQLTESTING",
+                use_physical_tables=use_physical_tables,
             )
 
         # Execute the test
@@ -501,7 +522,7 @@ class TestSnowflakeIntegration(unittest.TestCase):
         assert all(hasattr(result, "avg_price") for result in results)
         assert all(result.product_count > 0 for result in results)
 
-    def test_subquery_operations(self):
+    def test_subquery_operations(self, use_physical_tables):
         """Test subquery operations and EXISTS clauses."""
 
         @sql_test(
@@ -530,7 +551,8 @@ class TestSnowflakeIntegration(unittest.TestCase):
                     )
                     ORDER BY c.customer_id
                 """,
-                execution_database=os.getenv("SNOWFLAKE_DATABASE", "TEST_DB"),
+                execution_database="TEST_DB.SQLTESTING",
+                use_physical_tables=use_physical_tables,
             )
 
         # Execute the test
@@ -538,7 +560,7 @@ class TestSnowflakeIntegration(unittest.TestCase):
         assert len(results) >= 1
         assert all(hasattr(result, "customer_id") for result in results)
 
-    def test_snowflake_specific_functions(self):
+    def test_snowflake_specific_functions(self, use_physical_tables):
         """Test Snowflake-specific functions and features."""
 
         @sql_test(
@@ -559,7 +581,8 @@ class TestSnowflakeIntegration(unittest.TestCase):
                     WHERE EXTRACT(YEAR FROM order_date) = 2023
                     AND EXTRACT(MONTH FROM order_date) >= 3
                 """,
-                execution_database=os.getenv("SNOWFLAKE_DATABASE", "TEST_DB"),
+                execution_database="TEST_DB.SQLTESTING",
+                use_physical_tables=use_physical_tables,
             )
 
         # Execute the test
@@ -568,7 +591,7 @@ class TestSnowflakeIntegration(unittest.TestCase):
         assert hasattr(results[0], "total_spent")
         assert hasattr(results[0], "order_count")
 
-    def test_decimal_precision(self):
+    def test_decimal_precision(self, use_physical_tables):
         """Test decimal precision handling in Snowflake."""
 
         @sql_test(
@@ -587,7 +610,8 @@ class TestSnowflakeIntegration(unittest.TestCase):
                     WHERE price BETWEEN CAST(100.00 AS DECIMAL(10,2))
                                    AND CAST(1000.00 AS DECIMAL(10,2))
                 """,
-                execution_database=os.getenv("SNOWFLAKE_DATABASE", "TEST_DB"),
+                execution_database="TEST_DB.SQLTESTING",
+                use_physical_tables=use_physical_tables,
             )
 
         # Execute the test
@@ -596,7 +620,7 @@ class TestSnowflakeIntegration(unittest.TestCase):
         assert hasattr(results[0], "avg_price")
         assert results[0].product_count > 0
 
-    def test_cte_transformation(self):
+    def test_cte_transformation(self, use_physical_tables):
         """Test CTE transformation with the Snowflake adapter."""
 
         @sql_test(
@@ -619,7 +643,8 @@ class TestSnowflakeIntegration(unittest.TestCase):
                     FROM premium_customers
                     ORDER BY lifetime_value DESC
                 """,
-                execution_database=os.getenv("SNOWFLAKE_DATABASE", "TEST_DB"),
+                execution_database="TEST_DB.SQLTESTING",
+                use_physical_tables=use_physical_tables,
             )
 
         # Execute the test

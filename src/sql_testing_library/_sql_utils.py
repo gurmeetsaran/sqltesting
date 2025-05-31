@@ -104,7 +104,26 @@ def format_sql_value(value: Any, column_type: Type, dialect: str = "standard") -
             elif column_type == datetime:
                 return "NULL::TIMESTAMP"
             else:
-                return "NULL::VARCHAR(1024)"
+                return "NULL::VARCHAR"
+        elif dialect in ("athena", "trino"):
+            # Athena and Trino need type-specific NULL casting for table creation
+            if column_type == Decimal:
+                return "CAST(NULL AS DECIMAL(38,9))"
+            elif column_type is int:
+                # Athena uses INTEGER, Trino uses BIGINT
+                int_type = "INTEGER" if dialect == "athena" else "BIGINT"
+                return f"CAST(NULL AS {int_type})"
+            elif column_type is float:
+                return "CAST(NULL AS DOUBLE)"
+            elif column_type is bool:
+                return "CAST(NULL AS BOOLEAN)"
+            elif column_type is date:
+                return "CAST(NULL AS DATE)"
+            elif column_type == datetime:
+                return "CAST(NULL AS TIMESTAMP)"
+            else:
+                # Both Athena and Trino support VARCHAR without size specification
+                return "CAST(NULL AS VARCHAR)"
         else:
             return "NULL"
 
@@ -189,7 +208,11 @@ def format_sql_value(value: Any, column_type: Type, dialect: str = "standard") -
             return f"DATETIME('{value.isoformat()}')"
         elif dialect in ("athena", "trino"):
             # Athena and Trino don't like 'T' separator in timestamps
-            return f"TIMESTAMP '{value.isoformat(sep=' ')}'"
+            # Athena expects millisecond precision, so truncate microseconds
+            timestamp_str = value.strftime("%Y-%m-%d %H:%M:%S.%f")[
+                :-3
+            ]  # Remove last 3 digits for millisecond precision
+            return f"TIMESTAMP '{timestamp_str}'"
         else:
             return f"TIMESTAMP '{value.isoformat()}'"
 

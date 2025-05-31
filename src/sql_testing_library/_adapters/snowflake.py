@@ -128,11 +128,16 @@ class SnowflakeAdapter(DatabaseAdapter):
         timestamp = int(time.time() * 1000)
         temp_table_name = f"TEMP_{mock_table.get_table_name()}_{timestamp}"
 
-        # In Snowflake, temporary tables are qualified with database and schema
-        qualified_table_name = f"{self.database}.{self.schema}.{temp_table_name}"
+        # Use the adapter's configured database and schema for temporary tables
+        # This avoids permission issues with creating schemas in other databases
+        target_schema = self.schema
+
+        # For temporary tables, Snowflake doesn't support full database qualification
+        # Return schema.table format for temporary tables
+        qualified_table_name = f"{target_schema}.{temp_table_name}"
 
         # Generate CTAS statement (CREATE TABLE AS SELECT)
-        ctas_sql = self._generate_ctas_sql(temp_table_name, mock_table)
+        ctas_sql = self._generate_ctas_sql(temp_table_name, mock_table, target_schema)
 
         # Execute CTAS query
         self.execute_query(ctas_sql)
@@ -178,15 +183,18 @@ class SnowflakeAdapter(DatabaseAdapter):
         # Snowflake has a 1MB limit for SQL statements
         return 1 * 1024 * 1024  # 1MB
 
-    def _generate_ctas_sql(self, table_name: str, mock_table: BaseMockTable) -> str:
+    def _generate_ctas_sql(
+        self, table_name: str, mock_table: BaseMockTable, schema: Optional[str] = None
+    ) -> str:
         """Generate CREATE TABLE AS SELECT (CTAS) statement for Snowflake."""
         df = mock_table.to_dataframe()
         column_types = mock_table.get_column_types()
         columns = list(df.columns)
 
-        # Qualify table name with schema but not database
-        # Database is specified in the current session context
-        qualified_table = f'"{self.schema}"."{table_name}"'
+        # For temporary tables in Snowflake, only use schema.table, not database.schema.table
+        # Temporary tables are session-specific and don't support full qualification
+        target_schema = schema if schema is not None else self.schema
+        qualified_table = f'"{target_schema}"."{table_name}"'
 
         if df.empty:
             # For empty tables, create an empty table with correct schema
@@ -250,7 +258,7 @@ class SnowflakeAdapter(DatabaseAdapter):
 
                 select_sql += f"\nUNION ALL SELECT {', '.join(row_values)}"
 
-            # Create the CTAS statement
+            # Create the CTAS statement using temporary table
             return f"""
             CREATE TEMPORARY TABLE {qualified_table} AS
             {select_sql}

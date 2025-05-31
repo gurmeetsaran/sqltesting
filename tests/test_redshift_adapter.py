@@ -194,7 +194,7 @@ class TestRedshiftAdapter(unittest.TestCase):
         )
 
         # Test None with type casting
-        self.assertEqual(adapter.format_value_for_cte(None, str), "NULL::VARCHAR(1024)")
+        self.assertEqual(adapter.format_value_for_cte(None, str), "NULL::VARCHAR")
         self.assertEqual(adapter.format_value_for_cte(None, Decimal), "NULL::DECIMAL(38,9)")
         self.assertEqual(adapter.format_value_for_cte(None, int), "NULL::BIGINT")
         self.assertEqual(adapter.format_value_for_cte(None, float), "NULL::DOUBLE PRECISION")
@@ -248,8 +248,8 @@ class TestRedshiftAdapter(unittest.TestCase):
         with mock.patch("time.time", return_value=1234567890.123):
             table_name = adapter.create_temp_table(mock_table)
 
-        # Check table name format (schema.table)
-        self.assertEqual(table_name, "public.temp_users_1234567890123")
+        # Check table name format (just table name for temp tables)
+        self.assertEqual(table_name, "temp_users_1234567890123")
 
         # Check execute_query calls - only one call for CTAS
         self.assertEqual(mock_cursor.execute.call_count, 1)

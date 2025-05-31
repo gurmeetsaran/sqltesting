@@ -196,6 +196,12 @@ class AthenaAdapter(DatabaseAdapter):
         # If we reached here, we timed out
         return "TIMEOUT", "Query execution timed out after waiting for completion"
 
+    def _build_s3_location(self, table_name: str) -> str:
+        """Build proper S3 location path avoiding double slashes."""
+        # Remove trailing slash from s3_output_location if present
+        base_location = self.s3_output_location.rstrip("/")
+        return f"{base_location}/{table_name}/"
+
     def _generate_ctas_sql(self, table_name: str, mock_table: BaseMockTable) -> str:
         """Generate CREATE TABLE AS SELECT (CTAS) statement for Athena."""
         df = mock_table.to_dataframe()
@@ -206,7 +212,7 @@ class AthenaAdapter(DatabaseAdapter):
             # For empty tables, create an empty table with correct schema
             # Type mapping from Python types to Athena types
             type_mapping = {
-                str: "STRING",
+                str: "VARCHAR",
                 int: "INTEGER",
                 float: "DOUBLE",
                 bool: "BOOLEAN",
@@ -225,19 +231,18 @@ class AthenaAdapter(DatabaseAdapter):
                     if non_none_types:
                         col_type = non_none_types[0]
 
-                athena_type = type_mapping.get(col_type, "STRING")
-                column_defs.append(f"`{col_name}` {athena_type}")
+                athena_type = type_mapping.get(col_type, "VARCHAR")
+                column_defs.append(f'"{col_name}" {athena_type}')
 
             columns_sql = ",\n  ".join(column_defs)
 
-            # Create an empty table with the correct schema
+            # Create an empty external table with the correct schema
             return f"""
-            CREATE TABLE {table_name} (
+            CREATE EXTERNAL TABLE {table_name} (
               {columns_sql}
             )
             STORED AS PARQUET
-            LOCATION '{self.s3_output_location}/{table_name}/'
-            WITH (is_external = false)
+            LOCATION '{self._build_s3_location(table_name)}'
             """
         else:
             # For tables with data, use CTAS with a VALUES clause
@@ -249,8 +254,17 @@ class AthenaAdapter(DatabaseAdapter):
             for col_name in columns:
                 col_type = column_types.get(col_name, str)
                 value = first_row[col_name]
-                formatted_value = self.format_value_for_cte(value, col_type)
-                select_expressions.append(f"{formatted_value} AS `{col_name}`")
+
+                # Handle Optional types by extracting the non-None type for proper formatting
+                actual_type = col_type
+                if hasattr(col_type, "__origin__") and col_type.__origin__ is Union:
+                    # Extract the non-None type from Optional[T]
+                    non_none_types = [arg for arg in get_args(col_type) if arg is not type(None)]
+                    if non_none_types:
+                        actual_type = non_none_types[0]
+
+                formatted_value = self.format_value_for_cte(value, actual_type)
+                select_expressions.append(f'{formatted_value} AS "{col_name}"')
 
             # Start with the first row in the SELECT
             select_sql = f"SELECT {', '.join(select_expressions)}"
@@ -262,18 +276,28 @@ class AthenaAdapter(DatabaseAdapter):
                 for col_name in columns:
                     col_type = column_types.get(col_name, str)
                     value = row[col_name]
-                    formatted_value = self.format_value_for_cte(value, col_type)
+
+                    # Handle Optional types by extracting the non-None type for proper formatting
+                    actual_type = col_type
+                    if hasattr(col_type, "__origin__") and col_type.__origin__ is Union:
+                        # Extract the non-None type from Optional[T]
+                        non_none_types = [
+                            arg for arg in get_args(col_type) if arg is not type(None)
+                        ]
+                        if non_none_types:
+                            actual_type = non_none_types[0]
+
+                    formatted_value = self.format_value_for_cte(value, actual_type)
                     row_values.append(formatted_value)
 
                 select_sql += f"\nUNION ALL SELECT {', '.join(row_values)}"
 
-            # Create the CTAS statement
+            # Create the CTAS statement for external table
             return f"""
             CREATE TABLE {table_name}
             WITH (
                 format = 'PARQUET',
-                external_location = '{self.s3_output_location}/{table_name}/',
-                is_external = false
+                external_location = '{self._build_s3_location(table_name)}'
             )
             AS {select_sql}
             """

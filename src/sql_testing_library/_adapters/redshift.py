@@ -99,11 +99,11 @@ class RedshiftAdapter(DatabaseAdapter):
         timestamp = int(time.time() * 1000)
         temp_table_name = f"temp_{mock_table.get_table_name()}_{timestamp}"
 
-        # In Redshift, temporary tables are automatically dropped at session end
-        # We don't need to explicitly clean them up
-        # Include schema name for consistency with other adapters
-        schema_name = "public"  # Default schema
-        qualified_table_name = f"{schema_name}.{temp_table_name}"
+        # In Redshift, temporary tables are automatically created in a session-specific
+        # temporary schema, NOT in the public schema. They are automatically dropped
+        # at session end, so we don't need to explicitly clean them up.
+        # We return just the table name without schema qualification since temp tables
+        # are accessible without schema prefix.
 
         # Generate CTAS statement (CREATE TABLE AS SELECT)
         ctas_sql = self._generate_ctas_sql(temp_table_name, mock_table)
@@ -111,7 +111,8 @@ class RedshiftAdapter(DatabaseAdapter):
         # Execute CTAS query
         self.execute_query(ctas_sql)
 
-        return qualified_table_name
+        # Return just the table name, no schema prefix needed for temp tables
+        return temp_table_name
 
     def cleanup_temp_tables(self, table_names: List[str]) -> None:
         """Clean up temporary tables."""
@@ -148,7 +149,7 @@ class RedshiftAdapter(DatabaseAdapter):
             # For empty tables, create an empty temporary table with correct schema
             # Type mapping from Python types to Redshift types
             type_mapping = {
-                str: "VARCHAR(1024)",
+                str: "VARCHAR",
                 int: "BIGINT",
                 float: "DOUBLE PRECISION",
                 bool: "BOOLEAN",
@@ -167,7 +168,7 @@ class RedshiftAdapter(DatabaseAdapter):
                     if non_none_types:
                         col_type = non_none_types[0]
 
-                redshift_type = type_mapping.get(col_type, "VARCHAR(1024)")
+                redshift_type = type_mapping.get(col_type, "VARCHAR")
                 column_defs.append(f'"{col_name}" {redshift_type}')
 
             columns_sql = ",\n  ".join(column_defs)

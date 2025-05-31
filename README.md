@@ -89,6 +89,166 @@ The library supports different data types across database engines. All checkmark
 - **Trino**: Memory catalog for testing; excellent decimal precision
 - **Snowflake**: Column names normalized to lowercase; 1MB query size limit
 
+## Execution Modes Support
+
+The library supports two execution modes for mock data injection. **CTE Mode is the default** and is automatically used unless Physical Tables mode is explicitly requested or required due to query size limits.
+
+| Execution Mode | Description | BigQuery | Athena | Redshift | Trino | Snowflake |
+|----------------|-------------|----------|--------|----------|-------|-----------|
+| **CTE Mode** | Mock data injected as Common Table Expressions | ✅ | ✅ | ✅ | ✅ | ✅ |
+| **Physical Tables** | Mock data created as temporary tables | ✅ | ✅ | ✅ | ✅ | ⚠️* |
+
+### Execution Mode Details
+
+#### **CTE Mode (Default)**
+- **Default Behavior**: Used automatically for all tests unless overridden
+- **Data Injection**: Mock data is injected as Common Table Expressions (CTEs) within the SQL query
+- **No Physical Objects**: No actual tables are created in the database
+- **Memory-Based**: All data exists only for the duration of the query execution
+- **Compatibility**: Works with all database engines
+- **Query Size**: Subject to database-specific query size limits (see table below)
+
+#### **Physical Tables Mode**
+- **When Used**: Automatically activated when CTE queries exceed size limits, or explicitly requested with `use_physical_tables=True`
+- **Table Creation**: Creates actual temporary tables in the database with mock data
+- **Table Types by Database**:
+
+| Database | Table Type | Schema/Location | Cleanup Method | Cleanup Timing |
+|----------|------------|-----------------|----------------|-----------------|
+| **BigQuery** | Standard tables | Project dataset | Library executes `client.delete_table()` | After each test |
+| **Athena** | External tables | S3-backed external tables | Library executes `DROP TABLE` (⚠️ S3 data remains) | After each test |
+| **Redshift** | Temporary tables | Session-specific temp schema | Database automatic | Session end |
+| **Trino** | Memory tables | `memory.default` schema | Library executes `DROP TABLE` | After each test |
+| **Snowflake** | Temporary tables | Session-specific temp schema | Database automatic | Session end |
+
+#### **Cleanup Behavior Explained**
+
+**Library-Managed Cleanup (BigQuery, Athena, Trino):**
+- The SQL Testing Library explicitly calls cleanup methods after each test
+- **BigQuery**: Creates standard tables in your dataset, then deletes them via `client.delete_table()`
+- **Athena**: Creates external tables backed by S3 data, then drops table metadata via `DROP TABLE IF EXISTS` (⚠️ **S3 data files remain and require separate cleanup**)
+- **Trino**: Creates tables in memory catalog, then drops them via `DROP TABLE IF EXISTS`
+
+**Database-Managed Cleanup (Redshift, Snowflake):**
+- These databases have built-in temporary table mechanisms
+- **Redshift**: Uses `CREATE TEMPORARY TABLE` - automatically dropped when session ends
+- **Snowflake**: Uses `CREATE TEMPORARY TABLE` - automatically dropped when session ends
+- The library's cleanup method is a no-op for these databases
+
+**Why the Difference?**
+- **Athena & Trino**: Don't have true temporary table features, so library manages cleanup
+- **BigQuery**: Has temporary tables, but library uses standard tables for better control
+- **Redshift & Snowflake**: Have robust temporary table features that handle cleanup automatically
+
+#### **Frequently Asked Questions**
+
+**Q: Why does Athena require "manual" cleanup while others are automatic?**
+A: Athena creates external tables backed by S3 data. The library automatically calls `DROP TABLE` after each test, which removes the table metadata from AWS Glue catalog. **However, the actual S3 data files remain and must be cleaned up separately** - either manually or through S3 lifecycle policies. This two-step cleanup process is why it's considered "manual" compared to true temporary tables.
+
+**Q: What does "explicit cleanup" mean for Trino?**
+A: Trino's memory catalog doesn't automatically clean up tables when sessions end. The library explicitly calls `DROP TABLE IF EXISTS` after each test to remove the tables. Like Athena, if a test fails catastrophically, some tables might persist until the Trino server restarts.
+
+**Q: What is the TTL (Time To Live) for BigQuery tables?**
+A: BigQuery tables created by the library are **standard tables without TTL** - they persist until explicitly deleted. The library immediately calls `client.delete_table()` after each test. If you want to set TTL as a safety net, you can configure it at the dataset level (e.g., 24 hours) to auto-delete any orphaned tables.
+
+**Q: Which databases leave artifacts if tests crash?**
+- **BigQuery, Athena, Trino**: May leave tables if library crashes before cleanup
+- **Redshift, Snowflake**: No artifacts - temporary tables auto-cleanup on session end
+
+**Q: How to manually clean up orphaned tables?**
+```sql
+-- BigQuery: List and delete tables with temp prefix
+SELECT table_name FROM `project.dataset.INFORMATION_SCHEMA.TABLES`
+WHERE table_name LIKE 'temp_%';
+
+-- Athena: List and drop tables with temp prefix
+SHOW TABLES LIKE 'temp_%';
+DROP TABLE temp_table_name;
+
+-- Trino: List and drop tables with temp prefix
+SHOW TABLES FROM memory.default LIKE 'temp_%';
+DROP TABLE memory.default.temp_table_name;
+```
+
+**Q: How to handle S3 cleanup for Athena tables?**
+Athena external tables store data in S3. When `DROP TABLE` is called, only the table metadata is removed from AWS Glue catalog - **S3 data files remain**. Here are cleanup options:
+
+**Option 1: S3 Lifecycle Policy (Recommended)**
+```json
+{
+  "Rules": [
+    {
+      "ID": "DeleteSQLTestingTempFiles",
+      "Status": "Enabled",
+      "Filter": {
+        "Prefix": "temp_"
+      },
+      "Expiration": {
+        "Days": 1
+      }
+    }
+  ]
+}
+```
+
+**Option 2: Manual S3 Cleanup**
+```bash
+# List temp files in your Athena results bucket
+aws s3 ls s3://your-athena-results-bucket/ --recursive | grep temp_
+
+# Delete temp files older than 1 day
+aws s3 rm s3://your-athena-results-bucket/ --recursive --exclude "*" --include "temp_*"
+```
+
+**Option 3: Automated Cleanup Script**
+```bash
+#!/bin/bash
+# Delete S3 objects older than 1 day with temp_ prefix
+aws s3api list-objects-v2 --bucket your-athena-results-bucket --prefix "temp_" \
+  --query 'Contents[?LastModified<=`2024-01-01`].Key' --output text | \
+  xargs -I {} aws s3 rm s3://your-athena-results-bucket/{}
+```
+
+#### **Query Size Limits (When Physical Tables Auto-Activate)**
+
+| Database | CTE Query Size Limit | Physical Tables Threshold |
+|----------|---------------------|---------------------------|
+| **BigQuery** | ~1MB (estimated) | Large dataset or complex CTEs |
+| **Athena** | 256KB | Automatically switches at 256KB |
+| **Redshift** | 16MB | Automatically switches at 16MB |
+| **Trino** | 16MB (estimated) | Large dataset or complex CTEs |
+| **Snowflake** | 1MB | Automatically switches at 1MB |
+
+### How to Control Execution Mode
+
+```python
+# Default: CTE Mode (recommended for most use cases)
+@sql_test(mock_tables=[...], result_class=ResultClass)
+def test_default_mode():
+    return TestCase(query="SELECT * FROM table")
+
+# Explicit CTE Mode
+@sql_test(mock_tables=[...], result_class=ResultClass)
+def test_explicit_cte():
+    return TestCase(
+        query="SELECT * FROM table",
+        use_physical_tables=False  # Explicit CTE mode
+    )
+
+# Explicit Physical Tables Mode
+@sql_test(mock_tables=[...], result_class=ResultClass)
+def test_physical_tables():
+    return TestCase(
+        query="SELECT * FROM table",
+        use_physical_tables=True  # Force physical tables
+    )
+```
+
+**Notes:**
+- **CTE Mode**: Default mode, works with all database engines, suitable for most use cases
+- **Physical Tables**: Used automatically when CTE queries exceed database size limits or when explicitly requested
+- **⚠️ Snowflake Physical Tables**: Currently disabled in test environment due to temporary table visibility limitations. CTE mode works perfectly for all use cases.
+
 ## Installation
 
 ### For End Users (pip)
