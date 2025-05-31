@@ -137,7 +137,7 @@ class TestBigQueryIntegration(unittest.TestCase):
             def test_bigquery_query():
                 return TestCase(
                     query="SELECT id, name FROM users WHERE id = 1",
-                    execution_database="test_dataset",
+                    default_namespace="test_dataset",
                 )
 
             # Execute the test

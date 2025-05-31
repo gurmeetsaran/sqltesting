@@ -52,10 +52,10 @@ class TestSQLTestCaseExtra(unittest.TestCase):
         self.assertFalse(SQLTestCase.__test__)
 
         # Test basic instantiation
-        test_case = SQLTestCase(query="SELECT * FROM test", execution_database="test_db")
+        test_case = SQLTestCase(query="SELECT * FROM test", default_namespace="test_db")
 
         self.assertEqual(test_case.query, "SELECT * FROM test")
-        self.assertEqual(test_case.execution_database, "test_db")
+        self.assertEqual(test_case.default_namespace, "test_db")
         self.assertIsNone(test_case.mock_tables)
         self.assertIsNone(test_case.result_class)
         self.assertFalse(test_case.use_physical_tables)
@@ -81,7 +81,7 @@ class TestSQLTestFrameworkExtra(unittest.TestCase):
         """Test error when mock_tables is None."""
         test_case = SQLTestCase(
             query="SELECT * FROM test",
-            execution_database="test_db",
+            default_namespace="test_db",
             mock_tables=None,  # This should cause an error
             result_class=dict,
         )
@@ -97,7 +97,7 @@ class TestSQLTestFrameworkExtra(unittest.TestCase):
 
         test_case = SQLTestCase(
             query="SELECT * FROM test",
-            execution_database="test_db",
+            default_namespace="test_db",
             mock_tables=[mock_table],
             result_class=None,  # This should cause an error
         )
@@ -119,7 +119,7 @@ class TestSQLTestFrameworkExtra(unittest.TestCase):
 
         test_case = SQLTestCase(
             query="INVALID SQL",
-            execution_database="test_db",
+            default_namespace="test_db",
             mock_tables=[mock_table],
             result_class=dict,
         )
@@ -136,7 +136,7 @@ class TestSQLTestFrameworkExtra(unittest.TestCase):
 
         test_case = SQLTestCase(
             query="SELECT * FROM test",
-            execution_database="test_db",
+            default_namespace="test_db",
             mock_tables=[mock_table],
             result_class=None,  # This will cause an error
         )
@@ -196,7 +196,7 @@ class TestSQLTestFrameworkCTEHandling(unittest.TestCase):
 
             test_case = SQLTestCase(
                 query="WITH existing AS (SELECT 1) SELECT * FROM test",
-                execution_database="test_db",
+                default_namespace="test_db",
                 mock_tables=[mock_table],
                 result_class=dict,
             )

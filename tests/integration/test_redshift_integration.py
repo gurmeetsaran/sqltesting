@@ -86,7 +86,7 @@ class CustomersMockTable(BaseMockTable):
     """Mock table for customers data."""
 
     def get_database_name(self) -> str:
-        return "sqltesting_db"
+        return "test_db"
 
     def get_table_name(self) -> str:
         return "customers"
@@ -96,7 +96,7 @@ class OrdersMockTable(BaseMockTable):
     """Mock table for orders data."""
 
     def get_database_name(self) -> str:
-        return "sqltesting_db"
+        return "test_db"
 
     def get_table_name(self) -> str:
         return "orders"
@@ -106,7 +106,7 @@ class ProductsMockTable(BaseMockTable):
     """Mock table for products data."""
 
     def get_database_name(self) -> str:
-        return "sqltesting_db"
+        return "test_db"
 
     def get_table_name(self) -> str:
         return "products"
@@ -193,7 +193,7 @@ class TestRedshiftIntegration:
                     FROM customers
                     WHERE customer_id = 1
                 """,
-                execution_database="sqltesting_db",
+                default_namespace="test_db",
                 use_physical_tables=use_physical_tables,
             )
 
@@ -229,7 +229,7 @@ class TestRedshiftIntegration:
                     GROUP BY c.customer_id, c.name, c.email
                     ORDER BY total_amount DESC
                 """,
-                execution_database="sqltesting_db",
+                default_namespace="test_db",
                 use_physical_tables=use_physical_tables,
             )
 
@@ -308,7 +308,7 @@ class TestRedshiftIntegration:
                     HAVING COUNT(o.order_id) >= 1
                     ORDER BY total_spent DESC
                 """,
-                execution_database="sqltesting_db",
+                default_namespace="test_db",
                 use_physical_tables=use_physical_tables,
             )
 
@@ -349,7 +349,7 @@ class TestRedshiftIntegration:
                     GROUP BY category
                     ORDER BY total_revenue DESC
                 """,
-                execution_database="sqltesting_db",
+                default_namespace="test_db",
                 use_physical_tables=use_physical_tables,
             )
 
@@ -379,7 +379,7 @@ class TestRedshiftIntegration:
                       AND order_date < DATE('2023-05-01')
                       AND status IN ('completed', 'pending')
                 """,
-                execution_database="sqltesting_db",
+                default_namespace="test_db",
                 use_physical_tables=use_physical_tables,
             )
 
@@ -425,7 +425,7 @@ class TestRedshiftIntegration:
                     WHERE lifetime_value IS NOT NULL OR customer_id = 2
                     ORDER BY customer_id
                 """,
-                execution_database="sqltesting_db",
+                default_namespace="test_db",
                 use_physical_tables=use_physical_tables,
             )
 
@@ -456,7 +456,7 @@ class TestRedshiftIntegration:
                     WHERE LENGTH(name) > 8
                     ORDER BY customer_id
                 """,
-                execution_database="sqltesting_db",
+                default_namespace="test_db",
                 use_physical_tables=use_physical_tables,
             )
 
@@ -509,7 +509,7 @@ class TestRedshiftIntegration:
                     WHERE is_premium = true
                     ORDER BY customer_id
                 """,
-                execution_database="sqltesting_db",
+                default_namespace="test_db",
                 use_physical_tables=use_physical_tables,
             )
 
@@ -544,7 +544,7 @@ class TestRedshiftIntegration:
                     GROUP BY c.customer_id, c.name
                     ORDER BY total_spent DESC NULLS LAST
                 """,
-                execution_database="sqltesting_db",
+                default_namespace="test_db",
                 use_physical_tables=use_physical_tables,
             )
 
@@ -590,7 +590,7 @@ class TestRedshiftIntegration:
                     GROUP BY category
                     ORDER BY avg_price DESC
                 """,
-                execution_database="sqltesting_db",
+                default_namespace="test_db",
                 use_physical_tables=use_physical_tables,
             )
 
@@ -629,7 +629,7 @@ class TestRedshiftIntegration:
                     )
                     ORDER BY customer_id
                 """,
-                execution_database="sqltesting_db",
+                default_namespace="test_db",
                 use_physical_tables=use_physical_tables,
             )
 
@@ -673,7 +673,7 @@ class TestRedshiftIntegration:
                       AND EXTRACT(year FROM order_date) = 2023
                       AND status = 'completed'
                 """,
-                execution_database="sqltesting_db",
+                default_namespace="test_db",
                 use_physical_tables=use_physical_tables,
             )
 
@@ -683,3 +683,66 @@ class TestRedshiftIntegration:
         assert hasattr(results[0], "total_revenue")
         assert hasattr(results[0], "order_count")
         assert results[0].order_count >= 0
+
+    def test_unqualified_table_names_with_default_namespace(self, use_physical_tables):
+        """Test how default_namespace resolves unqualified table names to mock tables.
+
+        This test demonstrates the key role of default_namespace for Redshift:
+        - Query uses unqualified table names: 'customers' and 'orders'
+        - default_namespace='test_db' qualifies them to:
+          'test_db.customers' and 'test_db.orders'
+        - These qualified names must match mock table get_qualified_name() values
+        """
+
+        test_customers = [
+            Customer(1, "Alice", "alice@example.com", date(2023, 1, 1), True, Decimal("1000.00")),
+            Customer(2, "Bob", "bob@example.com", date(2023, 1, 2), False, Decimal("500.00")),
+        ]
+
+        test_orders = [
+            Order(101, 1, datetime(2023, 2, 1, 10, 0, 0), Decimal("200.00"), "completed"),
+            Order(102, 2, datetime(2023, 2, 2, 11, 0, 0), Decimal("150.00"), "completed"),
+        ]
+
+        @sql_test(
+            adapter_type="redshift",
+            mock_tables=[CustomersMockTable(test_customers), OrdersMockTable(test_orders)],
+            result_class=OrderSummaryResult,
+        )
+        def query_unqualified_tables():
+            return TestCase(
+                # Note: SQL uses unqualified table names 'customers' and 'orders'
+                query="""
+                    SELECT
+                        c.customer_id,
+                        c.name as customer_name,
+                        COUNT(o.order_id) as order_count,
+                        SUM(o.amount) as total_spent,
+                        AVG(o.amount) as avg_order_value
+                    FROM customers c
+                    LEFT JOIN orders o ON c.customer_id = o.customer_id
+                    WHERE o.status = 'completed'
+                    GROUP BY c.customer_id, c.name
+                    ORDER BY c.customer_id
+                """,
+                # default_namespace provides the namespace to qualify table names
+                # 'customers' becomes 'test_db.customers'
+                # 'orders' becomes 'test_db.orders'
+                default_namespace="test_db",
+                use_physical_tables=use_physical_tables,
+            )
+
+        results = query_unqualified_tables()
+
+        # Assertions - verifies that unqualified 'customers' and 'orders' tables
+        # were correctly resolved to 'test_db.customers' and 'test_db.orders'
+        # and matched with mock tables
+        assert len(results) == 2
+        assert results[0].customer_id == 1
+        assert results[0].customer_name == "Alice"
+        assert results[0].order_count == 1
+        assert results[0].total_spent == Decimal("200.00")
+        assert results[1].customer_id == 2
+        assert results[1].customer_name == "Bob"
+        assert results[1].order_count == 1
+        assert results[1].total_spent == Decimal("150.00")

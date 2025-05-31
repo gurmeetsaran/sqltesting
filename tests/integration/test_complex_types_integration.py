@@ -114,7 +114,7 @@ class TestComplexTypesIntegration(unittest.TestCase):
                     FROM complex_types
                     ORDER BY id
                 """,
-                execution_database=os.getenv("AWS_ATHENA_DATABASE", "test_db"),
+                default_namespace=os.getenv("AWS_ATHENA_DATABASE", "test_db"),
             )
 
         results = query_athena_complex_types()
@@ -198,7 +198,7 @@ class TestComplexTypesIntegration(unittest.TestCase):
                     FROM complex_types
                     ORDER BY id
                 """,
-                execution_database=os.getenv("GCP_PROJECT_ID", "test_project"),
+                default_namespace=os.getenv("GCP_PROJECT_ID", "test_project"),
             )
 
         results = query_bigquery_complex_types()
@@ -283,7 +283,7 @@ class TestComplexTypesIntegration(unittest.TestCase):
                     FROM complex_types
                     ORDER BY id
                 """,
-                execution_database="test_db",
+                default_namespace="test_db",
             )
 
         results = query_redshift_complex_types()
@@ -367,7 +367,7 @@ class TestComplexTypesIntegration(unittest.TestCase):
                     FROM complex_types
                     ORDER BY id
                 """,
-                execution_database=os.getenv("SNOWFLAKE_DATABASE", "test_db"),
+                default_namespace=os.getenv("SNOWFLAKE_DATABASE", "test_db"),
             )
 
         results = query_snowflake_complex_types()
@@ -449,7 +449,7 @@ class TestComplexTypesIntegration(unittest.TestCase):
                     FROM complex_types
                     ORDER BY id
                 """,
-                execution_database="memory",
+                default_namespace="memory",
             )
 
         results = query_trino_complex_types()

@@ -213,7 +213,7 @@ class TestPydanticModelsIntegration(unittest.TestCase):
                              u.department_id
                     ORDER BY total_spent DESC
                 """,
-                execution_database=os.getenv("GCP_PROJECT_ID", "test_project"),
+                default_namespace=os.getenv("GCP_PROJECT_ID", "test_project"),
             )
 
         results = query_user_order_summary()
@@ -279,7 +279,7 @@ class TestPydanticModelsIntegration(unittest.TestCase):
                              u.department_id
                     ORDER BY total_spent DESC
                 """,
-                execution_database=os.getenv("AWS_ATHENA_DATABASE", "test_db"),
+                default_namespace=os.getenv("AWS_ATHENA_DATABASE", "test_db"),
             )
 
         results = query_user_order_summary()
@@ -325,7 +325,7 @@ class TestPydanticModelsIntegration(unittest.TestCase):
                              u.department_id
                     ORDER BY total_spent DESC
                 """,
-                execution_database="test_db",
+                default_namespace="test_db",
             )
 
         results = query_user_order_summary()
@@ -372,7 +372,7 @@ class TestPydanticModelsIntegration(unittest.TestCase):
                              u.department_id
                     ORDER BY total_spent DESC
                 """,
-                execution_database="memory",
+                default_namespace="memory",
             )
 
         results = query_user_order_summary()
@@ -412,7 +412,7 @@ class TestPydanticModelsIntegration(unittest.TestCase):
                              u.department_id
                     ORDER BY total_spent DESC
                 """,
-                execution_database=os.getenv("SNOWFLAKE_DATABASE", "test_db"),
+                default_namespace=os.getenv("SNOWFLAKE_DATABASE", "test_db"),
             )
 
         results = query_user_order_summary()

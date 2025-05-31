@@ -42,12 +42,43 @@ class SQLTestCase(Generic[T]):
     __test__ = False  # Tell pytest this is not a test class
 
     query: str
-    execution_database: str
+    default_namespace: Optional[str] = None
     mock_tables: Optional[List[BaseMockTable]] = None
     result_class: Optional[Type[T]] = None
     use_physical_tables: bool = False
     description: Optional[str] = None
     adapter_type: Optional[AdapterType] = None
+    # Backward compatibility
+    execution_database: Optional[str] = None
+
+    def __post_init__(self) -> None:
+        """Handle backward compatibility for execution_database parameter."""
+        if self.execution_database is not None and self.default_namespace is not None:
+            # Both provided - warn and prefer default_namespace
+            import warnings
+
+            warnings.warn(
+                "Both 'default_namespace' and 'execution_database' provided. "
+                "Using 'default_namespace'. Please migrate to 'default_namespace' only.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+        elif self.execution_database is not None and self.default_namespace is None:
+            # Only execution_database provided - use it with deprecation warning
+            import warnings
+
+            warnings.warn(
+                "'execution_database' parameter is deprecated. Use 'default_namespace' instead.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+            self.default_namespace = self.execution_database
+        elif self.default_namespace is None and self.execution_database is None:
+            # Neither provided - this is an error
+            raise ValueError(
+                "Must provide either 'default_namespace' (preferred) or 'execution_database' "
+                "(deprecated) parameter"
+            )
 
 
 class SQLTestFramework:
@@ -84,8 +115,10 @@ class SQLTestFramework:
             referenced_tables = self._parse_sql_tables(test_case.query)
 
             # Resolve unqualified table names
+            # default_namespace is guaranteed to be set by __post_init__
+            assert test_case.default_namespace is not None
             resolved_tables = self._resolve_table_names(
-                referenced_tables, test_case.execution_database
+                referenced_tables, test_case.default_namespace
             )
 
             # Validate all required mock tables are provided
@@ -164,10 +197,10 @@ class SQLTestFramework:
             raise SQLParseError(query, str(e))  # noqa:  B904
 
     def _resolve_table_names(
-        self, referenced_tables: List[str], execution_database: str
+        self, referenced_tables: List[str], default_namespace: str
     ) -> Dict[str, str]:
         """
-        Resolve unqualified table names using execution database context.
+        Resolve unqualified table names using default namespace context.
 
         Returns:
             Dict mapping original table name to fully qualified name
@@ -178,8 +211,8 @@ class SQLTestFramework:
                 # Already qualified
                 resolved[table_name] = table_name
             else:
-                # Add database prefix
-                qualified_name = f"{execution_database}.{table_name}"
+                # Add namespace prefix
+                qualified_name = f"{default_namespace}.{table_name}"
                 resolved[table_name] = qualified_name
 
         return resolved
@@ -191,7 +224,13 @@ class SQLTestFramework:
         provided_tables = {mock.get_qualified_name() for mock in mock_tables}
         required_tables = set(resolved_tables.values())
 
-        missing_tables = required_tables - provided_tables
+        # Perform case-insensitive validation for all SQL databases
+        provided_tables_upper = {table.upper() for table in provided_tables}
+        missing_tables = set()
+
+        for required_table in required_tables:
+            if required_table.upper() not in provided_tables_upper:
+                missing_tables.add(required_table)
 
         if missing_tables:
             raise MockTableNotFoundError(
@@ -205,10 +244,23 @@ class SQLTestFramework:
         """Create mapping from qualified table names to mock table objects."""
         mock_table_map = {mock.get_qualified_name(): mock for mock in mock_tables}
 
-        # Map original table references to mock tables
+        # Map original table references to mock tables using case-insensitive matching
         table_mapping = {}
+
         for original_name, qualified_name in resolved_tables.items():
-            table_mapping[original_name] = mock_table_map[qualified_name]
+            # Case-insensitive matching for all SQL databases
+            matched_mock = None
+            for mock_qualified_name, mock_table in mock_table_map.items():
+                if qualified_name.upper() == mock_qualified_name.upper():
+                    matched_mock = mock_table
+                    break
+            if matched_mock:
+                table_mapping[original_name] = matched_mock
+            else:
+                # This shouldn't happen if validation passed, but fallback to exact match
+                exact_match = mock_table_map.get(qualified_name)
+                if exact_match:
+                    table_mapping[original_name] = exact_match
 
         return table_mapping
 
@@ -351,11 +403,16 @@ class SQLTestFramework:
                         original_name = str(node.name)
 
                     # Check if this table should be replaced
-                    if original_name in replacement_mapping:
+                    # Perform case-insensitive matching for all SQL databases
+                    replacement_name = None
+                    for mapping_key, mapping_value in replacement_mapping.items():
+                        if original_name.upper() == mapping_key.upper():
+                            replacement_name = mapping_value
+                            break
+
+                    if replacement_name:
                         # Create a new Table node with the replacement name
-                        new_table = exp.Table(
-                            this=exp.Identifier(this=replacement_mapping[original_name])
-                        )
+                        new_table = exp.Table(this=exp.Identifier(this=replacement_name))
 
                         # Preserve the table alias if it exists
                         if hasattr(node, "alias") and node.alias:

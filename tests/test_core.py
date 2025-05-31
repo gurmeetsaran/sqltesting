@@ -370,6 +370,55 @@ class TestReplaceTableNamesInQuery(unittest.TestCase):
         with self.assertRaises(SQLParseError):
             self.framework._replace_table_names_in_query(query, replacement_mapping)
 
+    def test_case_insensitive_table_matching(self):
+        """Test case-insensitive table name matching for all SQL adapters."""
+        # Set up mock adapter (any dialect - behavior is now generic)
+        mock_adapter = MagicMock()
+        mock_adapter.get_sqlglot_dialect.return_value = "bigquery"
+        framework = SQLTestFramework(mock_adapter)
+
+        # Test case: query has mixed case table names, but mapping uses lowercase
+        query = "SELECT * FROM CUSTOMERS c JOIN orders o ON c.id = o.customer_id"
+
+        # Replacement mapping uses lowercase names (as mock tables would provide)
+        replacement_mapping = {
+            "customers": "customers_cte",  # lowercase - should match CUSTOMERS
+            "orders": "orders_cte",  # lowercase - should match orders
+        }
+
+        result = framework._replace_table_names_in_query(query, replacement_mapping)
+
+        # Should match case-insensitively for all SQL databases:
+        # CUSTOMERS should match customers (case-insensitive)
+        # orders should match orders (exact match)
+        self.assertIn("customers_cte", result)
+        self.assertIn("orders_cte", result)
+        self.assertNotIn("CUSTOMERS", result)  # Should be replaced
+
+    def test_case_insensitive_matching_different_adapters(self):
+        """Test that case-insensitive matching works for different SQL adapters."""
+        adapters_to_test = ["bigquery", "snowflake", "presto", "redshift", "trino"]
+
+        query = "SELECT * FROM Users u JOIN Orders o ON u.id = o.user_id"
+        replacement_mapping = {
+            "users": "users_cte",  # lowercase should match Users
+            "orders": "orders_cte",  # lowercase should match Orders
+        }
+
+        for dialect in adapters_to_test:
+            with self.subTest(dialect=dialect):
+                mock_adapter = MagicMock()
+                mock_adapter.get_sqlglot_dialect.return_value = dialect
+                framework = SQLTestFramework(mock_adapter)
+
+                result = framework._replace_table_names_in_query(query, replacement_mapping)
+
+                # All adapters should now support case-insensitive matching
+                self.assertIn("users_cte", result, f"Failed for {dialect}")
+                self.assertIn("orders_cte", result, f"Failed for {dialect}")
+                self.assertNotIn("Users", result, f"Failed for {dialect}")
+                self.assertNotIn("Orders", result, f"Failed for {dialect}")
+
 
 if __name__ == "__main__":
     unittest.main()

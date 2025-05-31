@@ -464,7 +464,7 @@ class TestSQLTestDecoratorFunction(unittest.TestCase):
 
         @sql_test()
         def test_function():
-            return SQLTestCase(query="SELECT 1 as result", execution_database="test")
+            return SQLTestCase(query="SELECT 1 as result", default_namespace="test")
 
         # Check that function is marked as decorated
         self.assertTrue(hasattr(test_function, "_sql_test_decorated"))
@@ -485,7 +485,7 @@ class TestSQLTestDecoratorFunction(unittest.TestCase):
 
         @sql_test(mock_tables=[mock_table], use_physical_tables=True, adapter_type="bigquery")
         def test_function():
-            return SQLTestCase(query="SELECT * FROM test_table", execution_database="test")
+            return SQLTestCase(query="SELECT * FROM test_table", default_namespace="test")
 
         # Check that function is marked as decorated
         self.assertTrue(hasattr(test_function, "_sql_test_decorated"))
@@ -494,7 +494,7 @@ class TestSQLTestDecoratorFunction(unittest.TestCase):
         """Test that multiple sql_test decorators raise an error."""
 
         def test_function():
-            return SQLTestCase(query="SELECT 1", execution_database="test")
+            return SQLTestCase(query="SELECT 1", default_namespace="test")
 
         # Apply first decorator
         decorated_once = sql_test()(test_function)
@@ -542,7 +542,7 @@ class TestSQLTestDecoratorFunction(unittest.TestCase):
             # Return SQLTestCase with different values
             return SQLTestCase(
                 query="SELECT 1",
-                execution_database="test",
+                default_namespace="test",
                 mock_tables=[mock_table1],
                 use_physical_tables=False,
                 adapter_type="bigquery",

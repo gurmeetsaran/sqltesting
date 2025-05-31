@@ -347,6 +347,91 @@ credentials_path = <path to credentials json>
 # role = <role_name>  # Optional: specify a role
 ```
 
+### Database Context Understanding
+
+Each database adapter uses a different concept for organizing tables and queries. Understanding the **database context** - the minimum qualification needed to uniquely identify a table - is crucial for writing mock tables and queries:
+
+| Adapter | Database Context Format | Components | Mock Table Example | Query Example |
+|---------|------------------------|------------|-------------------|---------------|
+| **BigQuery** | `{project_id}.{dataset_id}` | project + dataset | `"test-project.test_dataset"` | `SELECT * FROM test-project.test_dataset.users` |
+| **Athena** | `{database}` | database only | `"test_db"` | `SELECT * FROM test_db.customers` |
+| **Redshift** | `{database}` | database only | `"test_db"` | `SELECT * FROM test_db.orders` |
+| **Snowflake** | `{database}.{schema}` | database + schema | `"test_db.public"` | `SELECT * FROM test_db.public.products` |
+| **Trino** | `{catalog}.{schema}` | catalog + schema | `"memory.default"` | `SELECT * FROM memory.default.inventory` |
+
+#### Key Points:
+
+1. **Mock Tables**: Use hardcoded database contexts in your test mock tables. Don't rely on environment variables - this makes tests predictable and consistent.
+
+2. **default_namespace Parameter**: This parameter serves as a **namespace resolution context** that qualifies unqualified table names in your SQL queries. When creating TestCase instances, use the same database context format as your mock tables.
+
+3. **Query References**: Your SQL queries can use either:
+   - **Fully qualified names**: `SELECT * FROM test-project.test_dataset.users`
+   - **Unqualified names**: `SELECT * FROM users` (qualified using `default_namespace`)
+
+4. **Case Sensitivity**:
+   - **All SQL Adapters**: Table name matching is **case-insensitive** - you can use lowercase contexts like `"test_db.public"` even if your SQL uses `FROM CUSTOMERS`
+   - This follows standard SQL behavior where table names are case-insensitive
+
+#### Understanding the `default_namespace` Parameter
+
+The `default_namespace` parameter is **not where your SQL executes** - it's the **namespace prefix** used to resolve unqualified table names in your queries.
+
+**How it works:**
+- **Query**: `SELECT * FROM users JOIN orders ON users.id = orders.user_id`
+- **default_namespace**: `"test-project.test_dataset"`
+- **Resolution**: `users` → `test-project.test_dataset.users`, `orders` → `test-project.test_dataset.orders`
+- **Requirement**: These resolved names must match your mock tables' `get_qualified_name()` values
+
+**Alternative parameter names under consideration:**
+- `default_namespace` ✅ (most clear about purpose)
+- `table_context`
+- `namespace_prefix`
+
+**Example showing the difference:**
+
+```python
+# Option 1: Fully qualified table names (default_namespace not used for resolution)
+TestCase(
+    query="SELECT * FROM test-project.test_dataset.users",
+    default_namespace="test-project.test_dataset",  # For consistency, but not used
+)
+
+# Option 2: Unqualified table names (default_namespace used for resolution)
+TestCase(
+    query="SELECT * FROM users",  # Unqualified
+    default_namespace="test-project.test_dataset",  # Qualifies to: test-project.test_dataset.users
+)
+```
+
+#### Example Mock Table Implementations:
+
+```python
+# BigQuery Mock Table
+class UsersMockTable(BaseMockTable):
+    def get_database_name(self) -> str:
+        return "test-project.test_dataset"  # project.dataset format
+
+    def get_table_name(self) -> str:
+        return "users"
+
+# Athena Mock Table
+class CustomerMockTable(BaseMockTable):
+    def get_database_name(self) -> str:
+        return "test_db"  # database only
+
+    def get_table_name(self) -> str:
+        return "customers"
+
+# Snowflake Mock Table
+class ProductsMockTable(BaseMockTable):
+    def get_database_name(self) -> str:
+        return "test_db.public"  # database.schema format (lowercase)
+
+    def get_table_name(self) -> str:
+        return "products"
+```
+
 2. **Write a test** using one of the flexible patterns:
 
 ```python
@@ -386,7 +471,7 @@ class UsersMockTable(BaseMockTable):
 def test_pattern_1():
     return TestCase(
         query="SELECT user_id, name FROM users WHERE user_id = 1",
-        execution_database="sqltesting_db"
+        default_namespace="sqltesting_db"
     )
 
 # Pattern 2: Define all test data in the TestCase
@@ -394,7 +479,7 @@ def test_pattern_1():
 def test_pattern_2():
     return TestCase(
         query="SELECT user_id, name FROM users WHERE user_id = 1",
-        execution_database="sqltesting_db",
+        default_namespace="sqltesting_db",
         mock_tables=[
             UsersMockTable([
                 User(1, "Alice", "alice@example.com"),
@@ -416,7 +501,7 @@ def test_pattern_2():
 def test_pattern_3():
     return TestCase(
         query="SELECT user_id, name FROM users WHERE user_id = 1",
-        execution_database="sqltesting_db",
+        default_namespace="sqltesting_db",
         result_class=UserResult
     )
 ```
@@ -559,7 +644,7 @@ except Exception as e:
 
 The library supports flexible ways to configure your tests:
 
-1. **All Config in Decorator**: Define all mock tables and result class in the `@sql_test` decorator, with only query and execution_database in TestCase.
+1. **All Config in Decorator**: Define all mock tables and result class in the `@sql_test` decorator, with only query and default_namespace in TestCase.
 2. **All Config in TestCase**: Use an empty `@sql_test()` decorator and define everything in the TestCase return value.
 3. **Mix and Match**: Specify some parameters in the decorator and others in the TestCase.
 4. **Per-Test Database Adapters**: Specify which adapter to use for specific tests.
@@ -582,7 +667,7 @@ You can specify which database adapter to use for individual tests:
 def test_bigquery_query():
     return TestCase(
         query="SELECT user_id, name FROM users WHERE user_id = 1",
-        execution_database="sqltesting_db"
+        default_namespace="sqltesting_db"
     )
 
 # Use Athena adapter for this test
@@ -594,7 +679,7 @@ def test_bigquery_query():
 def test_athena_query():
     return TestCase(
         query="SELECT user_id, name FROM users WHERE user_id = 1",
-        execution_database="test_db"
+        default_namespace="test_db"
     )
 
 # Use Redshift adapter for this test
@@ -606,7 +691,7 @@ def test_athena_query():
 def test_redshift_query():
     return TestCase(
         query="SELECT user_id, name FROM users WHERE user_id = 1",
-        execution_database="test_db"
+        default_namespace="test_db"
     )
 
 # Use Trino adapter for this test
@@ -618,7 +703,7 @@ def test_redshift_query():
 def test_trino_query():
     return TestCase(
         query="SELECT user_id, name FROM users WHERE user_id = 1",
-        execution_database="test_db"
+        default_namespace="test_db"
     )
 
 # Use Snowflake adapter for this test
@@ -630,7 +715,7 @@ def test_trino_query():
 def test_snowflake_query():
     return TestCase(
         query="SELECT user_id, name FROM users WHERE user_id = 1",
-        execution_database="test_db"
+        default_namespace="test_db"
     )
 ```
 
