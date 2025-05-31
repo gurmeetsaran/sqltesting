@@ -1,6 +1,5 @@
 """Integration tests for Athena adapter with pytest configuration."""
 
-import os
 from dataclasses import dataclass
 from datetime import date, datetime
 from decimal import Decimal
@@ -101,7 +100,7 @@ class CustomerMockTable(BaseMockTable):
     """Mock table for customer data."""
 
     def get_database_name(self) -> str:
-        return os.getenv("AWS_ATHENA_DATABASE", "test_db")
+        return "test_db"
 
     def get_table_name(self) -> str:
         return "customers"
@@ -111,7 +110,7 @@ class OrderMockTable(BaseMockTable):
     """Mock table for order data."""
 
     def get_database_name(self) -> str:
-        return os.getenv("AWS_ATHENA_DATABASE", "test_db")
+        return "test_db"
 
     def get_table_name(self) -> str:
         return "orders"
@@ -172,7 +171,7 @@ class TestAthenaIntegration:
                     WHERE is_premium = TRUE
                     ORDER BY lifetime_value DESC
                 """,
-                execution_database=os.getenv("AWS_ATHENA_DATABASE", "test_db"),
+                default_namespace="test_db",
                 use_physical_tables=use_physical_tables,
             )
 
@@ -251,7 +250,7 @@ class TestAthenaIntegration:
                     GROUP BY c.customer_id, c.name
                     ORDER BY total_amount DESC
                 """,
-                execution_database=os.getenv("AWS_ATHENA_DATABASE", "test_db"),
+                default_namespace="test_db",
                 use_physical_tables=use_physical_tables,
             )
 
@@ -328,7 +327,7 @@ class TestAthenaIntegration:
                         EXTRACT(MONTH FROM order_date)
                     ORDER BY order_year, order_month
                 """,
-                execution_database=os.getenv("AWS_ATHENA_DATABASE", "test_db"),
+                default_namespace="test_db",
                 use_physical_tables=use_physical_tables,
             )
 
@@ -428,7 +427,7 @@ class TestAthenaIntegration:
                     FROM customer_metrics
                     ORDER BY spending_rank
                 """,
-                execution_database=os.getenv("AWS_ATHENA_DATABASE", "test_db"),
+                default_namespace="test_db",
                 use_physical_tables=use_physical_tables,
             )
 
@@ -491,7 +490,7 @@ class TestAthenaIntegration:
                     FROM customers
                     ORDER BY customer_id
                 """,
-                execution_database=os.getenv("AWS_ATHENA_DATABASE", "test_db"),
+                default_namespace="test_db",
                 use_physical_tables=use_physical_tables,
             )
 
@@ -511,6 +510,68 @@ class TestAthenaIntegration:
         assert results[2].email_status == "No Email"
         assert results[2].lifetime_value_filled == Decimal("1500.50")
         assert results[2].value_category == "Has Value"
+
+    def test_unqualified_table_names_with_default_namespace(self, use_physical_tables):
+        """Test how default_namespace resolves unqualified table names to mock tables.
+
+        This test demonstrates the key role of default_namespace for Athena:
+        - Query uses unqualified table names: 'customers' and 'orders'
+        - default_namespace='test_db' qualifies them to:
+          'test_db.customers' and 'test_db.orders'
+        - These qualified names must match mock table get_qualified_name() values
+        """
+
+        test_customers = [
+            Customer(1, "Alice", "alice@example.com", date(2023, 1, 1), True),
+            Customer(2, "Bob", "bob@example.com", date(2023, 1, 2), False),
+        ]
+
+        test_orders = [
+            Order(101, 1, datetime(2023, 2, 1, 10, 0), Decimal("100.00"), "completed"),
+            Order(102, 2, datetime(2023, 2, 2, 11, 0), Decimal("150.00"), "completed"),
+        ]
+
+        @sql_test(
+            adapter_type="athena",
+            mock_tables=[CustomerMockTable(test_customers), OrderMockTable(test_orders)],
+            result_class=OrderSummaryResult,
+        )
+        def query_unqualified_tables():
+            return TestCase(
+                # Note: SQL uses unqualified table names 'customers' and 'orders'
+                query="""
+                    SELECT
+                        c.customer_id,
+                        c.name as customer_name,
+                        COUNT(o.order_id) as order_count,
+                        SUM(o.amount) as total_amount
+                    FROM customers c
+                    LEFT JOIN orders o ON c.customer_id = o.customer_id
+                    WHERE o.status = 'completed'
+                    GROUP BY c.customer_id, c.name
+                    ORDER BY c.customer_id
+                """,
+                # default_namespace provides the namespace to qualify table names
+                # 'customers' becomes 'test_db.customers'
+                # 'orders' becomes 'test_db.orders'
+                default_namespace="test_db",
+                use_physical_tables=use_physical_tables,
+            )
+
+        results = query_unqualified_tables()
+
+        # Assertions - verifies that unqualified 'customers' and 'orders' tables
+        # were correctly resolved to 'test_db.customers' and 'test_db.orders'
+        # and matched with mock tables
+        assert len(results) == 2
+        assert results[0].customer_id == 1
+        assert results[0].customer_name == "Alice"
+        assert results[0].order_count == 1
+        assert results[0].total_amount == Decimal("100.00")
+        assert results[1].customer_id == 2
+        assert results[1].customer_name == "Bob"
+        assert results[1].order_count == 1
+        assert results[1].total_amount == Decimal("150.00")
 
 
 @pytest.mark.integration
@@ -570,7 +631,7 @@ class TestAthenaPerformance:
                     INNER JOIN orders o ON c.customer_id = o.customer_id
                     WHERE c.is_premium = TRUE
                 """,
-                execution_database=os.getenv("AWS_ATHENA_DATABASE", "test_db"),
+                default_namespace="test_db",
                 use_physical_tables=use_physical_tables,
             )
 

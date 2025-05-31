@@ -513,7 +513,7 @@ class TestSQLTestFramework(unittest.TestCase):
         """Test run_test raises error when mock_tables is None."""
         test_case = SQLTestCase(
             query="SELECT * FROM users",
-            execution_database="test_db",
+            default_namespace="test_db",
             mock_tables=None,
             result_class=SampleResult,
         )
@@ -527,7 +527,7 @@ class TestSQLTestFramework(unittest.TestCase):
         """Test run_test raises error when result_class is None."""
         test_case = SQLTestCase(
             query="SELECT * FROM users",
-            execution_database="test_db",
+            default_namespace="test_db",
             mock_tables=[SampleUserMockTable(self.test_users)],
             result_class=None,
         )
@@ -550,7 +550,7 @@ class TestSQLTestFramework(unittest.TestCase):
 
             test_case = SQLTestCase(
                 query="SELECT * FROM users WHERE name = 'very long name that exceeds limit'",
-                execution_database="test_db",
+                default_namespace="test_db",
                 mock_tables=[SampleUserMockTable(self.test_users)],
                 result_class=SampleResult,
             )
@@ -564,7 +564,7 @@ class TestSQLTestFramework(unittest.TestCase):
         """Test that temp tables are cleaned up even when exceptions occur."""
         test_case = SQLTestCase(
             query="SELECT * FROM users",
-            execution_database="test_db",
+            default_namespace="test_db",
             mock_tables=[SampleUserMockTable(self.test_users)],
             result_class=SampleResult,
             use_physical_tables=True,
@@ -585,7 +585,7 @@ class TestSQLTestFramework(unittest.TestCase):
         """Test successful test run with CTE mode."""
         test_case = SQLTestCase(
             query="SELECT id, name FROM users",
-            execution_database="test_db",
+            default_namespace="test_db",
             mock_tables=[SampleUserMockTable(self.test_users)],
             result_class=SampleUser,
             use_physical_tables=False,
@@ -632,7 +632,7 @@ class TestSQLTestFramework(unittest.TestCase):
         """Test successful test run with physical tables mode."""
         test_case = SQLTestCase(
             query="SELECT id, name FROM users",
-            execution_database="test_db",
+            default_namespace="test_db",
             mock_tables=[SampleUserMockTable(self.test_users)],
             result_class=SampleUser,
             use_physical_tables=True,
@@ -677,11 +677,11 @@ class TestSQLTestCaseClass(unittest.TestCase):
         """Test SQLTestCase can be created with required fields."""
         test_case = SQLTestCase(
             query="SELECT * FROM users",
-            execution_database="test_db",
+            default_namespace="test_db",
         )
 
         assert test_case.query == "SELECT * FROM users"
-        assert test_case.execution_database == "test_db"
+        assert test_case.default_namespace == "test_db"
         assert test_case.mock_tables is None
         assert test_case.result_class is None
         assert test_case.use_physical_tables is False
@@ -694,7 +694,7 @@ class TestSQLTestCaseClass(unittest.TestCase):
 
         test_case = SQLTestCase(
             query="SELECT * FROM users",
-            execution_database="test_db",
+            default_namespace="test_db",
             mock_tables=[mock_table],
             result_class=SampleUser,
             use_physical_tables=True,
@@ -703,7 +703,7 @@ class TestSQLTestCaseClass(unittest.TestCase):
         )
 
         assert test_case.query == "SELECT * FROM users"
-        assert test_case.execution_database == "test_db"
+        assert test_case.default_namespace == "test_db"
         assert test_case.mock_tables == [mock_table]
         assert test_case.result_class == SampleUser
         assert test_case.use_physical_tables is True

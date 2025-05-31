@@ -78,7 +78,7 @@ class CustomersMockTable(BaseMockTable):
     """Mock table for customers data."""
 
     def get_database_name(self) -> str:
-        return "memory"
+        return "memory.default"
 
     def get_table_name(self) -> str:
         return "customers"
@@ -88,7 +88,7 @@ class OrdersMockTable(BaseMockTable):
     """Mock table for orders data."""
 
     def get_database_name(self) -> str:
-        return "memory"
+        return "memory.default"
 
     def get_table_name(self) -> str:
         return "orders"
@@ -98,7 +98,7 @@ class ProductsMockTable(BaseMockTable):
     """Mock table for products data."""
 
     def get_database_name(self) -> str:
-        return "memory"
+        return "memory.default"
 
     def get_table_name(self) -> str:
         return "products"
@@ -184,7 +184,7 @@ class TestTrinoIntegration:
                         CAST(0.00 AS DECIMAL(10,2)) as total_amount
                     FROM customers WHERE customer_id = 1
                 """,
-                execution_database="memory",
+                default_namespace="memory.default",
                 use_physical_tables=use_physical_tables,
             )
 
@@ -220,7 +220,7 @@ class TestTrinoIntegration:
                     GROUP BY c.customer_id, c.name
                     ORDER BY total_spent DESC
                 """,
-                execution_database="memory",
+                default_namespace="memory.default",
                 use_physical_tables=use_physical_tables,
             )
 
@@ -251,7 +251,7 @@ class TestTrinoIntegration:
                     WHERE signup_date >= DATE '2023-02-01'
                     ORDER BY signup_date DESC
                 """,
-                execution_database="memory",
+                default_namespace="memory.default",
                 use_physical_tables=use_physical_tables,
             )
 
@@ -281,7 +281,7 @@ class TestTrinoIntegration:
                     WHERE DATE(order_date) >= DATE '2023-04-01'
                     AND status IN ('completed', 'pending')
                 """,
-                execution_database="memory",
+                default_namespace="memory.default",
                 use_physical_tables=use_physical_tables,
             )
 
@@ -327,7 +327,7 @@ class TestTrinoIntegration:
                     WHERE lifetime_value IS NOT NULL OR customer_id = 2
                     ORDER BY customer_id
                 """,
-                execution_database="memory",
+                default_namespace="memory.default",
                 use_physical_tables=use_physical_tables,
             )
 
@@ -358,7 +358,7 @@ class TestTrinoIntegration:
                     WHERE LENGTH(name) > 8
                     ORDER BY name
                 """,
-                execution_database="memory",
+                default_namespace="memory.default",
                 use_physical_tables=use_physical_tables,
             )
 
@@ -388,7 +388,7 @@ class TestTrinoIntegration:
                     HAVING COUNT(*) >= 1
                     ORDER BY avg_price DESC
                 """,
-                execution_database="memory",
+                default_namespace="memory.default",
                 use_physical_tables=use_physical_tables,
             )
 
@@ -420,7 +420,7 @@ class TestTrinoIntegration:
                     AND lifetime_value > CAST(1000.00 AS DECIMAL(10,2))
                     ORDER BY lifetime_value DESC
                 """,
-                execution_database="memory",
+                default_namespace="memory.default",
                 use_physical_tables=use_physical_tables,
             )
 
@@ -465,7 +465,7 @@ class TestTrinoIntegration:
                     WHERE total_spent > CAST(0.00 AS DECIMAL(10,2))
                     ORDER BY total_spent DESC
                 """,
-                execution_database="memory",
+                default_namespace="memory.default",
                 use_physical_tables=use_physical_tables,
             )
 
@@ -502,7 +502,7 @@ class TestTrinoIntegration:
                         END
                     ORDER BY avg_price DESC
                 """,
-                execution_database="memory",
+                default_namespace="memory.default",
                 use_physical_tables=use_physical_tables,
             )
 
@@ -542,7 +542,7 @@ class TestTrinoIntegration:
                     )
                     ORDER BY c.customer_id
                 """,
-                execution_database="memory",
+                default_namespace="memory.default",
                 use_physical_tables=use_physical_tables,
             )
 
@@ -550,3 +550,66 @@ class TestTrinoIntegration:
         results = query_customers_with_orders()
         assert len(results) >= 1
         assert all(hasattr(result, "customer_id") for result in results)
+
+    def test_unqualified_table_names_with_default_namespace(self, use_physical_tables):
+        """Test how default_namespace resolves unqualified table names to mock tables.
+
+        This test demonstrates the key role of default_namespace for Trino:
+        - Query uses unqualified table names: 'customers' and 'orders'
+        - default_namespace='memory.default' qualifies them to:
+          'memory.default.customers' and 'memory.default.orders'
+        - These qualified names must match mock table get_qualified_name() values
+        """
+
+        test_customers = [
+            Customer(1, "Alice", "alice@example.com", date(2023, 1, 1), True, Decimal("1000.00")),
+            Customer(2, "Bob", "bob@example.com", date(2023, 1, 2), False, Decimal("500.00")),
+        ]
+
+        test_orders = [
+            Order(101, 1, datetime(2023, 2, 1, 10, 0, 0), Decimal("200.00"), "completed"),
+            Order(102, 2, datetime(2023, 2, 2, 11, 0, 0), Decimal("150.00"), "completed"),
+        ]
+
+        @sql_test(
+            adapter_type="trino",
+            mock_tables=[CustomersMockTable(test_customers), OrdersMockTable(test_orders)],
+            result_class=OrderSummaryResult,
+        )
+        def query_unqualified_tables():
+            return TestCase(
+                # Note: SQL uses unqualified table names 'customers' and 'orders'
+                query="""
+                    SELECT
+                        c.customer_id,
+                        c.name as customer_name,
+                        COUNT(o.order_id) as order_count,
+                        SUM(o.amount) as total_spent,
+                        AVG(o.amount) as avg_order_value
+                    FROM customers c
+                    LEFT JOIN orders o ON c.customer_id = o.customer_id
+                    WHERE o.status = 'completed'
+                    GROUP BY c.customer_id, c.name
+                    ORDER BY c.customer_id
+                """,
+                # default_namespace provides the namespace to qualify table names
+                # 'customers' becomes 'memory.default.customers'
+                # 'orders' becomes 'memory.default.orders'
+                default_namespace="memory.default",
+                use_physical_tables=use_physical_tables,
+            )
+
+        results = query_unqualified_tables()
+
+        # Assertions - verifies that unqualified 'customers' and 'orders' tables
+        # were correctly resolved to 'memory.default.customers' and 'memory.default.orders'
+        # and matched with mock tables
+        assert len(results) == 2
+        assert results[0].customer_id == 1
+        assert results[0].customer_name == "Alice"
+        assert results[0].order_count == 1
+        assert results[0].total_spent == Decimal("200.00")
+        assert results[1].customer_id == 2
+        assert results[1].customer_name == "Bob"
+        assert results[1].order_count == 1
+        assert results[1].total_spent == Decimal("150.00")

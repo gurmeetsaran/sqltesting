@@ -114,7 +114,7 @@ class TestRedshiftPhysicalTables(unittest.TestCase):
                 return TestCase(
                     query="SELECT id, name, price, category FROM products"
                     + " WHERE category = 'Electronics'",
-                    execution_database="test_db",
+                    default_namespace="test_db",
                 )
 
             # Execute the test
@@ -196,7 +196,7 @@ class TestRedshiftPhysicalTables(unittest.TestCase):
                 use_physical_tables=True,  # Force physical tables
             )
             def test_redshift_large_query():
-                return TestCase(query=large_query, execution_database="test_db")
+                return TestCase(query=large_query, default_namespace="test_db")
 
             # Execute the test with physical tables
             results = test_redshift_large_query()

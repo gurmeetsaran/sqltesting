@@ -124,7 +124,7 @@ class TestSnowflakePhysicalTables(unittest.TestCase):
         # Create a test case
         test_case = SQLTestCase(
             query=sql,
-            execution_database="test_db",
+            default_namespace="test_db",
             mock_tables=[PersonMockTable(person_dicts)],
             use_physical_tables=True,
         )
@@ -134,7 +134,7 @@ class TestSnowflakePhysicalTables(unittest.TestCase):
             # Manually replicate the needed operations without calling run directly
             referenced_tables = tester._parse_sql_tables(test_case.query)
             resolved_tables = tester._resolve_table_names(
-                referenced_tables, test_case.execution_database
+                referenced_tables, test_case.default_namespace
             )
             table_mapping = tester._create_table_mapping(resolved_tables, test_case.mock_tables)
             final_query = tester._execute_with_physical_tables(
@@ -268,7 +268,7 @@ class TestSnowflakePhysicalTables(unittest.TestCase):
         # Create a test case
         test_case = SQLTestCase(
             query=sql,
-            execution_database="test_db",
+            default_namespace="test_db",
             mock_tables=[
                 PersonMockTable(person_dicts),
                 DepartmentMockTable(dept_dicts),
@@ -280,7 +280,7 @@ class TestSnowflakePhysicalTables(unittest.TestCase):
         # Manually replicate the needed operations without calling run directly
         referenced_tables = tester._parse_sql_tables(test_case.query)
         resolved_tables = tester._resolve_table_names(
-            referenced_tables, test_case.execution_database
+            referenced_tables, test_case.default_namespace
         )
         table_mapping = tester._create_table_mapping(resolved_tables, test_case.mock_tables)
         final_query = tester._execute_with_physical_tables(

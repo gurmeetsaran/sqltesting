@@ -218,7 +218,7 @@ class TestPydanticCoreFramework(unittest.TestCase):
                     GROUP BY p.id, p.name, p.category
                     ORDER BY total_revenue DESC
                 """,
-                execution_database="test_project",
+                default_namespace="test_project",
             )
 
         # Mock the adapter to avoid actual database connection

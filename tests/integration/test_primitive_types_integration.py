@@ -300,7 +300,7 @@ class TestPrimitiveTypesIntegration:
                     FROM primitive_types
                     ORDER BY int_col DESC
                 """,
-                execution_database=self.database_name,
+                default_namespace=self.database_name,
                 use_physical_tables=use_physical_tables,
             )
 
@@ -539,7 +539,7 @@ class TestPrimitiveTypesIntegration:
                     FROM all_optional_table
                     ORDER BY optional_int
                 """,
-                execution_database=self.database_name,
+                default_namespace=self.database_name,
                 use_physical_tables=use_physical_tables,
             )
 
@@ -638,7 +638,7 @@ class TestSnowflakePrimitiveTypesIntegration:
                     FROM primitive_types
                     ORDER BY int_col DESC
                 """,
-                execution_database=self.database_name,
+                default_namespace=self.database_name,
                 use_physical_tables=use_physical_tables,
             )
 
@@ -735,7 +735,7 @@ class TestSnowflakePrimitiveTypesIntegration:
                     FROM all_optional_table
                     ORDER BY optional_int
                 """,
-                execution_database=self.database_name,
+                default_namespace=self.database_name,
                 use_physical_tables=use_physical_tables,
             )
 

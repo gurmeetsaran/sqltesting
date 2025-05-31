@@ -116,7 +116,7 @@ class TestBigQueryPhysicalTables(unittest.TestCase):
                 return TestCase(
                     query="SELECT id, name, price, category FROM products"
                     + " WHERE category = 'Electronics'",
-                    execution_database="test_dataset",
+                    default_namespace="test_dataset",
                 )
 
             # Execute the test
@@ -180,7 +180,7 @@ class TestBigQueryPhysicalTables(unittest.TestCase):
                 use_physical_tables=True,
             )
             def test_bigquery_large_query():
-                return TestCase(query=large_query, execution_database="test_dataset")
+                return TestCase(query=large_query, default_namespace="test_dataset")
 
             # Execute the test
             results = test_bigquery_large_query()

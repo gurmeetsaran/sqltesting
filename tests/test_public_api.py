@@ -23,9 +23,9 @@ class TestPublicAPIImports(unittest.TestCase):
         # Should be an alias for SQLTestCase
         assert TestCase is not None
         # Test that it can be instantiated
-        test_case = TestCase(query="SELECT 1", execution_database="test_db")
+        test_case = TestCase(query="SELECT 1", default_namespace="test_db")
         assert test_case.query == "SELECT 1"
-        assert test_case.execution_database == "test_db"
+        assert test_case.default_namespace == "test_db"
 
     def test_import_mock_table_base(self):
         """Test that BaseMockTable can be imported."""
@@ -81,7 +81,7 @@ class TestPublicAPIImports(unittest.TestCase):
         # Test that decorator can be applied
         @sql_test
         def test_function():
-            return TestCase(query="SELECT 1 as test_col", execution_database="test_db")
+            return TestCase(query="SELECT 1 as test_col", default_namespace="test_db")
 
         # Should not raise an error and should be callable
         assert callable(test_function)
@@ -97,8 +97,8 @@ class TestPublicAPIImports(unittest.TestCase):
         assert TestCase is SQLTestCase
 
         # Should have same functionality
-        test_case1 = TestCase(query="SELECT 1", execution_database="db1")
-        test_case2 = SQLTestCase(query="SELECT 1", execution_database="db1")
+        test_case1 = TestCase(query="SELECT 1", default_namespace="db1")
+        test_case2 = SQLTestCase(query="SELECT 1", default_namespace="db1")
 
         assert type(test_case1) is type(test_case2)
         assert test_case1.query == test_case2.query
@@ -220,10 +220,10 @@ class TestBackwardCompatibility(unittest.TestCase):
         from sql_testing_library import BaseMockTable, TestCase
 
         # TestCase should be usable for creating test cases
-        test_case = TestCase(query="SELECT 1 as id, 'test' as name", execution_database="test_db")
+        test_case = TestCase(query="SELECT 1 as id, 'test' as name", default_namespace="test_db")
 
         assert test_case.query is not None
-        assert test_case.execution_database == "test_db"
+        assert test_case.default_namespace == "test_db"
 
         # BaseMockTable should be an abstract base that can be subclassed
         class TestMockTable(BaseMockTable):
@@ -245,14 +245,14 @@ class TestBackwardCompatibility(unittest.TestCase):
         # Basic usage without arguments
         @sql_test
         def test_basic():
-            return TestCase(query="SELECT 1", execution_database="db")
+            return TestCase(query="SELECT 1", default_namespace="db")
 
         assert callable(test_basic)
 
         # Usage with adapter type (just test that decorator accepts the parameter)
         @sql_test(adapter_type="bigquery")
         def test_with_adapter():
-            return TestCase(query="SELECT 1", execution_database="db")
+            return TestCase(query="SELECT 1", default_namespace="db")
 
         assert callable(test_with_adapter)
 

@@ -119,7 +119,7 @@ class TestTrinoPhysicalTables(unittest.TestCase):
                 return TestCase(
                     query="SELECT id, name, price, category FROM products"
                     + " WHERE category = 'Electronics'",
-                    execution_database="test_db",
+                    default_namespace="test_db",
                 )
 
             # Execute the test
@@ -202,7 +202,7 @@ class TestTrinoPhysicalTables(unittest.TestCase):
             def test_trino_empty_table():
                 return TestCase(
                     query="SELECT id, name, price, category FROM products LIMIT 0",
-                    execution_database="test_db",
+                    default_namespace="test_db",
                 )
 
             # Execute the test - this primarily verifies that the empty table can be
@@ -245,7 +245,7 @@ class TestTrinoPhysicalTables(unittest.TestCase):
                 use_physical_tables=True,  # Force physical tables
             )
             def test_trino_large_query():
-                return TestCase(query=large_query, execution_database="test_db")
+                return TestCase(query=large_query, default_namespace="test_db")
 
             # Execute the test with physical tables
             results = test_trino_large_query()

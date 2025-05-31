@@ -147,7 +147,7 @@ class TestTrinoIntegration(unittest.TestCase):
             def test_trino_query():
                 return TestCase(
                     query="SELECT id, name FROM users WHERE id = 1",
-                    execution_database="test_db",
+                    default_namespace="test_db",
                 )
 
             # Execute the test
