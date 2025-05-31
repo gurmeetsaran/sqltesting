@@ -137,6 +137,69 @@ testpaths = ["tests"]
 python_files = "test_*.py"
 python_functions = "test_*"
 
+[tool.coverage.run]
+source = ["src/sql_testing_library"]
+omit = [
+    "*/_adapters/base.py",
+    "*/_adapters/__init__.py",
+    "*/tests/*",
+    "*/test_*.py",
+]
+branch = true
+concurrency = ["thread", "multiprocessing"]
+
+[tool.coverage.report]
+exclude_lines = [
+    # Manual exclusion
+    "pragma: no cover",
+    
+    # Don't complain about missing debug-only code
+    "def __repr__",
+    "if self\\.debug:",
+    "if settings\\.DEBUG",
+    
+    # Don't complain if tests don't hit defensive assertion code
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "raise ImportError",
+    "raise ValueError.*unreachable",
+    
+    # Don't complain if non-runnable code isn't run
+    "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
+    "if typing\\.TYPE_CHECKING:",
+    
+    # Abstract methods and classes
+    "@abstract",
+    "@abstractmethod",
+    "class .*\\bProtocol\\):",
+    "class .*\\bAbstract.*\\):",
+    "raise NotImplementedError.*",
+    
+    # Exception handling for optional imports
+    "except ImportError:",
+    "except ModuleNotFoundError:",
+    "HAS_.* = False",
+    "HAS_.* = True",
+    ".*_module = None",
+    
+    # Skip empty functions/methods and ellipsis
+    "^\\s*pass\\s*$",
+    "^\\s*\\.\\.\\.\\s*$",
+    
+    # Type annotation-only lines
+    "^\\s*\\.\\.\\.$",
+    
+    # Platform specific code that may not be tested
+    "if sys\\.platform",
+    "if os\\.name",
+    
+    # Version checks
+    "if sys\\.version_info",
+]
+show_missing = true
+skip_covered = false
+
 [tool.commitizen]
 name = "cz_conventional_commits"
 tag_format = "$version"
