@@ -201,12 +201,20 @@ class TrinoAdapter(DatabaseAdapter):
             columns_sql = ",\n  ".join(column_defs)
 
             # Create an empty table with the correct schema
-            return f"""
-            CREATE TABLE {qualified_table} (
-              {columns_sql}
-            )
-            WITH (format = 'ORC')
-            """
+            # Memory catalog doesn't support table properties like format
+            if self.catalog == "memory":
+                return f"""
+                CREATE TABLE {qualified_table} (
+                  {columns_sql}
+                )
+                """
+            else:
+                return f"""
+                CREATE TABLE {qualified_table} (
+                  {columns_sql}
+                )
+                WITH (format = 'ORC')
+                """
         else:
             # For tables with data, use CTAS with a VALUES clause
             # Build a SELECT statement with literal values for the first row
@@ -236,8 +244,15 @@ class TrinoAdapter(DatabaseAdapter):
                 select_sql += f"\nUNION ALL SELECT {', '.join(row_values)}"
 
             # Create the CTAS statement
-            return f"""
-            CREATE TABLE {qualified_table}
-            WITH (format = 'ORC')
-            AS {select_sql}
-            """
+            # Memory catalog doesn't support table properties like format
+            if self.catalog == "memory":
+                return f"""
+                CREATE TABLE {qualified_table}
+                AS {select_sql}
+                """
+            else:
+                return f"""
+                CREATE TABLE {qualified_table}
+                WITH (format = 'ORC')
+                AS {select_sql}
+                """

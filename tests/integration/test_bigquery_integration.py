@@ -1,7 +1,6 @@
 """Integration tests for BigQuery adapter with pytest configuration."""
 
 import os
-import unittest
 from dataclasses import dataclass
 from datetime import date
 from decimal import Decimal
@@ -141,10 +140,13 @@ class OrdersMockTable(BaseMockTable):
 
 @pytest.mark.integration
 @pytest.mark.bigquery
-class TestBigQueryIntegration(unittest.TestCase):
+@pytest.mark.parametrize(
+    "use_physical_tables", [False, True], ids=["cte_mode", "physical_tables_mode"]
+)
+class TestBigQueryIntegration:
     """Integration tests for BigQuery adapter using pytest configuration."""
 
-    def test_simple_user_query(self):
+    def test_simple_user_query(self, use_physical_tables):
         """Test simple user query with BigQuery adapter."""
 
         @sql_test(
@@ -194,6 +196,7 @@ class TestBigQueryIntegration(unittest.TestCase):
                     ORDER BY lifetime_value DESC
                 """,
                 execution_database=database,
+                use_physical_tables=use_physical_tables,
             )
 
         results = query_premium_users()
@@ -204,7 +207,7 @@ class TestBigQueryIntegration(unittest.TestCase):
         assert results[1].name == "Alice Johnson"
         assert results[1].lifetime_value == Decimal("2500.00")
 
-    def test_user_order_join_query(self):
+    def test_user_order_join_query(self, use_physical_tables):
         """Test join query between users and orders."""
 
         @sql_test(
@@ -276,6 +279,7 @@ class TestBigQueryIntegration(unittest.TestCase):
                     ORDER BY u.user_id
                 """,
                 execution_database=database,
+                use_physical_tables=use_physical_tables,
             )
 
         results = query_user_order_summary()
@@ -290,7 +294,7 @@ class TestBigQueryIntegration(unittest.TestCase):
         assert results[1].total_orders == 1
         assert results[1].total_amount == Decimal("200.00")
 
-    def test_aggregation_with_date_functions(self):
+    def test_aggregation_with_date_functions(self, use_physical_tables):
         """Test aggregation queries with date functions."""
 
         test_orders = [
@@ -320,6 +324,7 @@ class TestBigQueryIntegration(unittest.TestCase):
                     ORDER BY month
                 """,
                 execution_database=database,
+                use_physical_tables=use_physical_tables,
             )
 
         results = query_monthly_revenue()
@@ -342,7 +347,7 @@ class TestBigQueryIntegration(unittest.TestCase):
         assert march.revenue == Decimal("75.00")
 
     @pytest.mark.slow
-    def test_complex_analytical_query(self):
+    def test_complex_analytical_query(self, use_physical_tables):
         """Test complex analytical query with window functions."""
 
         @sql_test(
@@ -426,6 +431,7 @@ class TestBigQueryIntegration(unittest.TestCase):
                     ORDER BY spending_rank
                 """,
                 execution_database=database,
+                use_physical_tables=use_physical_tables,
             )
 
         results = query_user_analytics()
@@ -438,7 +444,7 @@ class TestBigQueryIntegration(unittest.TestCase):
         assert top_spender.total_spent == Decimal("550")
         assert top_spender.user_tier == "Top Spender"
 
-    def test_null_handling_and_edge_cases(self):
+    def test_null_handling_and_edge_cases(self, use_physical_tables):
         """Test handling of NULL values and edge cases."""
 
         @sql_test(
@@ -490,6 +496,7 @@ class TestBigQueryIntegration(unittest.TestCase):
                     ORDER BY user_id
                 """,
                 execution_database=database,
+                use_physical_tables=use_physical_tables,
             )
 
         results = query_null_handling()
@@ -509,7 +516,7 @@ class TestBigQueryIntegration(unittest.TestCase):
         assert results[2].lifetime_value_filled == Decimal("1500.50")
         assert results[2].value_category == "Has Value"
 
-    def test_type_conversion(self):
+    def test_type_conversion(self, use_physical_tables):
         """Test various data type conversions."""
 
         @sql_test(
@@ -536,6 +543,7 @@ class TestBigQueryIntegration(unittest.TestCase):
                         ON u.user_id = o.user_id
                 """,
                 execution_database=database,
+                use_physical_tables=use_physical_tables,
             )
 
         results = query_type_conversion()
@@ -557,7 +565,7 @@ class TestBigQueryIntegration(unittest.TestCase):
         assert result.total_amount == Decimal("123.45")
         assert result.is_active is True
 
-    def test_empty_result_set(self):
+    def test_empty_result_set(self, use_physical_tables):
         """Test handling of empty result sets."""
 
         @sql_test(
@@ -579,6 +587,7 @@ class TestBigQueryIntegration(unittest.TestCase):
                     WHERE user_id = 999  -- No matching user
                 """,
                 execution_database=database,
+                use_physical_tables=use_physical_tables,
             )
 
         results = query_empty_results()
@@ -587,7 +596,7 @@ class TestBigQueryIntegration(unittest.TestCase):
         assert len(results) == 0
         assert results == []
 
-    def test_missing_mock_table_error(self):
+    def test_missing_mock_table_error(self, use_physical_tables):
         """Test that missing mock tables raise appropriate errors."""
 
         @sql_test(
@@ -610,13 +619,14 @@ class TestBigQueryIntegration(unittest.TestCase):
                     GROUP BY u.user_id, u.name
                 """,
                 execution_database=database,
+                use_physical_tables=use_physical_tables,
             )
 
         # Should raise MockTableNotFoundError
-        with self.assertRaises(MockTableNotFoundError):
+        with pytest.raises(MockTableNotFoundError):
             query_missing_table()
 
-    def test_single_user_query_with_physical_tables(self):
+    def test_single_user_query_with_physical_tables(self, use_physical_tables):
         """Test querying a single user with physical tables option."""
 
         @sql_test(
@@ -625,7 +635,6 @@ class TestBigQueryIntegration(unittest.TestCase):
                 UsersMockTable([User(42, "Test User", "test@example.com", date(2023, 1, 1))])
             ],
             result_class=UserOrderSummary,
-            use_physical_tables=True,  # Test physical tables option
         )
         def query_single_user():
             project_id = os.getenv("BIGQUERY_PROJECT_ID", "bigquery-public-data")
@@ -641,6 +650,7 @@ class TestBigQueryIntegration(unittest.TestCase):
                     WHERE user_id = 42
                 """,
                 execution_database="test_db",  # Different database
+                use_physical_tables=use_physical_tables,
             )
 
         results = query_single_user()
@@ -653,7 +663,7 @@ class TestBigQueryIntegration(unittest.TestCase):
         assert user.total_orders == 0
         assert user.total_amount == Decimal("0")
 
-    def test_pattern_decorator_only(self):
+    def test_pattern_decorator_only(self, use_physical_tables):
         """Test Pattern 1: Providing all settings in the decorator."""
 
         test_users = [
@@ -691,6 +701,7 @@ class TestBigQueryIntegration(unittest.TestCase):
                     ORDER BY u.user_id
                 """,
                 execution_database=database,
+                use_physical_tables=use_physical_tables,
             )
 
         results = query_decorator_pattern()
@@ -701,7 +712,7 @@ class TestBigQueryIntegration(unittest.TestCase):
         assert results[0].total_orders == 2
         assert results[0].total_amount == Decimal("250.00")
 
-    def test_pattern_testcase_only(self):
+    def test_pattern_testcase_only(self, use_physical_tables):
         """Test Pattern 2: Providing all settings in the TestCase (require empty decorator)."""
 
         test_users = [
@@ -738,6 +749,7 @@ class TestBigQueryIntegration(unittest.TestCase):
                 mock_tables=[UsersMockTable(test_users), OrdersMockTable(test_orders)],
                 result_class=UserOrderSummary,
                 adapter_type="bigquery",
+                use_physical_tables=use_physical_tables,
             )
 
         results = query_testcase_pattern()
@@ -748,7 +760,7 @@ class TestBigQueryIntegration(unittest.TestCase):
         assert results[0].total_orders == 2
         assert results[0].total_amount == Decimal("250.00")
 
-    def test_pattern_mix_and_match(self):
+    def test_pattern_mix_and_match(self, use_physical_tables):
         """Test Pattern 3: Mix and match decorator and TestCase values."""
 
         test_users = [
@@ -785,6 +797,7 @@ class TestBigQueryIntegration(unittest.TestCase):
                 # We define result_class here instead of in decorator
                 result_class=UserOrderSummary,
                 adapter_type="bigquery",
+                use_physical_tables=use_physical_tables,
             )
 
         results = query_mixed_pattern()
@@ -799,10 +812,13 @@ class TestBigQueryIntegration(unittest.TestCase):
 @pytest.mark.integration
 @pytest.mark.bigquery
 @pytest.mark.slow
+@pytest.mark.parametrize(
+    "use_physical_tables", [False, True], ids=["cte_mode", "physical_tables_mode"]
+)
 class TestBigQueryPerformance:
     """Performance-related integration tests for BigQuery."""
 
-    def test_large_dataset_simulation(self):
+    def test_large_dataset_simulation(self, use_physical_tables):
         """Test with simulated large dataset."""
 
         # Generate larger test dataset
@@ -853,6 +869,7 @@ class TestBigQueryPerformance:
                     WHERE u.is_premium = TRUE
                 """,
                 execution_database=database,
+                use_physical_tables=use_physical_tables,
             )
 
         results = query_large_dataset()

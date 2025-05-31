@@ -67,7 +67,10 @@ Create a dedicated IAM user for GitHub Actions with minimal permissions:
                 "glue:GetDatabase",
                 "glue:GetTable",
                 "glue:GetTables",
-                "glue:GetPartitions"
+                "glue:GetPartitions",
+                "glue:CreateTable",
+                "glue:DeleteTable",
+                "glue:UpdateTable"
             ],
             "Resource": "*"
         }
@@ -226,3 +229,34 @@ strategy:
 ```
 
 This allows running all adapter tests in parallel while maintaining cost control.
+
+## 🗃️ Physical Tables Support
+
+The SQL Testing Library supports two execution modes for Athena:
+
+### CTE Mode (Default)
+- Mock data injected as Common Table Expressions
+- No additional AWS permissions required
+- Works with the basic IAM policy above
+- Suitable for most test scenarios
+
+### Physical Tables Mode
+- Creates temporary external tables in AWS Glue Data Catalog
+- **Requires additional Glue permissions** (included in IAM policy above):
+  - `glue:CreateTable` - Create temporary test tables
+  - `glue:DeleteTable` - Clean up test tables after tests
+  - `glue:UpdateTable` - Modify table metadata if needed
+
+### Why Physical Tables?
+Physical tables are automatically used when:
+- CTE queries exceed Athena's 256KB query size limit
+- Explicitly requested via `use_physical_tables=True` parameter
+- Testing complex scenarios that require persistent table structures
+
+### Troubleshooting Physical Tables
+If you see errors like:
+```
+User: arn:aws:iam::xxx:user/github-actions is not authorized to perform: glue:CreateTable
+```
+
+**Solution**: Ensure your IAM user has all Glue permissions listed in the IAM policy above. The `glue:CreateTable`, `glue:DeleteTable`, and `glue:UpdateTable` permissions are essential for physical table creation and cleanup.

@@ -186,17 +186,17 @@ class TestTrinoAdapter(unittest.TestCase):
         test_datetime = datetime(2023, 1, 15, 10, 30, 45)
         self.assertEqual(
             adapter.format_value_for_cte(test_datetime, datetime),
-            "TIMESTAMP '2023-01-15 10:30:45'",
+            "TIMESTAMP '2023-01-15 10:30:45.000'",
         )
 
-        # Test None (unified approach uses simple NULL for most dialects)
-        self.assertEqual(adapter.format_value_for_cte(None, str), "NULL")
-        self.assertEqual(adapter.format_value_for_cte(None, Decimal), "NULL")
-        self.assertEqual(adapter.format_value_for_cte(None, int), "NULL")
-        self.assertEqual(adapter.format_value_for_cte(None, float), "NULL")
-        self.assertEqual(adapter.format_value_for_cte(None, bool), "NULL")
-        self.assertEqual(adapter.format_value_for_cte(None, date), "NULL")
-        self.assertEqual(adapter.format_value_for_cte(None, datetime), "NULL")
+        # Test None (Trino uses CAST for NULL values)
+        self.assertEqual(adapter.format_value_for_cte(None, str), "CAST(NULL AS VARCHAR)")
+        self.assertEqual(adapter.format_value_for_cte(None, Decimal), "CAST(NULL AS DECIMAL(38,9))")
+        self.assertEqual(adapter.format_value_for_cte(None, int), "CAST(NULL AS BIGINT)")
+        self.assertEqual(adapter.format_value_for_cte(None, float), "CAST(NULL AS DOUBLE)")
+        self.assertEqual(adapter.format_value_for_cte(None, bool), "CAST(NULL AS BOOLEAN)")
+        self.assertEqual(adapter.format_value_for_cte(None, date), "CAST(NULL AS DATE)")
+        self.assertEqual(adapter.format_value_for_cte(None, datetime), "CAST(NULL AS TIMESTAMP)")
 
     def test_create_temp_table(self, mock_trino_connect):
         """Test temp table creation."""

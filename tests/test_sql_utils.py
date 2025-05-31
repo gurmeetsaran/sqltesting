@@ -101,7 +101,7 @@ class TestFormatSQLValue:
         from decimal import Decimal
 
         # Redshift requires explicit type casting for NULL values
-        assert format_sql_value(None, str, "redshift") == "NULL::VARCHAR(1024)"
+        assert format_sql_value(None, str, "redshift") == "NULL::VARCHAR"
         assert format_sql_value(None, int, "redshift") == "NULL::BIGINT"
         assert format_sql_value(None, float, "redshift") == "NULL::DOUBLE PRECISION"
         assert format_sql_value(None, bool, "redshift") == "NULL::BOOLEAN"
@@ -151,10 +151,10 @@ class TestFormatSQLValue:
 
         # Athena and Trino use space separator (don't like 'T')
         result_athena = format_sql_value(test_datetime, datetime, "athena")
-        assert result_athena == "TIMESTAMP '2023-12-25 15:30:45'"
+        assert result_athena == "TIMESTAMP '2023-12-25 15:30:45.000'"
 
         result_trino = format_sql_value(test_datetime, datetime, "trino")
-        assert result_trino == "TIMESTAMP '2023-12-25 15:30:45'"
+        assert result_trino == "TIMESTAMP '2023-12-25 15:30:45.000'"
 
         # Standard uses ISO format
         result_std = format_sql_value(test_datetime, datetime, "standard")

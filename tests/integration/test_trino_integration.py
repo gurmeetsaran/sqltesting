@@ -1,6 +1,5 @@
 """Integration tests for Trino adapter with pytest configuration."""
 
-import unittest
 from dataclasses import dataclass
 from datetime import date, datetime
 from decimal import Decimal
@@ -108,10 +107,13 @@ class ProductsMockTable(BaseMockTable):
 # Test data that will be reused across multiple tests
 @pytest.mark.integration
 @pytest.mark.trino
-class TestTrinoIntegration(unittest.TestCase):
+@pytest.mark.parametrize(
+    "use_physical_tables", [False, True], ids=["cte_mode", "physical_tables_mode"]
+)
+class TestTrinoIntegration:
     """Integration tests for Trino adapter using real database connections."""
 
-    def setUp(self):
+    def setup_method(self):
         """Set up test data for integration tests."""
         self.customers_data = [
             Customer(
@@ -142,7 +144,7 @@ class TestTrinoIntegration(unittest.TestCase):
             Product(5, "Old Monitor", "Electronics", Decimal("150.00"), False),
         ]
 
-    def test_simple_customer_query(self):
+    def test_simple_customer_query(self, use_physical_tables):
         """Test basic customer data retrieval."""
 
         @sql_test(
@@ -183,6 +185,7 @@ class TestTrinoIntegration(unittest.TestCase):
                     FROM customers WHERE customer_id = 1
                 """,
                 execution_database="memory",
+                use_physical_tables=use_physical_tables,
             )
 
         # Execute the test
@@ -191,7 +194,7 @@ class TestTrinoIntegration(unittest.TestCase):
         assert results[0].customer_id == 1
         assert results[0].name == "Alice Johnson"
 
-    def test_customer_order_join(self):
+    def test_customer_order_join(self, use_physical_tables):
         """Test joining customers with orders data."""
 
         @sql_test(
@@ -218,6 +221,7 @@ class TestTrinoIntegration(unittest.TestCase):
                     ORDER BY total_spent DESC
                 """,
                 execution_database="memory",
+                use_physical_tables=use_physical_tables,
             )
 
         # Execute the test
@@ -226,7 +230,7 @@ class TestTrinoIntegration(unittest.TestCase):
         assert all(hasattr(result, "customer_id") for result in results)
         assert all(hasattr(result, "order_count") for result in results)
 
-    def test_date_functions(self):
+    def test_date_functions(self, use_physical_tables):
         """Test date functions and filtering."""
 
         @sql_test(
@@ -248,6 +252,7 @@ class TestTrinoIntegration(unittest.TestCase):
                     ORDER BY signup_date DESC
                 """,
                 execution_database="memory",
+                use_physical_tables=use_physical_tables,
             )
 
         # Execute the test
@@ -255,7 +260,7 @@ class TestTrinoIntegration(unittest.TestCase):
         assert len(results) >= 1
         assert all(hasattr(result, "customer_id") for result in results)
 
-    def test_complex_date_filtering(self):
+    def test_complex_date_filtering(self, use_physical_tables):
         """Test complex date operations and filtering."""
 
         @sql_test(
@@ -277,6 +282,7 @@ class TestTrinoIntegration(unittest.TestCase):
                     AND status IN ('completed', 'pending')
                 """,
                 execution_database="memory",
+                use_physical_tables=use_physical_tables,
             )
 
         # Execute the test
@@ -286,7 +292,7 @@ class TestTrinoIntegration(unittest.TestCase):
         assert hasattr(results[0], "order_count")
         assert results[0].order_count >= 0
 
-    def test_null_handling(self):
+    def test_null_handling(self, use_physical_tables):
         """Test proper handling of NULL values."""
 
         @sql_test(
@@ -322,6 +328,7 @@ class TestTrinoIntegration(unittest.TestCase):
                     ORDER BY customer_id
                 """,
                 execution_database="memory",
+                use_physical_tables=use_physical_tables,
             )
 
         # Execute the test
@@ -330,7 +337,7 @@ class TestTrinoIntegration(unittest.TestCase):
         assert all(hasattr(result, "customer_id") for result in results)
         assert all(hasattr(result, "total_amount") for result in results)
 
-    def test_string_functions(self):
+    def test_string_functions(self, use_physical_tables):
         """Test string manipulation functions."""
 
         @sql_test(
@@ -352,6 +359,7 @@ class TestTrinoIntegration(unittest.TestCase):
                     ORDER BY name
                 """,
                 execution_database="memory",
+                use_physical_tables=use_physical_tables,
             )
 
         # Execute the test
@@ -359,7 +367,7 @@ class TestTrinoIntegration(unittest.TestCase):
         assert len(results) >= 1
         assert all(hasattr(result, "customer_id") for result in results)
 
-    def test_aggregation_functions(self):
+    def test_aggregation_functions(self, use_physical_tables):
         """Test aggregation and grouping operations."""
 
         @sql_test(
@@ -381,6 +389,7 @@ class TestTrinoIntegration(unittest.TestCase):
                     ORDER BY avg_price DESC
                 """,
                 execution_database="memory",
+                use_physical_tables=use_physical_tables,
             )
 
         # Execute the test
@@ -389,7 +398,7 @@ class TestTrinoIntegration(unittest.TestCase):
         assert all(hasattr(result, "category") for result in results)
         assert all(hasattr(result, "avg_price") for result in results)
 
-    def test_boolean_operations(self):
+    def test_boolean_operations(self, use_physical_tables):
         """Test boolean logic and conditions."""
 
         @sql_test(
@@ -412,6 +421,7 @@ class TestTrinoIntegration(unittest.TestCase):
                     ORDER BY lifetime_value DESC
                 """,
                 execution_database="memory",
+                use_physical_tables=use_physical_tables,
             )
 
         # Execute the test
@@ -420,7 +430,7 @@ class TestTrinoIntegration(unittest.TestCase):
         assert all(hasattr(result, "customer_id") for result in results)
         assert results[0].customer_id == 3
 
-    def test_window_functions(self):
+    def test_window_functions(self, use_physical_tables):
         """Test window functions and ranking."""
 
         @sql_test(
@@ -456,6 +466,7 @@ class TestTrinoIntegration(unittest.TestCase):
                     ORDER BY total_spent DESC
                 """,
                 execution_database="memory",
+                use_physical_tables=use_physical_tables,
             )
 
         # Execute the test
@@ -463,7 +474,7 @@ class TestTrinoIntegration(unittest.TestCase):
         assert len(results) >= 1
         assert all(hasattr(result, "customer_id") for result in results)
 
-    def test_case_statements(self):
+    def test_case_statements(self, use_physical_tables):
         """Test CASE statements and conditional logic."""
 
         @sql_test(
@@ -492,6 +503,7 @@ class TestTrinoIntegration(unittest.TestCase):
                     ORDER BY avg_price DESC
                 """,
                 execution_database="memory",
+                use_physical_tables=use_physical_tables,
             )
 
         # Execute the test
@@ -501,7 +513,7 @@ class TestTrinoIntegration(unittest.TestCase):
         assert all(hasattr(result, "avg_price") for result in results)
         assert all(result.product_count > 0 for result in results)
 
-    def test_subquery_operations(self):
+    def test_subquery_operations(self, use_physical_tables):
         """Test subquery operations and EXISTS clauses."""
 
         @sql_test(
@@ -531,6 +543,7 @@ class TestTrinoIntegration(unittest.TestCase):
                     ORDER BY c.customer_id
                 """,
                 execution_database="memory",
+                use_physical_tables=use_physical_tables,
             )
 
         # Execute the test

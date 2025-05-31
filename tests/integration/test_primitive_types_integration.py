@@ -1,7 +1,6 @@
 """Integration tests for primitive types across all database adapters."""
 
 import os
-import unittest
 from dataclasses import dataclass
 from datetime import date, datetime
 from decimal import Decimal
@@ -94,71 +93,193 @@ class PrimitiveTypesMockTable(BaseMockTable):
 
 
 @pytest.mark.integration
-class TestPrimitiveTypesIntegration(unittest.TestCase):
+@pytest.mark.parametrize("adapter_type", ["athena", "bigquery", "redshift", "trino"])
+@pytest.mark.parametrize(
+    "use_physical_tables", [False, True], ids=["cte_mode", "physical_tables_mode"]
+)
+class TestPrimitiveTypesIntegration:
     """Integration tests for primitive types across all database adapters."""
 
-    def test_athena_primitive_types(self):
-        """Test all primitive types with Athena adapter."""
+    @pytest.fixture(autouse=True)
+    def setup_test_data(self, adapter_type):
+        """Set up test data specific to each adapter."""
+        if adapter_type == "athena":
+            self.test_data = [
+                PrimitiveTypes(
+                    int_col=2147483647,  # Max 32-bit int
+                    float_col=3.14159265359,
+                    decimal_col=Decimal("123456.789"),
+                    string_col="Hello Athena",
+                    varchar_col="VARCHAR test",
+                    boolean_col=True,
+                    date_col=date(2023, 12, 25),
+                    timestamp_col=datetime(2023, 12, 25, 15, 30, 45),
+                    optional_string="Not null",
+                    optional_int=42,
+                    optional_decimal=Decimal("999.99"),
+                    optional_bool=False,
+                    optional_date=date(2023, 6, 15),
+                    optional_timestamp=datetime(2023, 6, 15, 12, 0, 0),
+                ),
+                PrimitiveTypes(
+                    int_col=-2147483648,  # Min 32-bit int
+                    float_col=-2.71828,
+                    decimal_col=Decimal("-987654.321"),
+                    string_col="Test with 'quotes'",
+                    varchar_col="Special chars: !@#$%^&*()",
+                    boolean_col=False,
+                    date_col=date(2024, 1, 1),
+                    timestamp_col=datetime(2024, 1, 1, 0, 0, 0),
+                    optional_string=None,
+                    optional_int=None,
+                    optional_decimal=None,
+                    optional_bool=None,
+                    optional_date=None,
+                    optional_timestamp=None,
+                ),
+                PrimitiveTypes(
+                    int_col=0,
+                    float_col=0.0,
+                    decimal_col=Decimal("0"),
+                    string_col="",
+                    varchar_col="Unicode test: 你好世界",
+                    boolean_col=True,
+                    date_col=date(1970, 1, 1),  # Unix epoch
+                    timestamp_col=datetime(1970, 1, 1, 0, 0, 1),
+                    optional_string="",
+                    optional_int=0,
+                    optional_decimal=Decimal("0"),
+                    optional_bool=False,
+                    optional_date=date(2000, 2, 29),  # Leap year
+                    optional_timestamp=datetime(2000, 2, 29, 23, 59, 59),
+                ),
+            ]
+            self.database_name = os.getenv("AWS_ATHENA_DATABASE", "test_db")
+            self.expected_results = 3
 
-        test_data = [
-            PrimitiveTypes(
-                int_col=2147483647,  # Max 32-bit int
-                float_col=3.14159265359,
-                decimal_col=Decimal("123456.789"),
-                string_col="Hello Athena",
-                varchar_col="VARCHAR test",
-                boolean_col=True,
-                date_col=date(2023, 12, 25),
-                timestamp_col=datetime(2023, 12, 25, 15, 30, 45),
-                optional_string="Not null",
-                optional_int=42,
-                optional_decimal=Decimal("999.99"),
-                optional_bool=False,
-                optional_date=date(2023, 6, 15),
-                optional_timestamp=datetime(2023, 6, 15, 12, 0, 0),
-            ),
-            PrimitiveTypes(
-                int_col=-2147483648,  # Min 32-bit int
-                float_col=-2.71828,
-                decimal_col=Decimal("-987654.321"),
-                string_col="Test with 'quotes'",
-                varchar_col="Special chars: !@#$%^&*()",
-                boolean_col=False,
-                date_col=date(2024, 1, 1),
-                timestamp_col=datetime(2024, 1, 1, 0, 0, 0),
-                optional_string=None,
-                optional_int=None,
-                optional_decimal=None,
-                optional_bool=None,
-                optional_date=None,
-                optional_timestamp=None,
-            ),
-            PrimitiveTypes(
-                int_col=0,
-                float_col=0.0,
-                decimal_col=Decimal("0"),
-                string_col="",
-                varchar_col="Unicode test: 你好世界",
-                boolean_col=True,
-                date_col=date(1970, 1, 1),  # Unix epoch
-                timestamp_col=datetime(1970, 1, 1, 0, 0, 1),
-                optional_string="",
-                optional_int=0,
-                optional_decimal=Decimal("0"),
-                optional_bool=False,
-                optional_date=date(2000, 2, 29),  # Leap year
-                optional_timestamp=datetime(2000, 2, 29, 23, 59, 59),
-            ),
-        ]
+        elif adapter_type == "bigquery":
+            self.test_data = [
+                PrimitiveTypes(
+                    int_col=9223372036854775807,  # Max 64-bit int
+                    float_col=1.7976931348623157e308,  # Near max float64
+                    decimal_col=Decimal("99999999999999999999999999999.999999999"),
+                    string_col="Hello BigQuery",
+                    varchar_col="BigQuery string test",
+                    boolean_col=True,
+                    date_col=date(9999, 12, 31),  # Max date
+                    timestamp_col=datetime(9999, 12, 31, 23, 59, 59),
+                    optional_string="BigQuery optional",
+                    optional_int=123456789,
+                    optional_decimal=Decimal("12345.6789"),
+                    optional_bool=True,
+                    optional_date=date(2023, 7, 20),
+                    optional_timestamp=datetime(2023, 7, 20, 14, 30, 0),
+                ),
+                PrimitiveTypes(
+                    int_col=-9223372036854775808,  # Min 64-bit int
+                    float_col=-1.7976931348623157e308,  # Near min float64
+                    decimal_col=Decimal("-99999999999999999999999999999.999999999"),
+                    string_col="BigQuery 'quoted' string",
+                    varchar_col="Newline\nTab\tCarriage\rReturn",
+                    boolean_col=False,
+                    date_col=date(1, 1, 1),  # Min date
+                    timestamp_col=datetime(1, 1, 1, 0, 0, 0),
+                    optional_string=None,
+                    optional_int=None,
+                    optional_decimal=None,
+                    optional_bool=None,
+                    optional_date=None,
+                    optional_timestamp=None,
+                ),
+            ]
+            self.database_name = os.getenv("GCP_PROJECT_ID", "test_project")
+            self.expected_results = 2
+
+        elif adapter_type == "redshift":
+            self.test_data = [
+                PrimitiveTypes(
+                    int_col=2147483647,  # Max int
+                    float_col=1.234567890123456789,
+                    decimal_col=Decimal("999999999999999999999999999.999999999"),
+                    string_col="Hello Redshift",
+                    varchar_col="Redshift varchar test",
+                    boolean_col=True,
+                    date_col=date(2262, 4, 11),  # Near max date
+                    timestamp_col=datetime(2262, 4, 11, 23, 47, 16),
+                    optional_string="Redshift optional",
+                    optional_int=987654321,
+                    optional_decimal=Decimal("54321.12345"),
+                    optional_bool=True,
+                    optional_date=date(2023, 8, 15),
+                    optional_timestamp=datetime(2023, 8, 15, 16, 45, 30),
+                ),
+                PrimitiveTypes(
+                    int_col=-2147483648,  # Min int
+                    float_col=-9.87654321e-10,
+                    decimal_col=Decimal("-999999999999999999999999999.999999999"),
+                    string_col="Redshift with\ttabs and\nnewlines",
+                    varchar_col="Special: áéíóú çñü",
+                    boolean_col=False,
+                    date_col=date(1900, 1, 1),
+                    timestamp_col=datetime(1900, 1, 1, 0, 0, 0),
+                    optional_string=None,
+                    optional_int=None,
+                    optional_decimal=None,
+                    optional_bool=None,
+                    optional_date=None,
+                    optional_timestamp=None,
+                ),
+            ]
+            self.database_name = "test_db"
+            self.expected_results = 2
+
+        elif adapter_type == "trino":
+            self.test_data = [
+                PrimitiveTypes(
+                    int_col=9223372036854775807,  # Max bigint
+                    float_col=1.23456789012345,
+                    decimal_col=Decimal("12345678901234567890123456789.123456789"),
+                    string_col="Hello Trino",
+                    varchar_col="Trino varchar test",
+                    boolean_col=True,
+                    date_col=date(2023, 7, 11),  # Max date for Trino
+                    timestamp_col=datetime(2023, 12, 31, 23, 59, 59),
+                    optional_string="Trino optional",
+                    optional_int=555666777,
+                    optional_decimal=Decimal("98765.43210"),
+                    optional_bool=True,
+                    optional_date=date(2023, 9, 10),
+                    optional_timestamp=datetime(2023, 9, 10, 18, 30, 45),
+                ),
+                PrimitiveTypes(
+                    int_col=-9223372036854775808,  # Min bigint
+                    float_col=-1.23456789012345e-10,
+                    decimal_col=Decimal("-12345678901234567890123456789.123456789"),
+                    string_col="Trino string with 'single' and \"double\" quotes",
+                    varchar_col='JSON-like: {"key": "value"}',
+                    boolean_col=False,
+                    date_col=date(1582, 10, 15),  # Gregorian calendar start
+                    timestamp_col=datetime(1582, 10, 15, 0, 0, 0),
+                    optional_string=None,
+                    optional_int=None,
+                    optional_decimal=None,
+                    optional_bool=None,
+                    optional_date=None,
+                    optional_timestamp=None,
+                ),
+            ]
+            self.database_name = "memory"
+            self.expected_results = 2
+
+    def test_primitive_types_comprehensive(self, adapter_type, use_physical_tables):
+        """Test all primitive types comprehensively for the specified adapter."""
 
         @sql_test(
-            adapter_type="athena",
-            mock_tables=[
-                PrimitiveTypesMockTable(test_data, os.getenv("AWS_ATHENA_DATABASE", "test_db"))
-            ],
+            adapter_type=adapter_type,
+            mock_tables=[PrimitiveTypesMockTable(self.test_data, self.database_name)],
             result_class=PrimitiveTypesResult,
         )
-        def query_athena_primitive_types():
+        def query_primitive_types():
             return TestCase(
                 query="""
                     SELECT
@@ -179,13 +300,25 @@ class TestPrimitiveTypesIntegration(unittest.TestCase):
                     FROM primitive_types
                     ORDER BY int_col DESC
                 """,
-                execution_database=os.getenv("AWS_ATHENA_DATABASE", "test_db"),
+                execution_database=self.database_name,
+                use_physical_tables=use_physical_tables,
             )
 
-        results = query_athena_primitive_types()
+        results = query_primitive_types()
+        assert len(results) == self.expected_results
 
-        assert len(results) == 3
+        # Test basic properties based on adapter type
+        if adapter_type == "athena":
+            self._verify_athena_results(results)
+        elif adapter_type == "bigquery":
+            self._verify_bigquery_results(results)
+        elif adapter_type == "redshift":
+            self._verify_redshift_results(results)
+        elif adapter_type == "trino":
+            self._verify_trino_results(results)
 
+    def _verify_athena_results(self, results):
+        """Verify Athena-specific results."""
         # Verify max int row
         max_row = results[0]
         assert max_row.int_col == 2147483647
@@ -237,84 +370,17 @@ class TestPrimitiveTypesIntegration(unittest.TestCase):
         assert min_row.optional_date is None
         assert min_row.optional_timestamp is None
 
-    def test_bigquery_primitive_types(self):
-        """Test all primitive types with BigQuery adapter."""
-
-        test_data = [
-            PrimitiveTypes(
-                int_col=9223372036854775807,  # Max 64-bit int
-                float_col=1.7976931348623157e308,  # Near max float64
-                decimal_col=Decimal("99999999999999999999999999999.999999999"),
-                string_col="Hello BigQuery",
-                varchar_col="BigQuery string test",
-                boolean_col=True,
-                date_col=date(9999, 12, 31),  # Max date
-                timestamp_col=datetime(9999, 12, 31, 23, 59, 59),
-                optional_string="BigQuery optional",
-                optional_int=123456789,
-                optional_decimal=Decimal("12345.6789"),
-                optional_bool=True,
-                optional_date=date(2023, 7, 20),
-                optional_timestamp=datetime(2023, 7, 20, 14, 30, 0),
-            ),
-            PrimitiveTypes(
-                int_col=-9223372036854775808,  # Min 64-bit int
-                float_col=-1.7976931348623157e308,  # Near min float64
-                decimal_col=Decimal("-99999999999999999999999999999.999999999"),
-                string_col="BigQuery 'quoted' string",
-                varchar_col="Newline\nTab\tCarriage\rReturn",
-                boolean_col=False,
-                date_col=date(1, 1, 1),  # Min date
-                timestamp_col=datetime(1, 1, 1, 0, 0, 0),
-                optional_string=None,
-                optional_int=None,
-                optional_decimal=None,
-                optional_bool=None,
-                optional_date=None,
-                optional_timestamp=None,
-            ),
-        ]
-
-        @sql_test(
-            adapter_type="bigquery",
-            mock_tables=[
-                PrimitiveTypesMockTable(test_data, os.getenv("GCP_PROJECT_ID", "test_project"))
-            ],
-            result_class=PrimitiveTypesResult,
-        )
-        def query_bigquery_primitive_types():
-            return TestCase(
-                query="""
-                    SELECT
-                        int_col,
-                        float_col,
-                        decimal_col,
-                        string_col,
-                        varchar_col,
-                        boolean_col,
-                        date_col,
-                        timestamp_col,
-                        optional_string,
-                        optional_int,
-                        optional_decimal,
-                        optional_bool,
-                        optional_date,
-                        optional_timestamp
-                    FROM primitive_types
-                    ORDER BY int_col DESC
-                """,
-                execution_database=os.getenv("GCP_PROJECT_ID", "test_project"),
-            )
-
-        results = query_bigquery_primitive_types()
-
-        assert len(results) == 2
-
+    def _verify_bigquery_results(self, results):
+        """Verify BigQuery-specific results."""
         # Verify max values row
         max_row = results[0]
         assert max_row.int_col == 9223372036854775807
         assert max_row.float_col == 1.7976931348623157e308
-        assert max_row.decimal_col == Decimal("1E+29")  # BigQuery returns scientific notation
+        # BigQuery returns scientific notation in CTE mode, exact value in physical tables mode
+        assert max_row.decimal_col in [
+            Decimal("1E+29"),
+            Decimal("99999999999999999999999999999.999999999"),
+        ]
         assert max_row.string_col == "Hello BigQuery"
         assert max_row.varchar_col == "BigQuery string test"
         assert max_row.boolean_col is True
@@ -331,7 +397,11 @@ class TestPrimitiveTypesIntegration(unittest.TestCase):
         min_row = results[1]
         assert min_row.int_col == -9223372036854775808
         assert min_row.float_col == -1.7976931348623157e308
-        assert min_row.decimal_col == Decimal("-1E+29")  # BigQuery returns scientific notation
+        # BigQuery returns scientific notation in CTE mode, exact value in physical tables mode
+        assert min_row.decimal_col in [
+            Decimal("-1E+29"),
+            Decimal("-99999999999999999999999999999.999999999"),
+        ]
         assert min_row.string_col == "BigQuery 'quoted' string"
         assert min_row.varchar_col == "Newline\nTab\tCarriage\rReturn"
         assert min_row.boolean_col is False
@@ -344,77 +414,8 @@ class TestPrimitiveTypesIntegration(unittest.TestCase):
         assert min_row.optional_date is None
         assert min_row.optional_timestamp is None
 
-    def test_redshift_primitive_types(self):
-        """Test all primitive types with Redshift adapter."""
-
-        test_data = [
-            PrimitiveTypes(
-                int_col=2147483647,  # Max int
-                float_col=1.234567890123456789,
-                decimal_col=Decimal("999999999999999999999999999.999999999"),
-                string_col="Hello Redshift",
-                varchar_col="Redshift varchar test",
-                boolean_col=True,
-                date_col=date(2262, 4, 11),  # Near max date
-                timestamp_col=datetime(2262, 4, 11, 23, 47, 16),
-                optional_string="Redshift optional",
-                optional_int=987654321,
-                optional_decimal=Decimal("54321.12345"),
-                optional_bool=True,
-                optional_date=date(2023, 8, 15),
-                optional_timestamp=datetime(2023, 8, 15, 16, 45, 30),
-            ),
-            PrimitiveTypes(
-                int_col=-2147483648,  # Min int
-                float_col=-9.87654321e-10,
-                decimal_col=Decimal("-999999999999999999999999999.999999999"),
-                string_col="Redshift with\ttabs and\nnewlines",
-                varchar_col="Special: áéíóú çñü",
-                boolean_col=False,
-                date_col=date(1900, 1, 1),
-                timestamp_col=datetime(1900, 1, 1, 0, 0, 0),
-                optional_string=None,
-                optional_int=None,
-                optional_decimal=None,
-                optional_bool=None,
-                optional_date=None,
-                optional_timestamp=None,
-            ),
-        ]
-
-        @sql_test(
-            adapter_type="redshift",
-            mock_tables=[PrimitiveTypesMockTable(test_data, "test_db")],
-            result_class=PrimitiveTypesResult,
-        )
-        def query_redshift_primitive_types():
-            return TestCase(
-                query="""
-                    SELECT
-                        int_col,
-                        float_col,
-                        decimal_col,
-                        string_col,
-                        varchar_col,
-                        boolean_col,
-                        date_col,
-                        timestamp_col,
-                        optional_string,
-                        optional_int,
-                        optional_decimal,
-                        optional_bool,
-                        optional_date,
-                        optional_timestamp
-                    FROM primitive_types
-                    ORDER BY int_col DESC
-                """,
-                execution_database="test_db",
-            )
-
-        results = query_redshift_primitive_types()
-
-        assert len(results) == 2
-
+    def _verify_redshift_results(self, results):
+        """Verify Redshift-specific results."""
         # Verify max values row
         max_row = results[0]
         assert max_row.int_col == 2147483647
@@ -449,77 +450,8 @@ class TestPrimitiveTypesIntegration(unittest.TestCase):
         assert min_row.optional_date is None
         assert min_row.optional_timestamp is None
 
-    def test_trino_primitive_types(self):
-        """Test all primitive types with Trino adapter."""
-
-        test_data = [
-            PrimitiveTypes(
-                int_col=9223372036854775807,  # Max bigint
-                float_col=1.23456789012345,
-                decimal_col=Decimal("12345678901234567890123456789.123456789"),
-                string_col="Hello Trino",
-                varchar_col="Trino varchar test",
-                boolean_col=True,
-                date_col=date(2023, 7, 11),  # Max date for Trino
-                timestamp_col=datetime(2023, 12, 31, 23, 59, 59),
-                optional_string="Trino optional",
-                optional_int=555666777,
-                optional_decimal=Decimal("98765.43210"),
-                optional_bool=True,
-                optional_date=date(2023, 9, 10),
-                optional_timestamp=datetime(2023, 9, 10, 18, 30, 45),
-            ),
-            PrimitiveTypes(
-                int_col=-9223372036854775808,  # Min bigint
-                float_col=-1.23456789012345e-10,
-                decimal_col=Decimal("-12345678901234567890123456789.123456789"),
-                string_col="Trino string with 'single' and \"double\" quotes",
-                varchar_col='JSON-like: {"key": "value"}',
-                boolean_col=False,
-                date_col=date(1582, 10, 15),  # Gregorian calendar start
-                timestamp_col=datetime(1582, 10, 15, 0, 0, 0),
-                optional_string=None,
-                optional_int=None,
-                optional_decimal=None,
-                optional_bool=None,
-                optional_date=None,
-                optional_timestamp=None,
-            ),
-        ]
-
-        @sql_test(
-            adapter_type="trino",
-            mock_tables=[PrimitiveTypesMockTable(test_data, "memory")],
-            result_class=PrimitiveTypesResult,
-        )
-        def query_trino_primitive_types():
-            return TestCase(
-                query="""
-                    SELECT
-                        int_col,
-                        float_col,
-                        decimal_col,
-                        string_col,
-                        varchar_col,
-                        boolean_col,
-                        date_col,
-                        timestamp_col,
-                        optional_string,
-                        optional_int,
-                        optional_decimal,
-                        optional_bool,
-                        optional_date,
-                        optional_timestamp
-                    FROM primitive_types
-                    ORDER BY int_col DESC
-                """,
-                execution_database="memory",
-            )
-
-        results = query_trino_primitive_types()
-
-        assert len(results) == 2
-
+    def _verify_trino_results(self, results):
+        """Verify Trino-specific results."""
         # Verify max values row
         max_row = results[0]
         assert max_row.int_col == 9223372036854775807
@@ -554,10 +486,22 @@ class TestPrimitiveTypesIntegration(unittest.TestCase):
         assert min_row.optional_date is None
         assert min_row.optional_timestamp is None
 
-    def test_snowflake_primitive_types(self):
-        """Test all primitive types with Snowflake adapter."""
 
-        test_data = [
+# Snowflake primitive types test - separate class without parametrization
+@pytest.mark.integration
+@pytest.mark.snowflake
+@pytest.mark.parametrize(
+    "use_physical_tables",
+    [False],  # Physical tables disabled for Snowflake due to environment limitations
+    ids=["cte_mode"],
+)
+class TestSnowflakePrimitiveTypesIntegration:
+    """Integration tests for primitive types with Snowflake adapter (CTE mode only)."""
+
+    @pytest.fixture(autouse=True)
+    def setup_snowflake_data(self):
+        """Set up Snowflake-specific test data."""
+        self.test_data = [
             PrimitiveTypes(
                 int_col=9223372036854775807,  # Max number
                 float_col=1.7976931348623157e308,
@@ -591,12 +535,14 @@ class TestPrimitiveTypesIntegration(unittest.TestCase):
                 optional_timestamp=None,
             ),
         ]
+        self.database_name = os.getenv("SNOWFLAKE_DATABASE", "test_db")
+
+    def test_snowflake_primitive_types(self, use_physical_tables):
+        """Test all primitive types with Snowflake adapter."""
 
         @sql_test(
             adapter_type="snowflake",
-            mock_tables=[
-                PrimitiveTypesMockTable(test_data, os.getenv("SNOWFLAKE_DATABASE", "test_db"))
-            ],
+            mock_tables=[PrimitiveTypesMockTable(self.test_data, self.database_name)],
             result_class=PrimitiveTypesResult,
         )
         def query_snowflake_primitive_types():
@@ -620,7 +566,8 @@ class TestPrimitiveTypesIntegration(unittest.TestCase):
                     FROM primitive_types
                     ORDER BY int_col DESC
                 """,
-                execution_database=os.getenv("SNOWFLAKE_DATABASE", "test_db"),
+                execution_database=self.database_name,
+                use_physical_tables=use_physical_tables,
             )
 
         results = query_snowflake_primitive_types()
