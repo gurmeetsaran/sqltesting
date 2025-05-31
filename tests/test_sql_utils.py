@@ -2,7 +2,7 @@
 
 import pytest
 
-from sql_testing_library.sql_utils import escape_sql_string, format_sql_value
+from sql_testing_library._sql_utils import escape_sql_string, format_sql_value
 
 
 class TestSQLStringEscaping:

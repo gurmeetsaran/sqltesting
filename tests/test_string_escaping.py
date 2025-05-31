@@ -5,12 +5,12 @@ from typing import Optional
 
 import pytest
 
-from sql_testing_library.adapters.athena import AthenaAdapter
-from sql_testing_library.adapters.bigquery import BigQueryAdapter
-from sql_testing_library.adapters.redshift import RedshiftAdapter
-from sql_testing_library.adapters.snowflake import SnowflakeAdapter
-from sql_testing_library.adapters.trino import TrinoAdapter
-from sql_testing_library.mock_table import BaseMockTable
+from sql_testing_library._adapters.athena import AthenaAdapter
+from sql_testing_library._adapters.bigquery import BigQueryAdapter
+from sql_testing_library._adapters.redshift import RedshiftAdapter
+from sql_testing_library._adapters.snowflake import SnowflakeAdapter
+from sql_testing_library._adapters.trino import TrinoAdapter
+from sql_testing_library._mock_table import BaseMockTable
 
 
 @dataclass

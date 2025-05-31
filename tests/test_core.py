@@ -5,8 +5,8 @@ Tests for the core SQL testing framework.
 import unittest
 from unittest.mock import MagicMock
 
-from sql_testing_library.core import SQLTestFramework
-from sql_testing_library.exceptions import SQLParseError
+from sql_testing_library._core import SQLTestFramework
+from sql_testing_library._exceptions import SQLParseError
 
 
 class TestSQLParsingFunctions(unittest.TestCase):

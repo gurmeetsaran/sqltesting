@@ -8,7 +8,7 @@ from unittest import mock
 
 import pytest
 
-from sql_testing_library.pytest_plugin import SQLTestDecorator
+from sql_testing_library._pytest_plugin import SQLTestDecorator
 
 
 class TestPytestPluginConfig(unittest.TestCase):

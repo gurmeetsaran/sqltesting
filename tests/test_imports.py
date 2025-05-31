@@ -73,7 +73,7 @@ class TestAdapterImports(unittest.TestCase):
 
     def test_adapters_init_import(self):
         """Test adapters __init__.py imports."""
-        from sql_testing_library.adapters import __all__
+        from sql_testing_library._adapters import __all__
 
         self.assertIsInstance(__all__, list)
         self.assertGreater(len(__all__), 0)
@@ -82,22 +82,22 @@ class TestAdapterImports(unittest.TestCase):
         """Test that adapters are conditionally imported."""
         # Test BigQuery adapter import if available
         try:
-            from sql_testing_library.adapters import BigQueryAdapter
+            from sql_testing_library._adapters import BigQueryAdapter
 
             self.assertIsNotNone(BigQueryAdapter)
 
-            from sql_testing_library.adapters import __all__
+            from sql_testing_library._adapters import __all__
 
             self.assertIn("BigQueryAdapter", __all__)
         except ImportError:
             # BigQuery not available, should not be in __all__
-            from sql_testing_library.adapters import __all__
+            from sql_testing_library._adapters import __all__
 
             self.assertNotIn("BigQueryAdapter", __all__)
 
     def test_base_adapter_import(self):
         """Test base adapter import."""
-        from sql_testing_library.adapters.base import DatabaseAdapter
+        from sql_testing_library._adapters.base import DatabaseAdapter
 
         self.assertIsNotNone(DatabaseAdapter)
 
@@ -107,7 +107,7 @@ class TestAdapterImports(unittest.TestCase):
 
     def test_adapter_all_list(self):
         """Test adapter __all__ list."""
-        from sql_testing_library.adapters import __all__
+        from sql_testing_library._adapters import __all__
 
         self.assertIsInstance(__all__, list)
 

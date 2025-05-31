@@ -6,9 +6,9 @@ from unittest import mock
 
 import pandas as pd
 
-from sql_testing_library.adapters.snowflake import SnowflakeAdapter
-from sql_testing_library.core import SQLTestCase, SQLTestFramework
-from sql_testing_library.mock_table import BaseMockTable
+from sql_testing_library._adapters.snowflake import SnowflakeAdapter
+from sql_testing_library._core import SQLTestCase, SQLTestFramework
+from sql_testing_library._mock_table import BaseMockTable
 
 
 # Add a mock_table function since it doesn't exist in the core module

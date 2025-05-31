@@ -8,8 +8,8 @@ from typing import Any, List, Optional, Type, Union, get_args
 
 import pandas as pd
 
-from ..mock_table import BaseMockTable
-from ..types import BaseTypeConverter
+from .._mock_table import BaseMockTable
+from .._types import BaseTypeConverter
 from .base import DatabaseAdapter
 
 
@@ -165,7 +165,7 @@ class SnowflakeAdapter(DatabaseAdapter):
 
     def format_value_for_cte(self, value: Any, column_type: type) -> str:
         """Format value for Snowflake CTE VALUES clause."""
-        from ..sql_utils import format_sql_value
+        from .._sql_utils import format_sql_value
 
         return format_sql_value(value, column_type, dialect="snowflake")
 

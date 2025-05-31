@@ -4,9 +4,9 @@ import contextlib
 import unittest
 from unittest.mock import MagicMock, patch
 
-from sql_testing_library.adapters.base import DatabaseAdapter
-from sql_testing_library.core import SQLTestCase, SQLTestFramework
-from sql_testing_library.mock_table import BaseMockTable
+from sql_testing_library._adapters.base import DatabaseAdapter
+from sql_testing_library._core import SQLTestCase, SQLTestFramework
+from sql_testing_library._mock_table import BaseMockTable
 
 
 class MockAdapter(DatabaseAdapter):
@@ -28,7 +28,7 @@ class MockAdapter(DatabaseAdapter):
         return str(value)
 
     def get_type_converter(self):
-        from sql_testing_library.types import BaseTypeConverter
+        from sql_testing_library._types import BaseTypeConverter
 
         return BaseTypeConverter()
 
@@ -107,10 +107,10 @@ class TestSQLTestFrameworkExtra(unittest.TestCase):
 
         self.assertIn("result_class must be provided", str(context.exception))
 
-    @patch("sql_testing_library.core.sqlglot")
+    @patch("sql_testing_library._core.sqlglot")
     def test_sql_parsing_error(self, mock_sqlglot):
         """Test SQL parsing error handling."""
-        from sql_testing_library.exceptions import SQLParseError
+        from sql_testing_library._exceptions import SQLParseError
 
         # Mock sqlglot to raise an exception
         mock_sqlglot.parse_one.side_effect = Exception("Parse error")

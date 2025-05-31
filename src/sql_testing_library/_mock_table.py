@@ -14,7 +14,7 @@ from typing import (
 
 import pandas as pd
 
-from .types import unwrap_optional_type
+from ._types import unwrap_optional_type
 
 
 try:

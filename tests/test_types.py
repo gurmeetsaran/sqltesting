@@ -5,7 +5,7 @@ from datetime import date, datetime
 from decimal import Decimal
 from typing import Optional, Union
 
-from sql_testing_library.types import BaseTypeConverter, unwrap_optional_type
+from sql_testing_library._types import BaseTypeConverter, unwrap_optional_type
 
 
 class TestBaseTypeConverter(unittest.TestCase):

@@ -32,20 +32,20 @@ class TestCoverageBoost(unittest.TestCase):
         # This will execute all the conditional imports
 
         # Test __all__ is populated
-        from sql_testing_library.adapters import __all__
+        from sql_testing_library._adapters import __all__
 
         self.assertIsInstance(__all__, list)
 
         # Try importing some adapters that should be available
         try:
-            from sql_testing_library.adapters import BigQueryAdapter
+            from sql_testing_library._adapters import BigQueryAdapter
 
             self.assertIsNotNone(BigQueryAdapter)
         except ImportError:
             pass  # BigQuery not available in this environment
 
         try:
-            from sql_testing_library.adapters import AthenaAdapter
+            from sql_testing_library._adapters import AthenaAdapter
 
             self.assertIsNotNone(AthenaAdapter)
         except ImportError:
@@ -53,7 +53,7 @@ class TestCoverageBoost(unittest.TestCase):
 
     def test_exception_classes_basic(self):
         """Test basic exception class instantiation."""
-        from sql_testing_library.exceptions import (
+        from sql_testing_library._exceptions import (
             MockTableNotFoundError,
             QuerySizeLimitExceeded,
             SQLParseError,
@@ -79,7 +79,7 @@ class TestCoverageBoost(unittest.TestCase):
 
     def test_type_converter_basic(self):
         """Test basic type converter functionality."""
-        from sql_testing_library.types import BaseTypeConverter
+        from sql_testing_library._types import BaseTypeConverter
 
         converter = BaseTypeConverter()
 
@@ -94,7 +94,7 @@ class TestCoverageBoost(unittest.TestCase):
 
     def test_mock_table_basic(self):
         """Test basic mock table functionality."""
-        from sql_testing_library.mock_table import BaseMockTable
+        from sql_testing_library._mock_table import BaseMockTable
 
         class SimpleMockTable(BaseMockTable):
             def get_database_name(self) -> str:

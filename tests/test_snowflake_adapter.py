@@ -8,11 +8,11 @@ from unittest import mock
 
 import pandas as pd
 
-from sql_testing_library.adapters.snowflake import (
+from sql_testing_library._adapters.snowflake import (
     SnowflakeAdapter,
     SnowflakeTypeConverter,
 )
-from sql_testing_library.mock_table import BaseMockTable
+from sql_testing_library._mock_table import BaseMockTable
 
 
 # Mock snowflake.connector for testing

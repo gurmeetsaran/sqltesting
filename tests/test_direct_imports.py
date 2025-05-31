@@ -50,10 +50,10 @@ class TestDirectImports(unittest.TestCase):
     def test_adapters_init_imports(self):
         """Test adapters __init__.py imports."""
         # Import the adapters module to trigger __init__.py execution
-        import sql_testing_library.adapters
+        import sql_testing_library._adapters
 
         # Access the __all__ attribute
-        all_adapters = sql_testing_library.adapters.__all__
+        all_adapters = sql_testing_library._adapters.__all__
         self.assertIsInstance(all_adapters, list)
 
         # Try to import each adapter that might be available
@@ -67,7 +67,7 @@ class TestDirectImports(unittest.TestCase):
 
         for adapter_name in adapter_names:
             try:
-                adapter_class = getattr(sql_testing_library.adapters, adapter_name)
+                adapter_class = getattr(sql_testing_library._adapters, adapter_name)
                 self.assertIsNotNone(adapter_class)
             except AttributeError:
                 # Adapter not available in current environment
@@ -79,7 +79,7 @@ class TestDirectImports(unittest.TestCase):
 
         # Test BigQuery
         try:
-            from sql_testing_library.adapters import BigQueryAdapter
+            from sql_testing_library._adapters import BigQueryAdapter
 
             self.assertIsNotNone(BigQueryAdapter)
         except ImportError:
@@ -87,7 +87,7 @@ class TestDirectImports(unittest.TestCase):
 
         # Test Athena
         try:
-            from sql_testing_library.adapters import AthenaAdapter
+            from sql_testing_library._adapters import AthenaAdapter
 
             self.assertIsNotNone(AthenaAdapter)
         except ImportError:
@@ -95,7 +95,7 @@ class TestDirectImports(unittest.TestCase):
 
         # Test Redshift
         try:
-            from sql_testing_library.adapters import RedshiftAdapter
+            from sql_testing_library._adapters import RedshiftAdapter
 
             self.assertIsNotNone(RedshiftAdapter)
         except ImportError:
@@ -103,7 +103,7 @@ class TestDirectImports(unittest.TestCase):
 
         # Test Trino
         try:
-            from sql_testing_library.adapters import TrinoAdapter
+            from sql_testing_library._adapters import TrinoAdapter
 
             self.assertIsNotNone(TrinoAdapter)
         except ImportError:
@@ -111,7 +111,7 @@ class TestDirectImports(unittest.TestCase):
 
         # Test Snowflake
         try:
-            from sql_testing_library.adapters import SnowflakeAdapter
+            from sql_testing_library._adapters import SnowflakeAdapter
 
             self.assertIsNotNone(SnowflakeAdapter)
         except ImportError:

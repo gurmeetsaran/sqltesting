@@ -91,7 +91,7 @@ class TestPublicAPIImports(unittest.TestCase):
     def test_test_case_alias_compatibility(self):
         """Test that TestCase alias works the same as SQLTestCase."""
         from sql_testing_library import TestCase
-        from sql_testing_library.core import SQLTestCase
+        from sql_testing_library._core import SQLTestCase
 
         # Should be the same class
         assert TestCase is SQLTestCase
@@ -107,7 +107,7 @@ class TestPublicAPIImports(unittest.TestCase):
     def test_mock_table_alias_compatibility(self):
         """Test that BaseMockTable is available from both locations."""
         from sql_testing_library import BaseMockTable
-        from sql_testing_library.mock_table import BaseMockTable as DirectBaseMockTable
+        from sql_testing_library._mock_table import BaseMockTable as DirectBaseMockTable
 
         # Should be the same class
         assert BaseMockTable is DirectBaseMockTable
@@ -150,10 +150,15 @@ class TestModuleStructure(unittest.TestCase):
         import sql_testing_library
 
         # These internal modules should not be in the public namespace
-        # Note: Some modules like sql_utils may be available via transitive imports
-        # but are not officially part of the public API
+        # Note: Private modules with leading underscores are accessible but discouraged
         internal_modules = [
-            # Currently no modules strictly forbidden - sql_utils is available via imports
+            "core",  # Old names should not exist
+            "adapters",
+            "exceptions",
+            "mock_table",
+            "pytest_plugin",
+            "types",
+            "sql_utils",  # Should not be directly accessible
         ]
 
         for module_name in internal_modules:
