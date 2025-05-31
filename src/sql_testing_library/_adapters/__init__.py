@@ -3,42 +3,13 @@
 from typing import List
 
 
-# Import adapters if their dependencies are available
+# Lazy import adapters - only import when explicitly requested
+# This prevents loading all heavy database SDKs when just importing the base adapter
 __all__: List[str] = []
 
-try:
-    from .bigquery import BigQueryAdapter  # noqa: F401
-
-    __all__.append("BigQueryAdapter")
-except ImportError:
-    pass
-
-# Optional adapters - these may not be implemented yet,
-# but prepare the imports for when they are
-try:
-    from .athena import AthenaAdapter  # noqa: F401
-
-    __all__.append("AthenaAdapter")
-except ImportError:
-    pass
-
-try:
-    from .redshift import RedshiftAdapter  # noqa: F401
-
-    __all__.append("RedshiftAdapter")
-except ImportError:
-    pass
-
-try:
-    from .trino import TrinoAdapter  # noqa: F401
-
-    __all__.append("TrinoAdapter")
-except ImportError:
-    pass
-
-try:
-    from .snowflake import SnowflakeAdapter  # noqa: F401
-
-    __all__.append("SnowflakeAdapter")
-except ImportError:
-    pass
+# Individual adapters can be imported directly:
+# from sql_testing_library._adapters.bigquery import BigQueryAdapter
+# from sql_testing_library._adapters.athena import AthenaAdapter
+# from sql_testing_library._adapters.redshift import RedshiftAdapter
+# from sql_testing_library._adapters.trino import TrinoAdapter
+# from sql_testing_library._adapters.snowflake import SnowflakeAdapter

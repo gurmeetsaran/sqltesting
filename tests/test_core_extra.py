@@ -107,13 +107,13 @@ class TestSQLTestFrameworkExtra(unittest.TestCase):
 
         self.assertIn("result_class must be provided", str(context.exception))
 
-    @patch("sql_testing_library._core.sqlglot")
-    def test_sql_parsing_error(self, mock_sqlglot):
+    @patch("sqlglot.parse_one")
+    def test_sql_parsing_error(self, mock_parse_one):
         """Test SQL parsing error handling."""
         from sql_testing_library._exceptions import SQLParseError
 
         # Mock sqlglot to raise an exception
-        mock_sqlglot.parse_one.side_effect = Exception("Parse error")
+        mock_parse_one.side_effect = Exception("Parse error")
 
         mock_table = SimpleMockTable([{"id": 1, "name": "test"}])
 

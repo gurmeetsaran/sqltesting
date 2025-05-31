@@ -1,10 +1,13 @@
 """Base database adapter interface."""
 
 from abc import ABC, abstractmethod
-from typing import Any, List, Optional
+from typing import TYPE_CHECKING, Any, List, Optional
 
-import pandas as pd
 
+if TYPE_CHECKING:
+    import pandas as pd
+
+# Heavy import moved to function level for better performance
 from .._mock_table import BaseMockTable
 from .._types import BaseTypeConverter
 
@@ -18,7 +21,7 @@ class DatabaseAdapter(ABC):
         pass
 
     @abstractmethod
-    def execute_query(self, query: str) -> pd.DataFrame:
+    def execute_query(self, query: str) -> "pd.DataFrame":
         """Execute query and return results as DataFrame."""
         pass
 
