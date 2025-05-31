@@ -1,0 +1,181 @@
+name: ✨ Feature Request
+description: Suggest a new feature or enhancement for the SQL Testing Library
+title: "[Feature]: "
+labels: ["enhancement", "needs-triage"]
+assignees: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for suggesting a new feature! Please fill out this form to help us understand your request.
+
+        **Before submitting**, please:
+        - Search existing issues to avoid duplicates
+        - Check if this feature already exists in a different form
+        - Consider if this could be implemented as a plugin or extension
+
+  - type: dropdown
+    id: feature-type
+    attributes:
+      label: Feature Type
+      description: What type of feature are you requesting?
+      options:
+        - New database adapter
+        - Enhancement to existing adapter
+        - New testing functionality
+        - Configuration improvement
+        - Performance improvement
+        - Developer experience improvement
+        - Documentation improvement
+        - Other
+    validations:
+      required: true
+
+  - type: dropdown
+    id: database-adapter
+    attributes:
+      label: Related Database Adapter
+      description: Which database adapter is this related to? (if applicable)
+      options:
+        - BigQuery
+        - Athena
+        - Redshift
+        - Snowflake
+        - Trino
+        - All adapters
+        - New adapter (specify in description)
+        - Not applicable
+
+  - type: textarea
+    id: problem-description
+    attributes:
+      label: Problem Description
+      description: What problem does this feature solve? What use case does it address?
+      placeholder: |
+        Describe the problem or limitation you're experiencing:
+        - What are you trying to achieve?
+        - What current limitations prevent you from achieving it?
+        - How are you currently working around this limitation?
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposed-solution
+    attributes:
+      label: Proposed Solution
+      description: Describe your ideal solution for this problem
+      placeholder: |
+        Describe your proposed solution:
+        - What would the API look like?
+        - How would users interact with this feature?
+        - What would the behavior be?
+    validations:
+      required: true
+
+  - type: textarea
+    id: example-usage
+    attributes:
+      label: Example Usage
+      description: Show how you envision this feature being used
+      placeholder: |
+        ```python
+        # Example of how the feature would be used
+        from sql_testing_library import sql_test, TestCase
+
+        @sql_test(new_feature_option=True)
+        def test_example():
+            return TestCase(
+                query="SELECT * FROM my_table",
+                execution_database="test_db",
+                new_feature_parameter="value"
+            )
+        ```
+      render: python
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternative Solutions
+      description: What alternative solutions or features have you considered?
+      placeholder: |
+        - Alternative approach 1: ...
+        - Alternative approach 2: ...
+        - Why these alternatives don't work as well
+    validations:
+      required: false
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priority
+      description: How important is this feature to you?
+      options:
+        - Low - Nice to have
+        - Medium - Would improve workflow
+        - High - Blocking current work
+        - Critical - Essential for adoption
+    validations:
+      required: true
+
+  - type: textarea
+    id: use-cases
+    attributes:
+      label: Use Cases
+      description: Describe specific use cases where this feature would be beneficial
+      placeholder: |
+        1. Use case 1: When testing complex joins...
+        2. Use case 2: When working with large datasets...
+        3. Use case 3: When validating data transformations...
+    validations:
+      required: true
+
+  - type: textarea
+    id: implementation-suggestions
+    attributes:
+      label: Implementation Suggestions
+      description: Do you have any ideas about how this could be implemented? (optional)
+      placeholder: |
+        - Could be implemented by extending...
+        - Might require changes to...
+        - Similar to how [other library] handles...
+        - Configuration options needed...
+
+  - type: textarea
+    id: breaking-changes
+    attributes:
+      label: Breaking Changes
+      description: Would this feature require any breaking changes to the existing API?
+      placeholder: |
+        - Yes/No
+        - If yes, what changes would be needed?
+        - How could migration be handled?
+
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: Additional Context
+      description: Add any other context, screenshots, or references about the feature request
+      placeholder: |
+        - Links to similar features in other libraries
+        - Screenshots or mockups
+        - Related documentation or specifications
+        - Performance considerations
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Checklist
+      description: Please confirm the following
+      options:
+        - label: I have searched existing issues to ensure this is not a duplicate
+          required: true
+        - label: I have clearly described the problem this feature would solve
+          required: true
+        - label: I have provided specific use cases for this feature
+          required: true
+        - label: I am willing to help test this feature if implemented
+          required: false
+        - label: I am interested in contributing to the implementation
+          required: false

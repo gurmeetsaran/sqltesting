@@ -1,0 +1,149 @@
+name: 📖 Documentation Improvement
+description: Suggest improvements to documentation, examples, or guides
+title: "[Docs]: "
+labels: ["documentation", "needs-triage"]
+assignees: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for helping improve our documentation! Clear documentation is essential for a great developer experience.
+
+  - type: dropdown
+    id: doc-type
+    attributes:
+      label: Documentation Type
+      description: What type of documentation needs improvement?
+      options:
+        - README
+        - API documentation
+        - Setup/Installation guide
+        - Usage examples
+        - Best practices guide
+        - Adapter-specific documentation
+        - Tutorial/Getting started
+        - Troubleshooting guide
+        - Configuration reference
+        - Other
+    validations:
+      required: true
+
+  - type: dropdown
+    id: issue-type
+    attributes:
+      label: Issue Type
+      description: What kind of improvement is needed?
+      options:
+        - Missing information
+        - Incorrect information
+        - Unclear explanation
+        - Missing examples
+        - Outdated content
+        - Better organization needed
+        - New section needed
+        - Other
+    validations:
+      required: true
+
+  - type: input
+    id: location
+    attributes:
+      label: Documentation Location
+      description: Where is this documentation located? (URL, file path, or section name)
+      placeholder: e.g., README.md, docs/setup.md, API reference for sql_test decorator
+
+  - type: textarea
+    id: current-issue
+    attributes:
+      label: Current Issue
+      description: What's wrong with the current documentation or what's missing?
+      placeholder: |
+        Describe the specific problem:
+        - What information is missing or unclear?
+        - What confusion did you experience?
+        - What questions weren't answered?
+    validations:
+      required: true
+
+  - type: textarea
+    id: suggested-improvement
+    attributes:
+      label: Suggested Improvement
+      description: How would you improve this documentation?
+      placeholder: |
+        Describe your suggested improvement:
+        - What should be added or changed?
+        - How should it be organized?
+        - What examples would be helpful?
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposed-content
+    attributes:
+      label: Proposed Content
+      description: If you have specific content suggestions, include them here
+      placeholder: |
+        ```markdown
+        # Your proposed documentation content
+
+        ## Example Section
+        Here's how to...
+
+        ```python
+        # Code example
+        ```
+        ```
+      render: markdown
+
+  - type: dropdown
+    id: audience
+    attributes:
+      label: Target Audience
+      description: Who would benefit most from this documentation improvement?
+      options:
+        - New users getting started
+        - Experienced users
+        - Contributors/developers
+        - Specific database adapter users
+        - All users
+    validations:
+      required: true
+
+  - type: textarea
+    id: user-story
+    attributes:
+      label: User Story
+      description: Describe the user scenario that led to this documentation need
+      placeholder: |
+        As a [type of user], I was trying to [accomplish something] when I [encountered this documentation issue].
+
+        Example: "As a new BigQuery user, I was trying to set up my first test when I couldn't find clear examples of how to configure credentials."
+
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: Additional Context
+      description: Any other context that would help improve the documentation
+      placeholder: |
+        - Related issues or discussions
+        - Screenshots of confusing sections
+        - Links to helpful external resources
+        - Feedback from other users
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Checklist
+      description: Please confirm the following
+      options:
+        - label: I have searched existing issues to ensure this is not a duplicate
+          required: true
+        - label: I have clearly identified the documentation that needs improvement
+          required: true
+        - label: I have provided specific suggestions for improvement
+          required: true
+        - label: I am willing to help review proposed changes
+          required: false
+        - label: I am interested in contributing the documentation improvements myself
+          required: false
