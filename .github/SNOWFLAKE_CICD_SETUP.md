@@ -124,9 +124,9 @@ The CI/CD workflow runs automatically on:
 ### Pull Requests
 - **Triggers**: Any PR to `master` or `main` branch
 - **File changes**: Only when Snowflake-related files are modified:
-  - `src/sql_testing_library/adapters/snowflake.py`
-  - `src/sql_testing_library/core.py`
-  - `src/sql_testing_library/mock_table.py`
+  - `src/sql_testing_library/_adapters/snowflake.py`
+  - `src/sql_testing_library/_core.py`
+  - `src/sql_testing_library/_mock_table.py`
   - `tests/test_snowflake*.py`
   - `tests/integration/test_snowflake_integration.py`
   - Workflow file itself

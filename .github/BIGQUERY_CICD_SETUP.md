@@ -123,9 +123,9 @@ The CI/CD workflow runs automatically on:
 ### Pull Requests
 - **Triggers**: Any PR to `master` or `main` branch
 - **File changes**: Only when BigQuery-related files are modified:
-  - `src/sql_testing_library/adapters/bigquery.py`
-  - `src/sql_testing_library/core.py`
-  - `src/sql_testing_library/mock_table.py`
+  - `src/sql_testing_library/_adapters/bigquery.py`
+  - `src/sql_testing_library/_core.py`
+  - `src/sql_testing_library/_mock_table.py`
   - `tests/test_bigquery*.py`
   - `tests/integration/test_bigquery_integration.py`
   - Workflow file itself

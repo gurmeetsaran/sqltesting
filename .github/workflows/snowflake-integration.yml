@@ -4,18 +4,18 @@ on:
   pull_request:
     branches: [master, main]
     paths:
-      - 'src/sql_testing_library/adapters/snowflake.py'
-      - 'src/sql_testing_library/core.py'
-      - 'src/sql_testing_library/mock_table.py'
+      - 'src/sql_testing_library/_adapters/snowflake.py'
+      - 'src/sql_testing_library/_core.py'
+      - 'src/sql_testing_library/_mock_table.py'
       - 'tests/test_snowflake*.py'
       - 'tests/integration/test_snowflake_integration.py'
       - '.github/workflows/snowflake-integration.yml'
   push:
     branches: [master, main]
     paths:
-      - 'src/sql_testing_library/adapters/snowflake.py'
-      - 'src/sql_testing_library/core.py'
-      - 'src/sql_testing_library/mock_table.py'
+      - 'src/sql_testing_library/_adapters/snowflake.py'
+      - 'src/sql_testing_library/_core.py'
+      - 'src/sql_testing_library/_mock_table.py'
       - 'tests/test_snowflake*.py'
       - 'tests/integration/test_snowflake_integration.py'
       - '.github/workflows/snowflake-integration.yml'
