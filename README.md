@@ -8,7 +8,7 @@ A Python library for testing SQL queries with mock data injection across Athena,
 [![Redshift Integration](https://github.com/gurmeetsaran/sqltesting/actions/workflows/redshift-integration.yml/badge.svg)](https://github.com/gurmeetsaran/sqltesting/actions/workflows/redshift-integration.yml)
 [![Trino Integration](https://github.com/gurmeetsaran/sqltesting/actions/workflows/trino-integration.yml/badge.svg)](https://github.com/gurmeetsaran/sqltesting/actions/workflows/trino-integration.yml)
 [![Snowflake Integration](https://github.com/gurmeetsaran/sqltesting/actions/workflows/snowflake-integration.yml/badge.svg)](https://github.com/gurmeetsaran/sqltesting/actions/workflows/snowflake-integration.yml)
-[![GitHub license](https://img.shields.io/github/license/gurmeetsaran/sqltesting.svg)](https://github.com/gurmeetsaran/sqltesting/blob/master/LICENSE)
+[![GitHub license](https://img.shields.io/github/license/gurmeetsaran/sqltesting)](https://github.com/gurmeetsaran/sqltesting/blob/master/LICENSE)
 [![codecov](https://codecov.io/gh/gurmeetsaran/sqltesting/branch/master/graph/badge.svg?token=CN3G5X5ZA5)](https://codecov.io/gh/gurmeetsaran/sqltesting)
 ![python version](https://img.shields.io/badge/python-3.9%2B-yellowgreen)
 
