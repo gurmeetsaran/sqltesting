@@ -1,0 +1,281 @@
+/* Custom styles for SQL Testing Library documentation */
+
+/* Code blocks */
+.highlight pre {
+  background-color: #f6f8fa;
+  border: 1px solid #e1e4e8;
+  border-radius: 6px;
+  padding: 16px;
+  overflow: auto;
+  font-size: 85%;
+  line-height: 1.45;
+}
+
+.highlight pre code {
+  background-color: transparent;
+  padding: 0;
+  margin: 0;
+  font-size: 100%;
+}
+
+/* Dark mode code blocks */
+.dark-mode .highlight pre {
+  background-color: #161b22;
+  border-color: #30363d;
+}
+
+/* Tables */
+table {
+  border-collapse: collapse;
+  width: 100%;
+  margin-top: 1rem;
+  margin-bottom: 1rem;
+}
+
+table th {
+  background-color: #f6f8fa;
+  font-weight: 600;
+  text-align: left;
+  padding: 12px;
+  border: 1px solid #e1e4e8;
+}
+
+table td {
+  padding: 12px;
+  border: 1px solid #e1e4e8;
+}
+
+table tr:nth-child(even) {
+  background-color: #f6f8fa;
+}
+
+/* Dark mode tables */
+.dark-mode table th {
+  background-color: #161b22;
+  border-color: #30363d;
+}
+
+.dark-mode table td {
+  border-color: #30363d;
+}
+
+.dark-mode table tr:nth-child(even) {
+  background-color: #0d1117;
+}
+
+/* Cards for documentation links */
+.card {
+  display: block;
+  padding: 1.5rem;
+  margin-bottom: 1rem;
+  background-color: #f6f8fa;
+  border: 1px solid #e1e4e8;
+  border-radius: 6px;
+  text-decoration: none;
+  color: inherit;
+  transition: all 0.2s ease;
+}
+
+.card:hover {
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  transform: translateY(-2px);
+  text-decoration: none;
+}
+
+.card h3 {
+  margin-top: 0;
+  margin-bottom: 0.5rem;
+  color: #0366d6;
+}
+
+.card p {
+  margin: 0;
+  color: #586069;
+}
+
+/* Dark mode cards */
+.dark-mode .card {
+  background-color: #161b22;
+  border-color: #30363d;
+}
+
+.dark-mode .card h3 {
+  color: #58a6ff;
+}
+
+.dark-mode .card p {
+  color: #8b949e;
+}
+
+/* Grid layout for cards */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+/* Callouts */
+.callout {
+  padding: 1rem;
+  margin: 1rem 0;
+  border-left: 4px solid;
+  border-radius: 4px;
+}
+
+.callout-info {
+  background-color: #e3f2fd;
+  border-color: #2196f3;
+}
+
+.callout-warning {
+  background-color: #fff3cd;
+  border-color: #ffc107;
+}
+
+.callout-danger {
+  background-color: #f8d7da;
+  border-color: #dc3545;
+}
+
+.callout-success {
+  background-color: #d4edda;
+  border-color: #28a745;
+}
+
+/* Dark mode callouts */
+.dark-mode .callout-info {
+  background-color: #0d47a1;
+  border-color: #2196f3;
+}
+
+.dark-mode .callout-warning {
+  background-color: #5d4037;
+  border-color: #ffc107;
+}
+
+.dark-mode .callout-danger {
+  background-color: #5d1f1f;
+  border-color: #dc3545;
+}
+
+.dark-mode .callout-success {
+  background-color: #1b5e20;
+  border-color: #28a745;
+}
+
+/* Buttons */
+.btn-primary {
+  background-color: #0366d6;
+  color: white;
+  padding: 0.75rem 1.5rem;
+  border-radius: 6px;
+  text-decoration: none;
+  display: inline-block;
+  font-weight: 500;
+  transition: background-color 0.2s ease;
+}
+
+.btn-primary:hover {
+  background-color: #0256c7;
+  text-decoration: none;
+  color: white;
+}
+
+/* Navigation improvements */
+.nav-list .nav-list-item .nav-list-link:hover {
+  background-color: #f6f8fa;
+}
+
+.dark-mode .nav-list .nav-list-item .nav-list-link:hover {
+  background-color: #161b22;
+}
+
+/* Improve readability */
+.main-content {
+  max-width: 1000px;
+}
+
+.main-content h1,
+.main-content h2,
+.main-content h3,
+.main-content h4,
+.main-content h5,
+.main-content h6 {
+  margin-top: 2rem;
+  margin-bottom: 1rem;
+}
+
+.main-content p {
+  line-height: 1.6;
+}
+
+/* Syntax highlighting improvements */
+.highlight .k,
+.highlight .kd,
+.highlight .kn,
+.highlight .kp,
+.highlight .kr,
+.highlight .kt {
+  color: #d73a49;
+  font-weight: 600;
+}
+
+.highlight .s,
+.highlight .s1,
+.highlight .s2,
+.highlight .sb,
+.highlight .sc,
+.highlight .sd,
+.highlight .se,
+.highlight .sh,
+.highlight .si,
+.highlight .sr,
+.highlight .ss {
+  color: #032f62;
+}
+
+.highlight .c,
+.highlight .c1,
+.highlight .cm {
+  color: #6a737d;
+  font-style: italic;
+}
+
+/* Copy button for code blocks */
+.code-copy-button {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  padding: 4px 8px;
+  font-size: 12px;
+  background-color: #f6f8fa;
+  border: 1px solid #e1e4e8;
+  border-radius: 4px;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.highlight:hover .code-copy-button {
+  opacity: 1;
+}
+
+.code-copy-button:hover {
+  background-color: #e1e4e8;
+}
+
+/* Mobile responsiveness */
+@media (max-width: 768px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+
+  table {
+    font-size: 14px;
+  }
+
+  .main-content {
+    padding: 1rem;
+  }
+}

@@ -17,7 +17,7 @@ poetry install --with dev
 
 # Install the pre-commit hooks
 echo "Installing git hooks..."
-poetry run pre-commit install
+poetry run pre-commit install --hook-type commit-msg
 
 echo "Pre-commit hooks installed successfully!"
 echo "Now your code will be automatically checked and formatted when you commit."

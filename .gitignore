@@ -36,6 +36,15 @@ MANIFEST
 pip-log.txt
 pip-delete-this-directory.txt
 
+# Jekyll documentation build output
+docs/_site/
+docs/.sass-cache/
+docs/.jekyll-cache/
+docs/.jekyll-metadata
+docs/vendor/
+docs/.bundle/
+docs/Gemfile.lock
+
 # Unit test / coverage reports
 htmlcov/
 .tox/
@@ -180,3 +189,5 @@ pytest.ini
 
 # Local development markers
 .sql_testing_root
+.jekyll-cache
+_site/
