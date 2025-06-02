@@ -116,7 +116,9 @@ class AthenaAdapter(DatabaseAdapter):
             for row in rows[1:]:
                 data.append([col.get("VarCharValue") for col in row["Data"]])
 
-            return pd.DataFrame(data, columns=header)
+            df = pd.DataFrame(data)
+            df.columns = header
+            return df
         else:
             return pd.DataFrame()
 

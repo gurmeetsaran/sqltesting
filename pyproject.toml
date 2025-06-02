@@ -50,7 +50,7 @@ pytest-cov = ">=4.1.0"
 pytest-rerunfailures = ">=12.0.0"
 black = ">=22.0.0"
 flake8 = ">=4.0.0"
-mypy = ">=0.991"
+pyright = ">=1.1.350"
 tox = ">=4.0.0"
 build = ">=1.0.0"
 twine = ">=4.0.0"
@@ -61,16 +61,30 @@ commitizen = ">=3.0.0"
 [tool.poetry.plugins.pytest11]
 sql_testing = "sql_testing_library._pytest_plugin"
 
-[tool.mypy]
-python_version = "3.9"
-warn_return_any = true
-warn_unused_configs = true
-disallow_untyped_defs = true
-disallow_incomplete_defs = true
-check_untyped_defs = true
-disallow_untyped_decorators = true
-no_implicit_optional = true
-strict_optional = true
+[tool.pyright]
+pythonVersion = "3.9"
+include = ["src"]
+exclude = ["tests", "scripts"]
+reportMissingImports = true
+reportMissingTypeStubs = false
+reportUnusedImport = true
+reportUnusedClass = true
+reportUnusedFunction = true
+reportUnusedVariable = true
+reportDuplicateImport = true
+reportUntypedFunctionDecorator = true
+reportUntypedClassDecorator = true
+reportUntypedBaseClass = true
+reportUntypedNamedTuple = true
+reportPrivateUsage = true
+reportConstantRedefinition = true
+reportIncompatibleMethodOverride = true
+reportIncompatibleVariableOverride = true
+reportInconsistentConstructor = true
+strictListInference = true
+strictDictionaryInference = true
+strictSetInference = true
+strictParameterNoneValue = true
 
 [tool.ruff]
 # Same as Black.
@@ -152,48 +166,48 @@ concurrency = ["thread", "multiprocessing"]
 exclude_lines = [
     # Manual exclusion
     "pragma: no cover",
-    
+
     # Don't complain about missing debug-only code
     "def __repr__",
     "if self\\.debug:",
     "if settings\\.DEBUG",
-    
+
     # Don't complain if tests don't hit defensive assertion code
     "raise AssertionError",
     "raise NotImplementedError",
     "raise ImportError",
     "raise ValueError.*unreachable",
-    
+
     # Don't complain if non-runnable code isn't run
     "if __name__ == .__main__.:",
     "if TYPE_CHECKING:",
     "if typing\\.TYPE_CHECKING:",
-    
+
     # Abstract methods and classes
     "@abstract",
     "@abstractmethod",
     "class .*\\bProtocol\\):",
     "class .*\\bAbstract.*\\):",
     "raise NotImplementedError.*",
-    
+
     # Exception handling for optional imports
     "except ImportError:",
     "except ModuleNotFoundError:",
     "HAS_.* = False",
     "HAS_.* = True",
     ".*_module = None",
-    
+
     # Skip empty functions/methods and ellipsis
     "^\\s*pass\\s*$",
     "^\\s*\\.\\.\\.\\s*$",
-    
+
     # Type annotation-only lines
     "^\\s*\\.\\.\\.$",
-    
+
     # Platform specific code that may not be tested
     "if sys\\.platform",
     "if os\\.name",
-    
+
     # Version checks
     "if sys\\.version_info",
 ]

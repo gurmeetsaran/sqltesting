@@ -107,7 +107,9 @@ class TrinoAdapter(DatabaseAdapter):
             rows = cursor.fetchall()
 
             # Create DataFrame from rows
-            return pd.DataFrame(rows, columns=columns)
+            df = pd.DataFrame(rows)
+            df.columns = columns
+            return df
 
         # For non-SELECT queries
         return pd.DataFrame()

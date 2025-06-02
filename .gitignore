@@ -180,3 +180,7 @@ pytest.ini
 
 # Local development markers
 .sql_testing_root
+
+# Claude AI and direnv
+.claude/
+.envrc
