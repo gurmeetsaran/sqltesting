@@ -1,6 +1,6 @@
 # Linting and Formatting Guidelines
 
-This project uses [Ruff](https://github.com/astral-sh/ruff) for linting and formatting Python code, and [Mypy](http://mypy-lang.org/) for static type checking.
+This project uses [Ruff](https://github.com/astral-sh/ruff) for linting and formatting Python code, and [Pyright](https://github.com/microsoft/pyright) for static type checking.
 
 ## Setup
 
@@ -42,10 +42,14 @@ poetry run ruff format src tests
 
 ## Type Checking
 
-To run static type checking with Mypy:
+To run static type checking with Pyright:
 
 ```bash
-poetry run mypy src
+# Using the script
+./scripts/typecheck.sh
+
+# Or directly
+poetry run pyright
 ```
 
 ## Code Coverage
@@ -103,16 +107,15 @@ Ruff configuration is defined in the `pyproject.toml` file under the `[tool.ruff
   - Import sorting (I)
   - Bugbear checks (B)
 
-### Mypy
+### Pyright
 
-Mypy configuration is defined in the `mypy.ini` file. Key settings include:
+Pyright configuration is defined in the `pyproject.toml` file under the `[tool.pyright]` section. Key settings include:
 
 - Strict type checking enabled for the src directory
 - Disallows untyped function definitions and incomplete type hints
-- Warns about unused configurations and redundant casts
-- Properly handles Pydantic models
-- Ignores missing imports from external packages
-- Excludes the tests directory from type checking
+- Warns about unused imports and variables
+- Properly handles optional dependencies pattern
+- Includes the src directory, excludes tests and scripts directories
 
 ## Pre-commit Hooks
 
@@ -152,11 +155,11 @@ Ruff has extensions available for various IDEs:
 - VSCode: [Ruff Extension](https://marketplace.visualstudio.com/items?itemName=charliermarsh.ruff)
 - PyCharm: [Ruff Plugin](https://plugins.jetbrains.com/plugin/20574-ruff)
 
-### Mypy
-Mypy has extensions available for various IDEs:
+### Pyright
+Pyright has extensions available for various IDEs:
 
-- VSCode: [Mypy Extension](https://marketplace.visualstudio.com/items?itemName=matangover.mypy)
-- PyCharm: Built-in support for Mypy
+- VSCode: [Pylance Extension](https://marketplace.visualstudio.com/items?itemName=ms-python.vscode-pylance) (built on Pyright)
+- PyCharm: [Pyright Plugin](https://plugins.jetbrains.com/plugin/18340-pyright)
 
 ## Development Workflow
 
@@ -164,7 +167,7 @@ For the best development experience:
 
 1. Set up the pre-commit hooks as described above
 2. Configure your IDE to use Ruff for linting and formatting
-3. Configure your IDE to use Mypy for type checking
+3. Configure your IDE to use Pyright for type checking
 4. Run pre-commit hooks locally before pushing changes
 
 This ensures that your code always meets the project's formatting, linting, and type safety standards before it's committed or pushed to the repository.
@@ -174,26 +177,30 @@ This ensures that your code always meets the project's formatting, linting, and 
 To ensure all linting and type checking tools work consistently:
 
 ### Configuration Files
-- **`mypy.ini`** - Primary mypy configuration with exclusions: `^(tests/|scripts/)`
-- **`.pre-commit-config.yaml`** - Must match mypy.ini exclusions
-- **`scripts/lint.sh`** - Must use same exclusions as other tools
+- **`pyproject.toml`** - Primary pyright configuration under `[tool.pyright]` section
+- **`.pre-commit-config.yaml`** - Must use local hook to respect project configuration
+- **`scripts/lint.sh`** - Uses same pyright configuration as other tools
 
 ### External Library Handling
-When adding new external dependencies (cloud providers, databases), add to mypy.ini:
-```ini
-[mypy-newlibrary.*]
-ignore_missing_imports = true
+Optional dependencies are handled using the try/except import pattern in the code:
+```python
+try:
+    import newlibrary
+    has_newlibrary = True
+except ImportError:
+    has_newlibrary = False
+    newlibrary = None  # type: ignore
 ```
 
 ### Testing Consistency
 All three approaches should give the same results:
 ```bash
-python -m mypy src          # Direct mypy
+poetry run pyright          # Direct pyright
 ./scripts/lint.sh           # Lint script
-pre-commit run mypy --all-files  # Pre-commit hook
+pre-commit run pyright --all-files  # Pre-commit hook
 ```
 
 ### Current Exclusions
 - **Scripts folder**: Excluded from all linting (allows print statements, external deps)
-- **Tests folder**: Excluded from mypy (different type checking rules)
+- **Tests folder**: Excluded from pyright (different type checking rules)
 - **Source folder**: Full strict linting and type checking applied

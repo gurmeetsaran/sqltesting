@@ -1,5 +1,5 @@
 #!/bin/bash
-# Lint the codebase with Ruff and Mypy
+# Lint the codebase with Ruff and Pyright
 
 set -e
 
@@ -9,8 +9,8 @@ poetry run ruff check src tests --exclude scripts/
 echo "Running Ruff formatter (checking only)..."
 poetry run ruff format --check src tests --exclude scripts/
 
-echo "Running Mypy type checking..."
-poetry run mypy src
+echo "Running Pyright type checking..."
+poetry run pyright
 
 echo "✅ All lint checks passed!"
 echo ""
