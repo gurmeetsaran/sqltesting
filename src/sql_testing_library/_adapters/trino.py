@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING, Any, Dict, List, Optional, Type, Union, get_ar
 
 if TYPE_CHECKING:
     import pandas as pd
+    import trino
 
 # Heavy import moved to function level for better performance
 from .._mock_table import BaseMockTable
@@ -16,14 +17,13 @@ from .._types import BaseTypeConverter
 from .base import DatabaseAdapter
 
 
-HAS_TRINO = True
-
 try:
-    # This is a separate import to keep the module type
-    # for type checking, even if the module fails to import
-    import trino as _trino_module  # noqa: F401
+    import trino
+
+    has_trino = True
 except ImportError:
-    HAS_TRINO = False
+    has_trino = False
+    trino = None  # type: ignore
 
 
 class TrinoTypeConverter(BaseTypeConverter):
@@ -48,11 +48,13 @@ class TrinoAdapter(DatabaseAdapter):
         http_scheme: str = "http",
         auth: Optional[Dict[str, Any]] = None,
     ) -> None:
-        if not HAS_TRINO:
+        if not has_trino:
             raise ImportError(
                 "Trino adapter requires trino client. "
                 "Install with: pip install sql-testing-library[trino]"
             )
+
+        assert trino is not None  # For type checker
 
         self.host = host
         self.port = port

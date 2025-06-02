@@ -8,26 +8,21 @@ from typing import TYPE_CHECKING, Any, List, Optional, Type, Union, get_args
 
 if TYPE_CHECKING:
     import pandas as pd
+    from google.cloud import bigquery
 
 # Heavy imports moved to function level for better performance
-from google.cloud import bigquery
-
 from .._mock_table import BaseMockTable
 from .._types import BaseTypeConverter
 from .base import DatabaseAdapter
 
 
-HAS_BIGQUERY = True
-
-# The duplicate import is intentional
-# First import is to get the types, second is to actually import the module
-# If the second fails, we set HAS_BIGQUERY to False to handle it gracefully
 try:
-    # This is a separate import to keep the module type
-    # for type checking, even if the module fails to import
-    import google.cloud.bigquery as _bigquery_module  # noqa: F401
+    from google.cloud import bigquery
+
+    has_bigquery = True
 except ImportError:
-    HAS_BIGQUERY = False
+    has_bigquery = False
+    bigquery = None  # type: ignore
 
 
 class BigQueryTypeConverter(BaseTypeConverter):
@@ -45,11 +40,13 @@ class BigQueryAdapter(DatabaseAdapter):
     def __init__(
         self, project_id: str, dataset_id: str, credentials_path: Optional[str] = None
     ) -> None:
-        if not HAS_BIGQUERY:
+        if not has_bigquery:
             raise ImportError(
                 "BigQuery adapter requires google-cloud-bigquery. "
                 "Install with: pip install sql-testing-library[bigquery]"
             )
+
+        assert bigquery is not None  # For type checker
 
         self.project_id = project_id
         self.dataset_id = dataset_id
@@ -109,7 +106,7 @@ class BigQueryAdapter(DatabaseAdapter):
         """Get BigQuery-specific type converter."""
         return BigQueryTypeConverter()
 
-    def _get_bigquery_schema(self, mock_table: BaseMockTable) -> List[bigquery.SchemaField]:
+    def _get_bigquery_schema(self, mock_table: BaseMockTable) -> List[Any]:
         """Convert mock table schema to BigQuery schema."""
         column_types = mock_table.get_column_types()
 

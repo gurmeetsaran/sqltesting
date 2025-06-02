@@ -8,9 +8,8 @@ from typing import TYPE_CHECKING, Any, List, Optional, Type, Union, get_args
 
 
 if TYPE_CHECKING:
+    import boto3
     import pandas as pd
-
-import boto3
 
 # Heavy import moved to function level for better performance
 from .._mock_table import BaseMockTable
@@ -18,14 +17,13 @@ from .._types import BaseTypeConverter
 from .base import DatabaseAdapter
 
 
-HAS_BOTO3 = True
-
 try:
-    # This is a separate import to keep the module type
-    # for type checking, even if the module fails to import
-    import boto3 as _boto3_module  # noqa: F401
+    import boto3
+
+    has_boto3 = True
 except ImportError:
-    HAS_BOTO3 = False
+    has_boto3 = False
+    boto3 = None  # type: ignore
 
 
 class AthenaTypeConverter(BaseTypeConverter):
@@ -52,11 +50,13 @@ class AthenaAdapter(DatabaseAdapter):
         aws_access_key_id: Optional[str] = None,
         aws_secret_access_key: Optional[str] = None,
     ) -> None:
-        if not HAS_BOTO3:
+        if not has_boto3:
             raise ImportError(
                 "Athena adapter requires boto3. "
                 "Install with: pip install sql-testing-library[athena]"
             )
+
+        assert boto3 is not None  # For type checker
 
         self.database = database
         self.s3_output_location = s3_output_location
