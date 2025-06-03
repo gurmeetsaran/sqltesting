@@ -4,11 +4,37 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
 name = "sql-testing-library"
-version = "0.4.0"
+version = "0.5.0"
 description = "A Python library for testing SQL queries with mock data injection"
 authors = ["Gurmeet Saran <gurmeetx@gmail.com>"]
+maintainers = ["Gurmeet Saran <gurmeetx@gmail.com>", "Kushal Thakkar <kushal.thakkar@gmail.com>"]
+license = "MIT"
 readme = "README.md"
+homepage = "https://github.com/gurmeetsaran/sqltesting"
+repository = "https://github.com/gurmeetsaran/sqltesting"
+documentation = "https://github.com/gurmeetsaran/sqltesting#readme"
+keywords = ["sql", "testing", "mock", "database", "bigquery", "snowflake", "redshift", "athena", "trino"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Topic :: Software Development :: Testing",
+    "Topic :: Database",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Operating System :: OS Independent",
+    "Typing :: Typed",
+]
 packages = [{include = "sql_testing_library", from = "src"}]
+include = ["LICENSE", "README.md", "CHANGELOG.md", "py.typed"]
+
+[tool.poetry.urls]
+"Bug Tracker" = "https://github.com/gurmeetsaran/sqltesting/issues"
+"Changelog" = "https://github.com/gurmeetsaran/sqltesting/blob/master/CHANGELOG.md"
+"Discussions" = "https://github.com/gurmeetsaran/sqltesting/discussions"
 
 [tool.poetry.dependencies]
 python = ">=3.9"

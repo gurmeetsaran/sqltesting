@@ -8,7 +8,7 @@ A Python library for testing SQL queries with mock data injection across Athena,
 [![Redshift Integration](https://github.com/gurmeetsaran/sqltesting/actions/workflows/redshift-integration.yml/badge.svg)](https://github.com/gurmeetsaran/sqltesting/actions/workflows/redshift-integration.yml)
 [![Trino Integration](https://github.com/gurmeetsaran/sqltesting/actions/workflows/trino-integration.yml/badge.svg)](https://github.com/gurmeetsaran/sqltesting/actions/workflows/trino-integration.yml)
 [![Snowflake Integration](https://github.com/gurmeetsaran/sqltesting/actions/workflows/snowflake-integration.yml/badge.svg)](https://github.com/gurmeetsaran/sqltesting/actions/workflows/snowflake-integration.yml)
-[![GitHub license](https://img.shields.io/github/license/gurmeetsaran/sqltesting.svg)](https://github.com/gurmeetsaran/sqltesting/blob/master/LICENSE)
+[![GitHub license](https://img.shields.io/github/license/gurmeetsaran/sqltesting)](https://github.com/gurmeetsaran/sqltesting/blob/master/LICENSE)
 [![codecov](https://codecov.io/gh/gurmeetsaran/sqltesting/branch/master/graph/badge.svg?token=CN3G5X5ZA5)](https://codecov.io/gh/gurmeetsaran/sqltesting)
 ![python version](https://img.shields.io/badge/python-3.9%2B-yellowgreen)
 
@@ -512,6 +512,12 @@ def test_pattern_3():
 # Run all tests
 pytest test_users.py
 
+# Run only SQL tests (using the sql_test marker)
+pytest -m sql_test
+
+# Exclude SQL tests
+pytest -m "not sql_test"
+
 # Run a specific test
 pytest test_users.py::test_user_query
 
@@ -655,7 +661,14 @@ The library supports flexible ways to configure your tests:
 
 ### Using Different Database Adapters in Tests
 
-You can specify which database adapter to use for individual tests:
+The adapter specified in `[sql_testing]` section acts as the default adapter for all tests. When you don't specify an `adapter_type` in your test, it uses this default.
+
+```ini
+[sql_testing]
+adapter = snowflake  # This becomes the default for all tests
+```
+
+You can override the default adapter for individual tests:
 
 ```python
 # Use BigQuery adapter for this test
@@ -721,11 +734,16 @@ def test_snowflake_query():
 
 The adapter_type parameter will use the configuration from the corresponding section in pytest.ini, such as `[sql_testing.bigquery]`, `[sql_testing.athena]`, `[sql_testing.redshift]`, `[sql_testing.trino]`, or `[sql_testing.snowflake]`.
 
+**Default Adapter Behavior:**
+- If `adapter_type` is not specified in the test, the library uses the adapter from `[sql_testing]` section's `adapter` setting
+- If no adapter is specified in the `[sql_testing]` section, it defaults to "bigquery"
+- Each adapter reads its configuration from `[sql_testing.<adapter_name>]` section
+
 ### Adapter-Specific Features
 
 #### BigQuery Adapter
 - Supports Google Cloud BigQuery service
-- Uses STRUCT and UNNEST for efficient CTE creation
+- Uses UNION ALL pattern for CTE creation with complex data types
 - Handles authentication via service account or application default credentials
 
 #### Athena Adapter
