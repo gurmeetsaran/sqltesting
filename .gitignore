@@ -191,3 +191,6 @@ pytest.ini
 .sql_testing_root
 .jekyll-cache
 _site/
+
+# venv
+.envrc

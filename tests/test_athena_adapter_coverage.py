@@ -23,14 +23,14 @@ class TestAthenaAdapterCoverageBoost(unittest.TestCase):
         self.region = "us-west-2"
 
     def test_has_boto3_constant_exists(self):
-        """Test that the HAS_BOTO3 constant exists and is True in test environment."""
-        from sql_testing_library._adapters.athena import HAS_BOTO3
+        """Test that the has_boto3 constant exists and is True in test environment."""
+        from sql_testing_library._adapters.athena import has_boto3
 
-        # HAS_BOTO3 should be True in this test environment (since Athena works)
-        self.assertTrue(HAS_BOTO3)
+        # has_boto3 should be True in this test environment (since Athena works)
+        self.assertTrue(has_boto3)
 
         # The constant should be boolean
-        self.assertIsInstance(HAS_BOTO3, bool)
+        self.assertIsInstance(has_boto3, bool)
 
     @mock.patch("boto3.client")
     def test_execute_query_failed_status(self, mock_boto3_client):

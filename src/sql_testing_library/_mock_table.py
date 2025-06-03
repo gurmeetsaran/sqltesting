@@ -24,15 +24,15 @@ from ._types import unwrap_optional_type
 try:
     from pydantic import BaseModel
 
-    PYDANTIC_AVAILABLE = True
+    pydantic_available = True
 except ImportError:
     BaseModel = None  # type: ignore
-    PYDANTIC_AVAILABLE = False
+    pydantic_available = False
 
 
 def _is_pydantic_model(obj: Any) -> bool:
     """Check if an object is a Pydantic model instance."""
-    if not PYDANTIC_AVAILABLE or BaseModel is None:
+    if not pydantic_available or BaseModel is None:
         return False
     return isinstance(obj, BaseModel)
 

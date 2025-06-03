@@ -8,6 +8,8 @@ from typing import TYPE_CHECKING, Any, List, Optional, Type, Union, get_args
 
 if TYPE_CHECKING:
     import pandas as pd
+    import psycopg2
+    import psycopg2.extras
 
 # Heavy import moved to function level for better performance
 from .._mock_table import BaseMockTable
@@ -15,15 +17,14 @@ from .._types import BaseTypeConverter
 from .base import DatabaseAdapter
 
 
-HAS_PSYCOPG2 = True
-
 try:
-    # This is a separate import to keep the module type
-    # for type checking, even if the module fails to import
-    import psycopg2 as _psycopg2_module  # noqa: F401
+    import psycopg2
     import psycopg2.extras
+
+    has_psycopg2 = True
 except ImportError:
-    HAS_PSYCOPG2 = False
+    has_psycopg2 = False
+    psycopg2 = None  # type: ignore
 
 
 class RedshiftTypeConverter(BaseTypeConverter):
@@ -46,11 +47,13 @@ class RedshiftAdapter(DatabaseAdapter):
         password: str,
         port: int = 5439,
     ) -> None:
-        if not HAS_PSYCOPG2:
+        if not has_psycopg2:
             raise ImportError(
                 "Redshift adapter requires psycopg2. "
                 "Install with: pip install sql-testing-library[redshift]"
             )
+
+        assert psycopg2 is not None  # For type checker
 
         self.host = host
         self.database = database

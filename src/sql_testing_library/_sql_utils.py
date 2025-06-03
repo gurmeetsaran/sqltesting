@@ -205,16 +205,25 @@ def format_sql_value(value: Any, column_type: Type, dialect: str = "standard") -
     # Handle datetime/timestamp types
     elif column_type == datetime:
         if dialect == "bigquery":
-            return f"DATETIME('{value.isoformat()}')"
+            if isinstance(value, datetime):
+                return f"DATETIME('{value.isoformat()}')"
+            else:
+                return f"DATETIME('{value}')"
         elif dialect in ("athena", "trino"):
             # Athena and Trino don't like 'T' separator in timestamps
             # Athena expects millisecond precision, so truncate microseconds
-            timestamp_str = value.strftime("%Y-%m-%d %H:%M:%S.%f")[
-                :-3
-            ]  # Remove last 3 digits for millisecond precision
+            if isinstance(value, datetime):
+                timestamp_str = value.strftime("%Y-%m-%d %H:%M:%S.%f")[
+                    :-3
+                ]  # Remove last 3 digits for millisecond precision
+            else:
+                timestamp_str = str(value)
             return f"TIMESTAMP '{timestamp_str}'"
         else:
-            return f"TIMESTAMP '{value.isoformat()}'"
+            if isinstance(value, datetime):
+                return f"TIMESTAMP '{value.isoformat()}'"
+            else:
+                return f"TIMESTAMP '{value}'"
 
     # Handle decimal types
     elif column_type == Decimal:

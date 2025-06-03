@@ -16,14 +16,13 @@ from .._types import BaseTypeConverter
 from .base import DatabaseAdapter
 
 
-HAS_SNOWFLAKE = True
-
 try:
-    # This is a separate import to keep the module type
-    # for type checking, even if the module fails to import
-    import snowflake.connector as _snowflake_module  # noqa: F401
+    import snowflake.connector  # pyright: ignore[reportUnusedImport]
+
+    has_snowflake = True
 except ImportError:
-    HAS_SNOWFLAKE = False
+    has_snowflake = False
+    snowflake = None  # type: ignore
 
 
 class SnowflakeTypeConverter(BaseTypeConverter):
@@ -48,11 +47,13 @@ class SnowflakeAdapter(DatabaseAdapter):
         warehouse: Optional[str] = None,
         role: Optional[str] = None,
     ) -> None:
-        if not HAS_SNOWFLAKE:
+        if not has_snowflake:
             raise ImportError(
                 "Snowflake adapter requires snowflake-connector-python. "
                 "Install with: pip install sql-testing-library[snowflake]"
             )
+
+        assert snowflake is not None  # For type checker
 
         self.account = account
         self.user = user
@@ -123,7 +124,9 @@ class SnowflakeAdapter(DatabaseAdapter):
             rows = cursor.fetchall()
 
             # Create DataFrame from rows
-            return pd.DataFrame(rows, columns=columns)
+            df = pd.DataFrame(rows)
+            df.columns = columns
+            return df
 
         # For non-SELECT queries
         return pd.DataFrame()

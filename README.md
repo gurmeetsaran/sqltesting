@@ -788,7 +788,7 @@ The adapter_type parameter will use the configuration from the corresponding sec
 The project uses comprehensive tools to ensure code quality:
 
 1. **Ruff** for linting and formatting
-2. **Mypy** for static type checking
+2. **Pyright** for static type checking
 3. **Pre-commit hooks** for automated checks
 
 To set up the development environment:

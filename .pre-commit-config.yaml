@@ -18,19 +18,11 @@ repos:
     -   id: check-added-large-files
     -   id: debug-statements
 
--   repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.8.0
+-   repo: local
     hooks:
-    -   id: mypy
-        additional_dependencies:
-          - pydantic>=2.0.0
-          - types-requests
-          - types-setuptools
-        # Use mypy.ini configuration but still need to exclude here for pre-commit
-        exclude: ^(tests/|scripts/)
-        args: ["--ignore-missing-imports", "--disallow-untyped-defs", "--disallow-incomplete-defs"]
--   repo: https://github.com/compilerla/conventional-pre-commit
-    rev: v3.0.0
-    hooks:
-    -   id: conventional-pre-commit
-        stages: [commit-msg]
+    -   id: pyright
+        name: pyright
+        entry: scripts/typecheck.sh
+        language: script
+        types: [python]
+        require_serial: true

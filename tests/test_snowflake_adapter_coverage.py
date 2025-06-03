@@ -25,14 +25,14 @@ class TestSnowflakeAdapterCoverageBoost(unittest.TestCase):
         self.role = "test_role"
 
     def test_has_snowflake_constant_exists(self):
-        """Test that the HAS_SNOWFLAKE constant exists and is True in test environment."""
-        from sql_testing_library._adapters.snowflake import HAS_SNOWFLAKE
+        """Test that the has_snowflake constant exists and is True in test environment."""
+        from sql_testing_library._adapters.snowflake import has_snowflake
 
-        # HAS_SNOWFLAKE should be True in this test environment (since Snowflake works)
-        self.assertTrue(HAS_SNOWFLAKE)
+        # has_snowflake should be True in this test environment (since Snowflake works)
+        self.assertTrue(has_snowflake)
 
         # The constant should be boolean
-        self.assertIsInstance(HAS_SNOWFLAKE, bool)
+        self.assertIsInstance(has_snowflake, bool)
 
     @mock.patch("snowflake.connector.connect")
     def test_initialization_without_optional_params(self, mock_snowflake_connect):

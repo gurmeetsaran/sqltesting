@@ -1,9 +1,9 @@
 #!/bin/bash
-# Run mypy type checking
+# Run pyright type checking
 
 set -e
 
-echo "Running Mypy type checking..."
-poetry run mypy --ignore-missing-imports --disallow-untyped-defs --disallow-incomplete-defs src
+echo "Running Pyright type checking..."
+poetry run pyright
 
 echo "Type checking complete!"

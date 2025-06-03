@@ -324,7 +324,7 @@ class SQLTestFramework:
                     # First SELECT with column aliases
                     select_expressions = []
                     for col_name, value in row.items():
-                        col_type = column_types.get(col_name, str)
+                        col_type = column_types.get(str(col_name), str)
                         formatted_value = self.adapter.format_value_for_cte(value, col_type)
                         select_expressions.append(f"{formatted_value} AS {col_name}")
                     select_statements.append(f"SELECT {', '.join(select_expressions)}")
@@ -332,7 +332,7 @@ class SQLTestFramework:
                     # Subsequent SELECTs without aliases
                     row_values = []
                     for col_name, value in row.items():
-                        col_type = column_types.get(col_name, str)
+                        col_type = column_types.get(str(col_name), str)
                         formatted_value = self.adapter.format_value_for_cte(value, col_type)
                         row_values.append(formatted_value)
                     select_statements.append(f"SELECT {', '.join(row_values)}")
@@ -349,7 +349,7 @@ class SQLTestFramework:
                     # First SELECT with column aliases
                     select_expressions = []
                     for col_name, value in row.items():
-                        col_type = column_types.get(col_name, str)
+                        col_type = column_types.get(str(col_name), str)
                         formatted_value = self.adapter.format_value_for_cte(value, col_type)
                         select_expressions.append(f"{formatted_value} AS {col_name}")
                     select_statements.append(f"SELECT {', '.join(select_expressions)}")
@@ -357,7 +357,7 @@ class SQLTestFramework:
                     # Subsequent SELECTs without aliases
                     row_values = []
                     for col_name, value in row.items():
-                        col_type = column_types.get(col_name, str)
+                        col_type = column_types.get(str(col_name), str)
                         formatted_value = self.adapter.format_value_for_cte(value, col_type)
                         row_values.append(formatted_value)
                     select_statements.append(f"SELECT {', '.join(row_values)}")
@@ -370,7 +370,7 @@ class SQLTestFramework:
             for _, row in df.iterrows():
                 row_values = []
                 for col_name, value in row.items():
-                    col_type = column_types.get(col_name, str)
+                    col_type = column_types.get(str(col_name), str)
                     formatted_value = self.adapter.format_value_for_cte(value, col_type)
                     row_values.append(formatted_value)
                 values_rows.append(f"({', '.join(row_values)})")
@@ -480,15 +480,16 @@ class SQLTestFramework:
             # Convert row to dictionary with proper types
             converted_row: Dict[str, Any] = {}
             for col_name, value in row.items():
-                if col_name in type_hints:
-                    target_type = type_hints[col_name]
+                col_name_str = str(col_name)
+                if col_name_str in type_hints:
+                    target_type = type_hints[col_name_str]
                     try:
                         converted_value = self.type_converter.convert(value, target_type)
-                        converted_row[col_name] = converted_value
+                        converted_row[col_name_str] = converted_value
                     except Exception:
-                        raise TypeConversionError(value, target_type, col_name)  # noqa:  B904
+                        raise TypeConversionError(value, target_type, col_name_str)  # noqa:  B904
                 else:
-                    converted_row[col_name] = value
+                    converted_row[col_name_str] = value
 
             # Create instance of result class
             try:

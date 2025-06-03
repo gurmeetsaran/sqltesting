@@ -23,14 +23,14 @@ class TestRedshiftAdapterCoverageBoost(unittest.TestCase):
         self.port = 5439
 
     def test_has_psycopg2_constant_exists(self):
-        """Test that the HAS_PSYCOPG2 constant exists and is True in test environment."""
-        from sql_testing_library._adapters.redshift import HAS_PSYCOPG2
+        """Test that the has_psycopg2 constant exists and is True in test environment."""
+        from sql_testing_library._adapters.redshift import has_psycopg2
 
-        # HAS_PSYCOPG2 should be True in this test environment (since Redshift works)
-        self.assertTrue(HAS_PSYCOPG2)
+        # has_psycopg2 should be True in this test environment (since Redshift works)
+        self.assertTrue(has_psycopg2)
 
         # The constant should be boolean
-        self.assertIsInstance(HAS_PSYCOPG2, bool)
+        self.assertIsInstance(has_psycopg2, bool)
 
     @mock.patch("psycopg2.connect")
     def test_get_sqlglot_dialect(self, mock_psycopg2_connect):
