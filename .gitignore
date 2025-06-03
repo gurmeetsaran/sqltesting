@@ -192,8 +192,5 @@ pytest.ini
 .jekyll-cache
 _site/
 
-# Claude AI
-.claude/
-
 # venv
 .envrc
