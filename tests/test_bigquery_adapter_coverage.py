@@ -21,14 +21,14 @@ class TestBigQueryAdapterCoverageBoost(unittest.TestCase):
         self.credentials_path = "/path/to/credentials.json"
 
     def test_has_bigquery_constant_exists(self):
-        """Test that the HAS_BIGQUERY constant exists and is True in test environment."""
-        from sql_testing_library._adapters.bigquery import HAS_BIGQUERY
+        """Test that the has_bigquery constant exists and is True in test environment."""
+        from sql_testing_library._adapters.bigquery import has_bigquery
 
-        # HAS_BIGQUERY should be True in this test environment (since BigQuery works)
-        self.assertTrue(HAS_BIGQUERY)
+        # has_bigquery should be True in this test environment (since BigQuery works)
+        self.assertTrue(has_bigquery)
 
         # The constant should be boolean
-        self.assertIsInstance(HAS_BIGQUERY, bool)
+        self.assertIsInstance(has_bigquery, bool)
 
     @mock.patch("google.cloud.bigquery.Client")
     def test_initialization_without_credentials(self, mock_bigquery_client):

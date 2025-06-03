@@ -24,14 +24,14 @@ class TestTrinoAdapterCoverageBoost(unittest.TestCase):
         self.http_scheme = "http"
 
     def test_has_trino_constant_exists(self):
-        """Test that the HAS_TRINO constant exists and is True in test environment."""
-        from sql_testing_library._adapters.trino import HAS_TRINO
+        """Test that the has_trino constant exists and is True in test environment."""
+        from sql_testing_library._adapters.trino import has_trino
 
-        # HAS_TRINO should be True in this test environment (since Trino works)
-        self.assertTrue(HAS_TRINO)
+        # has_trino should be True in this test environment (since Trino works)
+        self.assertTrue(has_trino)
 
         # The constant should be boolean
-        self.assertIsInstance(HAS_TRINO, bool)
+        self.assertIsInstance(has_trino, bool)
 
     @mock.patch("trino.dbapi.connect")
     def test_initialization_with_auth(self, mock_trino_connect):
