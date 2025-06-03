@@ -1,0 +1,59 @@
+name: Check PR title
+
+on:
+  pull_request:
+    types:
+      - opened
+      - reopened
+      - synchronize
+      - edited
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Setup python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Check PR title format
+        run: |
+          python -m pip install -U pip commitizen
+
+          # Get the PR title
+          PR_TITLE="${{ github.event.pull_request.title }}"
+          echo "Checking PR title: $PR_TITLE"
+
+          if ! cz check -m "$PR_TITLE"; then
+            echo "❌ Invalid PR title: $PR_TITLE"
+            echo ""
+            echo "PR title must follow conventional commits format:"
+            echo "  <type>[optional scope]: <description>"
+            echo ""
+            echo "Valid types:"
+            echo "  build:    changes that affect build system or external dependencies"
+            echo "  ci:       changes to CI configuration files and scripts"
+            echo "  docs:     documentation only changes"
+            echo "  feat:     add new feature"
+            echo "  fix:      bug fix"
+            echo "  perf:     code change that improves performance"
+            echo "  refactor: code change that neither fixes bug nor adds feature"
+            echo "  style:    changes that do not affect meaning (white-space, formatting, etc)"
+            echo "  test:     adding missing tests or correcting existing tests"
+            echo "  chore:    other changes that don't modify src or test files"
+            echo "  revert:   reverts a previous commit"
+            echo "  bump:     version bump"
+            echo ""
+            echo "Examples:"
+            echo "  feat: add user authentication"
+            echo "  fix(api): resolve timeout issue"
+            echo "  docs: update README installation guide"
+            echo "  feat!: breaking change to API (note the !)"
+            echo "  chore(deps): update dependencies"
+            exit 1
+          else
+            echo "✅ Valid PR title: $PR_TITLE"
+          fi
+
+          echo "🎉 PR title follows conventional commits format!"
