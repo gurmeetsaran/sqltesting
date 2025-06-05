@@ -1,0 +1,11 @@
+# CODEOWNERS for SQL Testing Library
+#
+# This file defines the individuals or teams responsible for code in this repository.
+# Code owners are automatically requested for review when someone opens a pull request
+# that modifies code that they own.
+#
+# For more information, see:
+# https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# Global owners - all changes in the repository
+* @gurmeetsaran @kushal-thakkar
