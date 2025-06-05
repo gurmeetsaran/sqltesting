@@ -28,7 +28,7 @@ jobs:
         poetry run pytest -m "not integration" --cov=src/sql_testing_library --cov-report=xml
 
     - name: Upload unit test coverage to Codecov
-      uses: codecov/codecov-action@v3
+      uses: codecov/codecov-action@v5
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
         file: ./coverage.xml
