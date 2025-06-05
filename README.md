@@ -1,6 +1,6 @@
 # SQL Testing Library
 
-A Python library for testing SQL queries with mock data injection across Athena, BigQuery, Redshift, Trino, and Snowflake.
+A powerful Python framework for unit testing SQL queries with mock data injection across BigQuery, Snowflake, Redshift, Athena, and Trino.
 
 [![Unit Tests](https://github.com/gurmeetsaran/sqltesting/actions/workflows/tests.yaml/badge.svg)](https://github.com/gurmeetsaran/sqltesting/actions/workflows/tests.yaml)
 [![Athena Integration](https://github.com/gurmeetsaran/sqltesting/actions/workflows/athena-integration.yml/badge.svg)](https://github.com/gurmeetsaran/sqltesting/actions/workflows/athena-integration.yml)
@@ -9,6 +9,7 @@ A Python library for testing SQL queries with mock data injection across Athena,
 [![Trino Integration](https://github.com/gurmeetsaran/sqltesting/actions/workflows/trino-integration.yml/badge.svg)](https://github.com/gurmeetsaran/sqltesting/actions/workflows/trino-integration.yml)
 [![Snowflake Integration](https://github.com/gurmeetsaran/sqltesting/actions/workflows/snowflake-integration.yml/badge.svg)](https://github.com/gurmeetsaran/sqltesting/actions/workflows/snowflake-integration.yml)
 [![GitHub license](https://img.shields.io/github/license/gurmeetsaran/sqltesting)](https://github.com/gurmeetsaran/sqltesting/blob/master/LICENSE)
+[![Pepy Total Downloads](https://img.shields.io/pepy/dt/sql-testing-library?label=PyPI%20Downloads)](https://pepy.tech/projects/sql-testing-library)
 [![codecov](https://codecov.io/gh/gurmeetsaran/sqltesting/branch/master/graph/badge.svg?token=CN3G5X5ZA5)](https://codecov.io/gh/gurmeetsaran/sqltesting)
 ![python version](https://img.shields.io/badge/python-3.9%2B-yellowgreen)
 
