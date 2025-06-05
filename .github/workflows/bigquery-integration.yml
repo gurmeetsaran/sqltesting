@@ -160,7 +160,7 @@ jobs:
             --cov-report=xml:coverage-bigquery-integration.xml
 
       - name: Upload BigQuery integration coverage to Codecov
-        uses: codecov/codecov-action@v3
+        uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           file: ./coverage-bigquery-integration.xml

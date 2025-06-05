@@ -157,7 +157,7 @@ jobs:
         timeout-minutes: 15
 
       - name: Upload Redshift integration coverage to Codecov
-        uses: codecov/codecov-action@v3
+        uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           file: ./coverage-redshift-integration.xml
