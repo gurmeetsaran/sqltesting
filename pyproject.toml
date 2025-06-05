@@ -38,7 +38,7 @@ include = ["LICENSE", "README.md", "CHANGELOG.md", "py.typed"]
 
 [tool.poetry.dependencies]
 python = ">=3.9"
-sqlglot = ">=18.0.0,<19.0.0"
+sqlglot = ">=26.0.0"
 pydantic = ">=2.0.0"
 pandas = ">=1.0.0"
 typing-extensions = {version = ">=4.5.0", python = "<3.10"}
