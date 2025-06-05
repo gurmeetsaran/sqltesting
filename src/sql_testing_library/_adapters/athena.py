@@ -75,8 +75,8 @@ class AthenaAdapter(DatabaseAdapter):
             self.client = boto3.client("athena", region_name=region)
 
     def get_sqlglot_dialect(self) -> str:
-        """Return Presto dialect for sqlglot (Athena uses Presto SQL)."""
-        return "presto"
+        """Return Athena dialect for sqlglot."""
+        return "athena"
 
     def execute_query(self, query: str) -> "pd.DataFrame":
         """Execute query and return results as DataFrame."""

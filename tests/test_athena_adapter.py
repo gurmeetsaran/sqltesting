@@ -64,7 +64,7 @@ class TestAthenaAdapter(unittest.TestCase):
             database=self.database,
             s3_output_location=self.s3_output_location,
         )
-        self.assertEqual(adapter.get_sqlglot_dialect(), "presto")
+        self.assertEqual(adapter.get_sqlglot_dialect(), "athena")
 
     def test_execute_query(self, mock_boto3_client):
         """Test query execution."""

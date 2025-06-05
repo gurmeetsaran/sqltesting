@@ -84,7 +84,7 @@ The library supports different data types across database engines. All checkmark
 ### Database-Specific Notes
 
 - **BigQuery**: NULL arrays become empty arrays `[]`; uses scientific notation for large decimals
-- **Athena**: 256KB query size limit; uses Presto SQL dialect for arrays
+- **Athena**: 256KB query size limit; uses Athena SQL dialect for arrays
 - **Redshift**: Arrays implemented via JSON parsing; 16MB query size limit
 - **Trino**: Memory catalog for testing; excellent decimal precision
 - **Snowflake**: Column names normalized to lowercase; 1MB query size limit
