@@ -194,3 +194,5 @@ _site/
 
 # venv
 .envrc
+
+.sql_logs/
