@@ -4,7 +4,7 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
 name = "sql-testing-library"
-version = "0.5.0"
+version = "0.6.0"
 description = "A powerful Python framework for unit testing SQL queries across BigQuery, Snowflake, Redshift, Athena, and Trino with mock data"
 authors = ["Gurmeet Saran <gurmeetx@gmail.com>", "Kushal Thakkar <kushal.thakkar@gmail.com>"]
 maintainers = ["Gurmeet Saran <gurmeetx@gmail.com>", "Kushal Thakkar <kushal.thakkar@gmail.com>"]
