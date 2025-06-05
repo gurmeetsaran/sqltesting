@@ -1,18 +1,19 @@
 # Contributing to SQL Testing Library
 
-## Commit Message Format
+## Dependabot Integration Tests
 
-All commits MUST follow the [Conventional Commits](https://www.conventionalcommits.org/) format:
+For security reasons, integration tests are **skipped for Dependabot PRs**. Unit tests still run normally.
+## Pull Request Title Format
+
+All PR titles MUST follow the [Conventional Commits](https://www.conventionalcommits.org/) format:
 
 ```
 <type>[optional scope]: <description>
-
-[optional body]
-
-[optional footer(s)]
 ```
 
-### Commit Types
+**Note:** Individual commits within a PR do not need to follow this format. Only the PR title is validated.
+
+### PR Title Types
 
 | Type | Description | Version Impact |
 |------|-------------|----------------|
@@ -24,45 +25,36 @@ All commits MUST follow the [Conventional Commits](https://www.conventionalcommi
 | `test` | Adding or updating tests | None |
 | `chore` | Maintenance tasks (dependencies, etc.) | None |
 | `ci` | CI/CD changes | None |
+| `perf` | Performance improvements | Patch |
+| `build` | Build system or external dependencies | None |
+| `revert` | Reverts a previous commit | Varies |
 
 ### Examples
 
-✅ **Good Examples:**
-```bash
-feat: add BigQuery adapter support
-fix: resolve connection timeout in Athena adapter
-docs: update setup instructions for BigQuery
-feat(core): implement table validation
-fix(adapters): handle null values in mock tables
-test: add integration tests for Snowflake
-chore: update dependencies to latest versions
-```
+✅ **Good PR Title Examples:**
+- `feat: add BigQuery adapter support`
+- `fix: resolve connection timeout in Athena adapter`
+- `docs: update setup instructions for BigQuery`
+- `feat(core): implement table validation`
+- `fix(adapters): handle null values in mock tables`
+- `test: add integration tests for Snowflake`
+- `chore: update dependencies to latest versions`
 
-❌ **Bad Examples:**
-```bash
-Added new feature
-Bug fix
-Updated docs
-Fixed issue
-Improvements
-WIP
-```
+❌ **Bad PR Title Examples:**
+- `Added new feature`
+- `Bug fix`
+- `Updated docs`
+- `Fixed issue`
+- `Improvements`
+- `WIP`
 
 ### Breaking Changes
 
-For breaking changes, use one of these formats:
+For breaking changes in your PR title, add `!` after the type:
 
-**Method 1: Add `!` after type**
-```bash
+```
 feat!: redesign adapter interface
 fix!: change return type of validate_table
-```
-
-**Method 2: Use `BREAKING CHANGE:` footer**
-```bash
-feat: redesign adapter interface
-
-BREAKING CHANGE: Adapter.connect() now requires credentials parameter
 ```
 
 Breaking changes trigger a major version bump (1.2.0 → 2.0.0).
@@ -82,28 +74,32 @@ Use scopes to specify the area of change:
 
 ### Enforcement
 
-This repository uses multiple layers of validation:
-1. **Pre-commit hooks** - Block invalid commits locally
-2. **GitHub Actions** - Validate all commits in PRs using Commitizen
+PR titles are automatically validated by GitHub Actions when you:
+- Open a new PR
+- Edit the PR title
+- Push new commits
 
-Invalid commits will be rejected with helpful error messages.
-
-To set up pre-commit hooks:
-```bash
-pip install pre-commit
-pre-commit install
-pre-commit install --hook-type commit-msg
-```
+Invalid PR titles will fail the "Check PR title" workflow with a helpful error message explaining the correct format.
 
 ### Pull Request Guidelines
 
-1. All commits in your PR must follow conventional commit format
-2. Use descriptive commit messages that explain the "why"
-3. Keep commits atomic (one logical change per commit)
-4. Squash fixup commits before merging
+1. Your PR title must follow conventional commit format (individual commits don't need to)
+2. Use a descriptive PR title that explains what the PR accomplishes
+3. The PR title will be used as the merge commit message
+4. Keep PRs focused on a single feature or fix
 
 ### Need Help?
 
-- Review existing commits for examples
+- Review existing PR titles for examples
 - Use the conventional commits specification: https://www.conventionalcommits.org/
-- Ask in pull request comments if unsure about commit message format
+- The PR title validation workflow will provide specific guidance if your title is invalid
+
+## Individual Commit Messages
+
+Individual commits within your PR **do not** need to follow conventional commit format. Feel free to use informal commit messages like:
+- "WIP"
+- "fix typo"
+- "address review comments"
+- "update tests"
+
+Only the PR title matters for our automated tooling and changelog generation.
