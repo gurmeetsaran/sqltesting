@@ -93,6 +93,11 @@ class TestSQLTestFramework(unittest.TestCase):
         self.mock_adapter.get_query_size_limit.return_value = None
         self.mock_adapter.execute_query.return_value = pd.DataFrame()
         self.mock_adapter.cleanup_temp_tables.return_value = None
+        # Mock create_temp_table_with_sql to return a tuple
+        self.mock_adapter.create_temp_table_with_sql.return_value = (
+            "temp_table_123",
+            "CREATE TABLE temp_table_123 AS SELECT * FROM ...",
+        )
 
         self.framework = SQLTestFramework(self.mock_adapter)
 
@@ -366,19 +371,26 @@ class TestSQLTestFramework(unittest.TestCase):
         user_table = SampleUserMockTable(self.test_users, "test_db")
         table_mapping = {"users": user_table}
 
-        # Mock temp table creation
-        self.mock_adapter.create_temp_table.return_value = "temp_users_12345"
+        # Mock temp table creation - the code uses create_temp_table_with_sql if available
+        self.mock_adapter.create_temp_table_with_sql.return_value = (
+            "temp_users_12345",
+            "CREATE TABLE temp_users_12345 AS SELECT * FROM ...",
+        )
 
         with patch.object(self.framework, "_replace_table_names_in_query") as mock_replace:
             mock_replace.return_value = "SELECT * FROM temp_users_12345"
 
+            temp_table_queries = []
             result = self.framework._execute_with_physical_tables(
-                query, table_mapping, [user_table]
+                query, table_mapping, [user_table], temp_table_queries
             )
 
             assert result == "SELECT * FROM temp_users_12345"
             assert "temp_users_12345" in self.framework.temp_tables
-            self.mock_adapter.create_temp_table.assert_called_once_with(user_table)
+            self.mock_adapter.create_temp_table_with_sql.assert_called_once_with(user_table)
+            # Verify that temp_table_queries was populated
+            assert len(temp_table_queries) == 1
+            assert "CREATE TABLE temp_users_12345" in temp_table_queries[0]
 
     def test_deserialize_results_success(self):
         """Test successful result deserialization."""
@@ -570,8 +582,11 @@ class TestSQLTestFramework(unittest.TestCase):
             use_physical_tables=True,
         )
 
-        # Mock temp table creation
-        self.mock_adapter.create_temp_table.return_value = "temp_table_123"
+        # Mock temp table creation - the code uses create_temp_table_with_sql if available
+        self.mock_adapter.create_temp_table_with_sql.return_value = (
+            "temp_table_123",
+            "CREATE TABLE ...",
+        )
         # Make query execution fail
         self.mock_adapter.execute_query.side_effect = RuntimeError("Database error")
 
@@ -638,8 +653,12 @@ class TestSQLTestFramework(unittest.TestCase):
             use_physical_tables=True,
         )
 
-        # Mock temp table creation and execution
-        self.mock_adapter.create_temp_table.return_value = "temp_users_123"
+        # Mock temp table creation and execution - the code uses create_temp_table_with_sql
+        # if available
+        self.mock_adapter.create_temp_table_with_sql.return_value = (
+            "temp_users_123",
+            "CREATE TABLE ...",
+        )
         result_df = pd.DataFrame(
             [
                 {
@@ -666,7 +685,7 @@ class TestSQLTestFramework(unittest.TestCase):
 
         assert len(results) == 1
         assert isinstance(results[0], SampleUser)
-        self.mock_adapter.create_temp_table.assert_called_once()
+        self.mock_adapter.create_temp_table_with_sql.assert_called_once()
         self.mock_adapter.cleanup_temp_tables.assert_called_once()
 
 

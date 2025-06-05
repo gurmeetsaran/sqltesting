@@ -1,7 +1,7 @@
 """Base database adapter interface."""
 
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, Any, List, Optional
+from typing import TYPE_CHECKING, Any, List, Optional, Tuple
 
 
 if TYPE_CHECKING:
@@ -28,6 +28,15 @@ class DatabaseAdapter(ABC):
     @abstractmethod
     def create_temp_table(self, mock_table: BaseMockTable) -> str:
         """Create a temporary table with mock data. Returns temp table name."""
+        pass
+
+    @abstractmethod
+    def create_temp_table_with_sql(self, mock_table: BaseMockTable) -> Tuple[str, str]:
+        """Create a temporary table and return both table name and SQL.
+
+        Returns:
+            Tuple of (temp_table_name, create_table_sql)
+        """
         pass
 
     @abstractmethod

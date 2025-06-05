@@ -66,6 +66,12 @@ class SQLLogger:
         self.log_dir.mkdir(parents=True, exist_ok=True)
         self._logged_files: List[str] = []
 
+    def _ensure_run_directory(self) -> Path:
+        """Ensure run directory exists, creating it if necessary.
+
+        Returns:
+            Path to the run directory
+        """
         # Create run directory if not already created for this session
         if SQLLogger._run_directory is None:
             # Generate run ID with timestamp
@@ -73,12 +79,7 @@ class SQLLogger:
             SQLLogger._run_id = f"runid_{timestamp}"
             SQLLogger._run_directory = self.log_dir / SQLLogger._run_id
             SQLLogger._run_directory.mkdir(parents=True, exist_ok=True)
-
-            # Print run directory info to stderr
-            import sys
-
-            print(f"\n📁 SQL logs will be saved to: {SQLLogger._run_directory}", file=sys.stderr)
-            sys.stderr.flush()
+        return SQLLogger._run_directory
 
     def should_log(self, log_sql: Optional[bool] = None) -> bool:
         """Determine if SQL should be logged based on environment and parameters.
@@ -330,16 +331,10 @@ class SQLLogger:
         """
         # Generate filename
         filename = self.generate_filename(test_name, test_class, test_file, failed)
-        # Use the run directory instead of base log directory
-        # Ensure run directory is initialized (defensive programming)
-        if SQLLogger._run_directory is None:
-            # This should not happen in normal flow, but handle it gracefully
-            timestamp = datetime.now().strftime("%Y%m%dT%H%M%S")
-            SQLLogger._run_id = f"runid_{timestamp}"
-            SQLLogger._run_directory = self.log_dir / SQLLogger._run_id
-            SQLLogger._run_directory.mkdir(parents=True, exist_ok=True)
 
-        filepath = SQLLogger._run_directory / filename
+        # Ensure run directory exists (lazy creation)
+        run_directory = self._ensure_run_directory()
+        filepath = run_directory / filename
 
         # Prepare metadata
         if metadata is None:

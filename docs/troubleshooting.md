@@ -1,7 +1,7 @@
 ---
 layout: default
 title: Troubleshooting
-nav_order: 6
+nav_order: 7
 ---
 
 # Troubleshooting
@@ -256,6 +256,27 @@ nav_order: 6
    ```
 
 ## Debugging Tips
+
+### Use SQL Logging
+
+The SQL Testing Library provides comprehensive SQL logging to help debug test failures:
+
+```bash
+# Enable logging for all tests
+SQL_TEST_LOG_ALL=true pytest tests/
+
+# Or enable for specific tests
+@sql_test(log_sql=True)
+def test_with_logging():
+    ...
+```
+
+SQL logs are saved to `<project_root>/.sql_logs/` and include:
+- Complete transformed queries with CTEs or temp table SQL
+- Full error messages and stack traces
+- Test metadata and execution details
+
+See the [SQL Logging documentation](sql-logging) for more details.
 
 ### Enable Verbose Output
 

@@ -2,6 +2,7 @@
 
 import contextlib
 import unittest
+from typing import Tuple
 from unittest.mock import MagicMock, patch
 
 from sql_testing_library._adapters.base import DatabaseAdapter
@@ -20,6 +21,9 @@ class MockAdapter(DatabaseAdapter):
 
     def create_temp_table(self, mock_table: BaseMockTable) -> str:
         return "temp_table_123"
+
+    def create_temp_table_with_sql(self, mock_table: BaseMockTable) -> Tuple[str, str]:
+        return "temp_table_123", "CREATE TABLE temp_table_123 AS SELECT * FROM ..."
 
     def cleanup_temp_tables(self, table_names):
         pass

@@ -195,4 +195,5 @@ _site/
 # venv
 .envrc
 
+# SQL test logs
 .sql_logs/
