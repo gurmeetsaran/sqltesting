@@ -298,7 +298,7 @@ class TestComplexTypesIntegration:
         assert row3.string_array == []
         assert row3.int_array == [0]
         assert row3.decimal_array == []
-        assert row3.optional_string_array == [4444]
+        assert row3.optional_string_array == []
         assert row3.optional_int_array == [42]
 
 
