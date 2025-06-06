@@ -43,6 +43,9 @@ Seamlessly integrates with pytest using the `@sql_test` decorator.
 ### 📊 Comprehensive Type Support
 Supports primitive types, arrays, decimals, dates, and optional values across all databases.
 
+### 🔍 SQL Logging & Debugging
+Automatic SQL logging with formatted output, temp table queries, and full error tracebacks for easy debugging.
+
 ## 📋 Quick Example
 
 ```python

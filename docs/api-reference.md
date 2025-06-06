@@ -33,6 +33,7 @@ class SQLTestCase(Generic[T]):
     use_physical_tables: bool = False
     description: Optional[str] = None
     adapter_type: Optional[AdapterType] = None
+    log_sql: Optional[bool] = None
     execution_database: Optional[str] = None  # Deprecated
 ```
 
@@ -47,6 +48,7 @@ class SQLTestCase(Generic[T]):
 | `use_physical_tables` | `bool` | Force physical tables instead of CTEs (default: False) |
 | `description` | `Optional[str]` | Optional test description |
 | `adapter_type` | `Optional[AdapterType]` | Override default database adapter |
+| `log_sql` | `Optional[bool]` | Enable/disable SQL logging for this test |
 
 #### Example
 
@@ -170,7 +172,8 @@ from sql_testing_library import sql_test
     mock_tables: Optional[List[BaseMockTable]] = None,
     result_class: Optional[Type[T]] = None,
     use_physical_tables: Optional[bool] = None,
-    adapter_type: Optional[AdapterType] = None
+    adapter_type: Optional[AdapterType] = None,
+    log_sql: Optional[bool] = None
 )
 ```
 
@@ -197,6 +200,7 @@ pytest -m "sql_test and not slow"
 | `result_class` | `Optional[Type[T]]` | Override result class |
 | `use_physical_tables` | `Optional[bool]` | Override physical tables flag |
 | `adapter_type` | `Optional[AdapterType]` | Override adapter type |
+| `log_sql` | `Optional[bool]` | Enable/disable SQL logging |
 
 #### Usage Patterns
 

@@ -103,3 +103,41 @@ Individual commits within your PR **do not** need to follow conventional commit 
 - "update tests"
 
 Only the PR title matters for our automated tooling and changelog generation.
+
+## Development Setup
+
+### Running Tests
+
+```bash
+# Run all tests
+pytest
+
+# Run specific test file
+pytest tests/test_sql_logger.py
+
+# Run with coverage
+./scripts/coverage.sh
+
+# Run linting
+./scripts/lint.sh
+
+# Run type checking
+./scripts/typecheck.sh
+
+# Format code
+./scripts/format.sh
+```
+
+### Test Organization
+
+- Unit tests: `tests/test_*.py`
+- Integration tests: `tests/integration/test_*_integration.py`
+- Each module should have corresponding tests
+- New features should include tests
+
+### Key Test Files
+
+- `tests/test_sql_logger.py` - Tests for SQL logging functionality
+- `tests/test_core.py` - Core framework tests
+- `tests/test_sql_utils.py` - SQL utility function tests
+- `tests/test_*_adapter.py` - Adapter-specific tests

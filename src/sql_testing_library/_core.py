@@ -1,5 +1,6 @@
 """Core SQL testing framework."""
 
+import os
 from dataclasses import dataclass
 from typing import (
     TYPE_CHECKING,
@@ -27,12 +28,16 @@ from ._exceptions import (
     TypeConversionError,
 )
 from ._mock_table import BaseMockTable
+from ._sql_logger import SQLLogger
 
 
 # Type for adapter types
 AdapterType = Literal["bigquery", "athena", "redshift", "trino", "snowflake"]
 
 T = TypeVar("T")
+
+# Global storage for SQL execution data (used by pytest plugin)
+sql_test_execution_data: Dict[str, Dict[str, Any]] = {}
 
 
 @dataclass
@@ -48,6 +53,7 @@ class SQLTestCase(Generic[T]):
     use_physical_tables: bool = False
     description: Optional[str] = None
     adapter_type: Optional[AdapterType] = None
+    log_sql: Optional[bool] = None
     # Backward compatibility
     execution_database: Optional[str] = None
 
@@ -84,21 +90,34 @@ class SQLTestCase(Generic[T]):
 class SQLTestFramework:
     """Main framework for executing SQL tests."""
 
-    def __init__(self, adapter: DatabaseAdapter) -> None:
+    def __init__(self, adapter: DatabaseAdapter, sql_logger: Optional[SQLLogger] = None) -> None:
         self.adapter = adapter
         self.type_converter = self.adapter.get_type_converter()
         self.temp_tables: List[str] = []
+        self.sql_logger = sql_logger or SQLLogger()
 
-    def run_test(self, test_case: SQLTestCase[T]) -> List[T]:
+    def run_test(
+        self, test_case: SQLTestCase[T], test_context: Optional[Dict[str, Any]] = None
+    ) -> List[T]:
         """
         Execute a test case and return deserialized results.
 
         Args:
             test_case: The test case to execute
+            test_context: Optional context dictionary with test metadata
 
         Returns:
             List of result objects of type test_case.result_class
         """
+        import time
+
+        # Track execution time
+        start_time = time.time()
+        final_query = ""
+        error_message = None
+        row_count = None
+        temp_table_queries: List[str] = []  # Track temp table creation queries
+
         try:
             # Validate required fields
             if test_case.mock_tables is None:
@@ -130,7 +149,7 @@ class SQLTestFramework:
             if test_case.use_physical_tables:
                 # Create physical temporary tables
                 final_query = self._execute_with_physical_tables(
-                    test_case.query, table_mapping, test_case.mock_tables
+                    test_case.query, table_mapping, test_case.mock_tables, temp_table_queries
                 )
             else:
                 # Generate query with CTEs
@@ -150,8 +169,134 @@ class SQLTestFramework:
             # Execute query
             result_df = self.adapter.execute_query(final_query)
 
+            # Track row count
+            row_count = len(result_df) if result_df is not None else 0
+
             # Convert results to typed objects
-            return self._deserialize_results(result_df, test_case.result_class)
+            results = self._deserialize_results(result_df, test_case.result_class)
+
+            # Log SQL if enabled (success case)
+            execution_time = time.time() - start_time
+
+            # Store execution data for potential logging on test failure
+            if test_context:
+                test_id = test_context.get("test_id")
+                if test_id:
+                    sql_test_execution_data[test_id] = {
+                        "sql": final_query,
+                        "test_name": test_context.get("test_name", "unknown_test"),
+                        "test_class": test_context.get("test_class"),
+                        "test_file": test_context.get("test_file"),
+                        "metadata": {
+                            "query": test_case.query,
+                            "default_namespace": test_case.default_namespace,
+                            "mock_tables": test_case.mock_tables,
+                            "adapter_type": self.adapter.__class__.__name__.replace(
+                                "Adapter", ""
+                            ).lower(),
+                            "use_physical_tables": test_case.use_physical_tables,
+                            "execution_time": execution_time,
+                            "row_count": row_count,
+                            "error": None,
+                            "temp_table_queries": temp_table_queries,
+                        },
+                        "sql_logger": self.sql_logger,
+                        "log_sql": test_case.log_sql,
+                    }
+
+            if self.sql_logger.should_log(test_case.log_sql):
+                # Get test context info
+                test_name = (
+                    test_context.get("test_name", "unknown_test")
+                    if test_context
+                    else "unknown_test"
+                )
+                test_class = test_context.get("test_class") if test_context else None
+                test_file = test_context.get("test_file") if test_context else None
+
+                metadata = {
+                    "query": test_case.query,
+                    "default_namespace": test_case.default_namespace,
+                    "mock_tables": test_case.mock_tables,
+                    "adapter_type": self.adapter.get_sqlglot_dialect(),
+                    "adapter_name": self.adapter.__class__.__name__.replace("Adapter", "").lower(),
+                    "use_physical_tables": test_case.use_physical_tables,
+                    "execution_time": execution_time,
+                    "row_count": row_count,
+                    "error": None,
+                    "temp_table_queries": temp_table_queries,
+                }
+
+                # Log SQL immediately
+                log_path = self.sql_logger.log_sql(
+                    sql=final_query,
+                    test_name=test_name,
+                    test_class=test_class,
+                    test_file=test_file,
+                    failed=False,
+                    metadata=metadata,
+                )
+
+                # Print log location if environment variable is set
+                if os.environ.get("SQL_TEST_LOG_ALL", "").lower() in ("true", "1", "yes"):
+                    import sys
+
+                    print(f"\nSQL logged to: file://{log_path}", file=sys.stderr)  # noqa: T201
+                    sys.stderr.flush()
+
+            return results
+
+        except Exception as e:
+            # Store exception information for potential logging by pytest hook
+            execution_time = time.time() - start_time
+
+            # Capture full error details including traceback
+            import traceback
+
+            error_message = str(e)
+            error_traceback = traceback.format_exc()
+
+            # Store execution data for pytest hook to potentially log
+            if test_context and test_case.log_sql is not False:
+                test_id = test_context.get("test_id")
+                if test_id:
+                    # Update the execution data with error information
+                    if test_id in sql_test_execution_data:
+                        sql_test_execution_data[test_id]["metadata"]["error"] = error_message
+                        sql_test_execution_data[test_id]["metadata"]["error_traceback"] = (
+                            error_traceback
+                        )
+                        sql_test_execution_data[test_id]["metadata"]["execution_time"] = (
+                            execution_time
+                        )
+                        sql_test_execution_data[test_id]["metadata"]["row_count"] = row_count
+                    else:
+                        # If we haven't stored data yet (error happened early), store it now
+                        sql_test_execution_data[test_id] = {
+                            "sql": final_query if "final_query" in locals() else test_case.query,
+                            "test_name": test_context.get("test_name", "unknown_test"),
+                            "test_class": test_context.get("test_class"),
+                            "test_file": test_context.get("test_file"),
+                            "metadata": {
+                                "query": test_case.query,
+                                "default_namespace": test_case.default_namespace,
+                                "mock_tables": test_case.mock_tables,
+                                "adapter_type": self.adapter.get_sqlglot_dialect(),
+                                "adapter_name": self.adapter.__class__.__name__.replace(
+                                    "Adapter", ""
+                                ).lower(),
+                                "use_physical_tables": test_case.use_physical_tables,
+                                "execution_time": execution_time,
+                                "row_count": row_count,
+                                "error": error_message,
+                                "error_traceback": error_traceback,
+                                "temp_table_queries": temp_table_queries,
+                            },
+                            "sql_logger": self.sql_logger,
+                            "log_sql": test_case.log_sql,
+                        }
+
+            raise
 
         finally:
             # Cleanup any temporary tables
@@ -439,15 +584,48 @@ class SQLTestFramework:
         query: str,
         table_mapping: Dict[str, BaseMockTable],
         mock_tables: List[BaseMockTable],
+        temp_table_queries: List[str],
     ) -> str:
         """Execute query using physical temporary tables."""
         # Create physical tables
         replacement_mapping = {}
 
         for original_name, mock_table in table_mapping.items():
-            temp_table_name = self.adapter.create_temp_table(mock_table)
-            self.temp_tables.append(temp_table_name)
-            replacement_mapping[original_name] = temp_table_name
+            try:
+                # Check if adapter has method to get temp table SQL
+                if hasattr(self.adapter, "create_temp_table_with_sql"):
+                    temp_table_name, create_sql = self.adapter.create_temp_table_with_sql(
+                        mock_table
+                    )
+                    temp_table_queries.append(create_sql)
+                else:
+                    temp_table_name = self.adapter.create_temp_table(mock_table)
+                    # Try to generate approximate SQL for logging
+                    temp_table_queries.append(
+                        f"-- CREATE TEMP TABLE {temp_table_name} (SQL not captured)"
+                    )
+
+                self.temp_tables.append(temp_table_name)
+                replacement_mapping[original_name] = temp_table_name
+            except Exception:
+                # If table creation fails, still try to capture the SQL for debugging
+                if hasattr(self.adapter, "create_temp_table_with_sql") and hasattr(
+                    mock_table, "get_table_name"
+                ):
+                    try:
+                        temp_table_name, ctas_sql = self.adapter.create_temp_table_with_sql(
+                            mock_table
+                        )
+                        temp_table_queries.append(ctas_sql)
+                        replacement_mapping[original_name] = temp_table_name
+                    except Exception:
+                        # If even SQL generation fails, add a placeholder
+                        temp_table_queries.append(
+                            f"-- CREATE TEMP TABLE for {original_name} (SQL generation failed)"
+                        )
+                        replacement_mapping[original_name] = f"temp_{original_name}_failed"
+                # Re-raise the original exception
+                raise
 
         # Replace table names and return modified query
         return self._replace_table_names_in_query(query, replacement_mapping)

@@ -10,7 +10,7 @@ import pytest
 from _pytest.nodes import Item
 
 from ._adapters.base import DatabaseAdapter
-from ._core import AdapterType, SQLTestCase, SQLTestFramework
+from ._core import AdapterType, SQLTestCase, SQLTestFramework, sql_test_execution_data
 from ._mock_table import BaseMockTable
 
 
@@ -335,12 +335,16 @@ class SQLTestDecorator:
 # Global instance
 _sql_test_decorator = SQLTestDecorator()
 
+# Global SQL execution context for logging
+_sql_execution_context: Dict[str, Any] = {}
+
 
 def sql_test(
     mock_tables: Optional[List[BaseMockTable]] = None,
     result_class: Optional[Type[T]] = None,
     use_physical_tables: Optional[bool] = None,
     adapter_type: Optional[AdapterType] = None,
+    log_sql: Optional[bool] = None,
 ) -> Callable[[Callable[[], SQLTestCase[T]]], Callable[[], List[T]]]:
     """
     Decorator to mark a function as a SQL test.
@@ -360,6 +364,8 @@ def sql_test(
                      (e.g., 'bigquery', 'athena').
                      If provided, overrides adapter_type in SQLTestCase and uses config
                      from [sql_testing.{adapter_type}] section.
+        log_sql: Optional flag to log the generated SQL to a file.
+                 If provided, overrides log_sql in SQLTestCase.
     """
 
     def decorator(func: Callable[[], SQLTestCase[T]]) -> Callable[[], List[T]]:
@@ -396,15 +402,54 @@ def sql_test(
             if adapter_type is not None:
                 test_case.adapter_type = adapter_type
 
+            if log_sql is not None:
+                test_case.log_sql = log_sql
+
             # Get framework and execute test
             framework = _sql_test_decorator.get_framework(test_case.adapter_type)
-            results: List[T] = framework.run_test(test_case)
+
+            # Create test context for logging
+            test_context = {}
+
+            # Try to get test metadata from the current pytest context
+            import inspect
+
+            frame = inspect.currentframe()
+            while frame:
+                frame_locals = frame.f_locals
+                if "item" in frame_locals and hasattr(frame_locals["item"], "name"):
+                    item = frame_locals["item"]
+                    test_context["test_name"] = item.name
+                    test_context["test_class"] = item.cls.__name__ if item.cls else None
+                    test_context["test_file"] = (
+                        str(item.fspath) if hasattr(item, "fspath") else None
+                    )
+                    # Create a unique test ID
+                    test_context["test_id"] = str(id(item))
+                    break
+                frame = frame.f_back
+
+            # If we couldn't get test context from stack, try to get it from function name
+            if not test_context:
+                test_context["test_name"] = func.__name__
+                test_context["test_file"] = inspect.getfile(func) if func is not None else None
+                # Create a unique test ID
+                test_context["test_id"] = f"{func.__name__}_{id(func)}"
+
+            results: List[T] = framework.run_test(test_case, test_context)
 
             return results
 
         # Mark function as SQL test
         wrapper._sql_test_decorated = True  # type: ignore
         wrapper._original_func = func  # type: ignore
+        wrapper._decorator_params = {  # type: ignore
+            "mock_tables": mock_tables,
+            "result_class": result_class,
+            "use_physical_tables": use_physical_tables,
+            "adapter_type": adapter_type,
+            "log_sql": log_sql,
+        }
 
         return wrapper
 
@@ -449,3 +494,52 @@ def pytest_runtest_call(item: Item) -> None:
     else:
         # Use default pytest execution
         item.runtest()
+
+
+def pytest_runtest_makereport(item: Item, call: Any) -> None:
+    """Hook to log SQL when tests fail (including assertion failures)."""
+    # We want to log after the test call phase
+    if call.when == "call":
+        test_id = str(id(item))
+
+        if call.excinfo is not None:
+            # Test failed - check if we have SQL execution data for this test
+            if test_id in sql_test_execution_data:
+                data = sql_test_execution_data[test_id]
+                sql_logger = data["sql_logger"]
+                log_sql = data.get("log_sql")
+
+                # Only log if log_sql is not False
+                if log_sql is not False:
+                    # Capture the assertion error details
+                    import traceback
+
+                    metadata = data["metadata"].copy()
+                    # Update error info with the actual pytest error
+                    # (might be different from stored error)
+                    metadata["error"] = str(call.excinfo.value)
+                    metadata["error_traceback"] = "".join(
+                        traceback.format_exception(
+                            call.excinfo.type, call.excinfo.value, call.excinfo.tb
+                        )
+                    )
+
+                    # Log the SQL
+                    log_path = sql_logger.log_sql(
+                        sql=data["sql"],
+                        test_name=data["test_name"],
+                        test_class=data["test_class"],
+                        test_file=data["test_file"],
+                        failed=True,
+                        metadata=metadata,
+                    )
+
+                    # Print log location
+                    import sys
+
+                    print(f"\nSQL logged to: file://{log_path}", file=sys.stderr)  # noqa: T201
+                    sys.stderr.flush()
+
+        # Clean up the stored data after the test (whether it passed or failed)
+        if test_id in sql_test_execution_data:
+            del sql_test_execution_data[test_id]

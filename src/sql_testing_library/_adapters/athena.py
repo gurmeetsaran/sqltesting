@@ -4,7 +4,7 @@ import logging
 import time
 from datetime import date, datetime
 from decimal import Decimal
-from typing import TYPE_CHECKING, Any, List, Optional, Type, Union, get_args
+from typing import TYPE_CHECKING, Any, List, Optional, Tuple, Type, Union, get_args
 
 
 if TYPE_CHECKING:
@@ -135,6 +135,20 @@ class AthenaAdapter(DatabaseAdapter):
         self.execute_query(ctas_sql)
 
         return qualified_table_name
+
+    def create_temp_table_with_sql(self, mock_table: BaseMockTable) -> Tuple[str, str]:
+        """Create a temporary table and return both table name and SQL."""
+        timestamp = int(time.time() * 1000)
+        temp_table_name = f"temp_{mock_table.get_table_name()}_{timestamp}"
+        qualified_table_name = f"{self.database}.{temp_table_name}"
+
+        # Generate CTAS statement (CREATE TABLE AS SELECT)
+        ctas_sql = self._generate_ctas_sql(temp_table_name, mock_table)
+
+        # Execute CTAS query
+        self.execute_query(ctas_sql)
+
+        return qualified_table_name, ctas_sql
 
     def cleanup_temp_tables(self, table_names: List[str]) -> None:
         """Clean up temporary tables."""

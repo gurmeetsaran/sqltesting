@@ -3,7 +3,7 @@
 import logging
 from datetime import date, datetime
 from decimal import Decimal
-from typing import TYPE_CHECKING, Any, List, Optional, Type, Union, get_args
+from typing import TYPE_CHECKING, Any, List, Optional, Tuple, Type, Union, get_args
 
 
 if TYPE_CHECKING:
@@ -87,6 +87,54 @@ class BigQueryAdapter(DatabaseAdapter):
             job.result()  # Wait for job to complete
 
         return table_id
+
+    def create_temp_table_with_sql(self, mock_table: BaseMockTable) -> Tuple[str, str]:
+        """Create temporary table and return both table name and SQL."""
+        import time
+
+        temp_table_name = f"temp_{mock_table.get_table_name()}_{int(time.time() * 1000)}"
+        table_id = f"{self.project_id}.{self.dataset_id}.{temp_table_name}"
+
+        # Generate CREATE TABLE SQL
+        schema = self._get_bigquery_schema(mock_table)
+        column_defs = []
+        for field in schema:
+            column_defs.append(f"`{field.name}` {field.field_type}")
+
+        columns_sql = ",\n  ".join(column_defs)
+        create_sql = f"CREATE TABLE `{table_id}` (\n  {columns_sql}\n)"
+
+        # Get insert SQL for the data
+        df = mock_table.to_dataframe()
+        if not df.empty:
+            # Generate INSERT statement
+            values_rows = []
+            for _, row in df.iterrows():
+                values = []
+                for col in df.columns:
+                    value = row[col]
+                    col_type = mock_table.get_column_types().get(col, str)
+                    formatted_value = self.format_value_for_cte(value, col_type)
+                    values.append(formatted_value)
+                values_rows.append(f"({', '.join(values)})")
+
+            values_sql = ",\n".join(values_rows)
+            insert_sql = f"INSERT INTO `{table_id}` VALUES\n{values_sql}"
+            full_sql = f"{create_sql};\n\n{insert_sql};"
+        else:
+            full_sql = create_sql + ";"
+
+        # Actually create the table
+        table = bigquery.Table(table_id, schema=schema)
+        table = self.client.create_table(table)
+
+        # Insert data if any
+        if not df.empty:
+            job_config = bigquery.LoadJobConfig()
+            job = self.client.load_table_from_dataframe(df, table, job_config=job_config)
+            job.result()
+
+        return table_id, full_sql
 
     def cleanup_temp_tables(self, table_names: List[str]) -> None:
         """Delete temporary tables."""

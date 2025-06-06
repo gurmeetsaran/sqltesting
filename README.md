@@ -51,6 +51,7 @@ For more details on our journey and the engineering challenges we solved, read t
 - **CTE or Physical Tables**: Automatic fallback for query size limits
 - **Type-Safe Results**: Deserialize results to Pydantic models
 - **Pytest Integration**: Seamless testing with `@sql_test` decorator
+- **SQL Logging**: Comprehensive SQL logging with formatted output, error traces, and temp table queries
 
 ## Data Types Support
 

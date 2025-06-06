@@ -292,6 +292,7 @@ def test_large_dataset():
 - [Learn about database adapters](adapters)
 - [Explore advanced examples](examples)
 - [Read the API reference](api-reference)
+- [Debug with SQL logging](sql-logging)
 - [Troubleshooting guide](troubleshooting)
 
 ## Quick Tips
