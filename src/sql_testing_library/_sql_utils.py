@@ -82,6 +82,7 @@ def format_sql_value(value: Any, column_type: Type, dialect: str = "standard") -
     """
     from datetime import date, datetime
     from decimal import Decimal
+    from typing import get_args
 
     import pandas as pd
 
@@ -89,6 +90,42 @@ def format_sql_value(value: Any, column_type: Type, dialect: str = "standard") -
     # Note: pd.isna() doesn't work on lists/arrays, so check for None first
     # and only use pd.isna() on scalar values
     if value is None or (not isinstance(value, (list, tuple)) and pd.isna(value)):
+        # Check if column_type is a List type
+        if hasattr(column_type, "__origin__") and column_type.__origin__ is list:
+            # Get the element type from List[T]
+            element_type = get_args(column_type)[0] if get_args(column_type) else str
+
+            if dialect in ("athena", "trino"):
+                # Map Python types to SQL types for array elements
+                if element_type == Decimal:
+                    sql_element_type = "DECIMAL(38,9)"
+                elif element_type is int:
+                    sql_element_type = "INTEGER" if dialect == "athena" else "BIGINT"
+                elif element_type is float:
+                    sql_element_type = "DOUBLE"
+                elif element_type is bool:
+                    sql_element_type = "BOOLEAN"
+                elif element_type is date:
+                    sql_element_type = "DATE"
+                elif element_type == datetime:
+                    sql_element_type = "TIMESTAMP"
+                else:
+                    sql_element_type = "VARCHAR"
+
+                return f"CAST(NULL AS ARRAY({sql_element_type}))"
+            elif dialect == "bigquery":
+                # BigQuery doesn't need explicit NULL array casting
+                return "NULL"
+            elif dialect == "redshift":
+                # Redshift SUPER type handles NULL arrays
+                return "NULL::SUPER"
+            elif dialect == "snowflake":
+                # Snowflake VARIANT type handles NULL arrays
+                return "NULL::VARIANT"
+            else:
+                return "NULL"
+
+        # Handle non-array NULL values
         if dialect == "redshift":
             # Redshift needs type-specific NULL casting
             if column_type == Decimal:

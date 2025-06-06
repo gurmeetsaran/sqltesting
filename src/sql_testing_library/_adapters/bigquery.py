@@ -178,7 +178,19 @@ class BigQueryAdapter(DatabaseAdapter):
                 if non_none_types:
                     col_type = non_none_types[0]
 
-            bq_type = type_mapping.get(col_type, bigquery.enums.SqlTypeNames.STRING)
-            schema.append(bigquery.SchemaField(col_name, bq_type))
+            # Handle List/Array types
+            if hasattr(col_type, "__origin__") and col_type.__origin__ is list:
+                # Get the element type from List[T]
+                element_type = get_args(col_type)[0] if get_args(col_type) else str
+
+                # Map element type to BigQuery type
+                element_bq_type = type_mapping.get(element_type, bigquery.enums.SqlTypeNames.STRING)
+
+                # Create field with mode=REPEATED for arrays
+                schema.append(bigquery.SchemaField(col_name, element_bq_type, mode="REPEATED"))
+            else:
+                # Handle scalar types
+                bq_type = type_mapping.get(col_type, bigquery.enums.SqlTypeNames.STRING)
+                schema.append(bigquery.SchemaField(col_name, bq_type))
 
         return schema

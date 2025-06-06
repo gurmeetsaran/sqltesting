@@ -160,7 +160,8 @@ class SQLLogger:
         try:
             # Parse and format using sqlglot
             parsed = parse_one(sql, dialect=dialect)
-            formatted = parsed.sql(pretty=True, pad=2)
+            # IMPORTANT: Pass dialect to sql() to preserve dialect-specific syntax
+            formatted = parsed.sql(pretty=True, pad=2, dialect=dialect)
             return formatted
         except Exception:
             # If formatting fails, return original

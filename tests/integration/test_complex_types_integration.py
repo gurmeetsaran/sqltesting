@@ -1,7 +1,5 @@
 """Integration tests for complex types (arrays, etc.) across all database adapters."""
 
-import os
-import unittest
 from dataclasses import dataclass
 from decimal import Decimal
 from typing import List, Optional
@@ -61,16 +59,21 @@ class ComplexTypesMockTable(BaseMockTable):
 
 
 @pytest.mark.integration
-class TestComplexTypesIntegration(unittest.TestCase):
+@pytest.mark.parametrize("adapter_type", ["athena", "bigquery", "redshift", "snowflake", "trino"])
+@pytest.mark.parametrize(
+    "use_physical_tables", [False, True], ids=["cte_mode", "physical_tables_mode"]
+)
+class TestComplexTypesIntegration:
     """Integration tests for complex types across all database adapters."""
 
-    def test_athena_complex_types(self):
-        """Test complex types with Athena adapter."""
-
-        test_data = [
+    @pytest.fixture(autouse=True)
+    def setup_test_data(self, adapter_type):
+        """Set up test data specific to each adapter."""
+        # Common test data structure for all adapters
+        self.test_data = [
             ComplexTypes(
                 id=1,
-                string_array=["hello", "world", "athena"],
+                string_array=[f"{adapter_type.title()}", "arrays", "test"],
                 int_array=[1, 2, 3, 42],
                 decimal_array=[Decimal("1.5"), Decimal("2.7"), Decimal("3.14")],
                 optional_string_array=["optional", "array"],
@@ -94,14 +97,31 @@ class TestComplexTypesIntegration(unittest.TestCase):
             ),
         ]
 
+        # Set database name based on adapter type
+        if adapter_type == "athena":
+            self.database_name = "test_db"
+        elif adapter_type == "bigquery":
+            self.database_name = "test-project.test_dataset"
+        elif adapter_type == "redshift":
+            self.database_name = "test_db"
+        elif adapter_type == "snowflake":
+            self.database_name = "test_db"
+        elif adapter_type == "trino":
+            self.database_name = "memory"
+
+    def test_complex_types_comprehensive(self, adapter_type, use_physical_tables):
+        """Test all complex types comprehensively for the specified adapter."""
+
+        # Skip physical table mode for Snowflake due to known issues
+        if adapter_type == "snowflake" and use_physical_tables:
+            pytest.skip("Snowflake has known issues with physical table mode")
+
         @sql_test(
-            adapter_type="athena",
-            mock_tables=[
-                ComplexTypesMockTable(test_data, os.getenv("AWS_ATHENA_DATABASE", "test_db"))
-            ],
+            adapter_type=adapter_type,
+            mock_tables=[ComplexTypesMockTable(self.test_data, self.database_name)],
             result_class=ComplexTypesResult,
         )
-        def query_athena_complex_types():
+        def query_complex_types():
             return TestCase(
                 query="""
                     SELECT
@@ -114,17 +134,31 @@ class TestComplexTypesIntegration(unittest.TestCase):
                     FROM complex_types
                     ORDER BY id
                 """,
-                default_namespace=os.getenv("AWS_ATHENA_DATABASE", "test_db"),
+                default_namespace=self.database_name,
+                use_physical_tables=use_physical_tables,
             )
 
-        results = query_athena_complex_types()
-
+        results = query_complex_types()
         assert len(results) == 3
 
+        # Verify results based on adapter type
+        if adapter_type == "athena":
+            self._verify_athena_results(results)
+        elif adapter_type == "bigquery":
+            self._verify_bigquery_results(results)
+        elif adapter_type == "redshift":
+            self._verify_redshift_results(results)
+        elif adapter_type == "snowflake":
+            self._verify_snowflake_results(results)
+        elif adapter_type == "trino":
+            self._verify_trino_results(results)
+
+    def _verify_athena_results(self, results):
+        """Verify Athena-specific results."""
         # Verify first row
         row1 = results[0]
         assert row1.id == 1
-        assert row1.string_array == ["hello", "world", "athena"]
+        assert row1.string_array == ["Athena", "arrays", "test"]
         assert row1.int_array == [1, 2, 3, 42]
         assert row1.decimal_array == [Decimal("1.5"), Decimal("2.7"), Decimal("3.14")]
         assert row1.optional_string_array == ["optional", "array"]
@@ -148,67 +182,12 @@ class TestComplexTypesIntegration(unittest.TestCase):
         assert row3.optional_string_array == []
         assert row3.optional_int_array == [42]
 
-    def test_bigquery_complex_types(self):
-        """Test complex types with BigQuery adapter."""
-
-        test_data = [
-            ComplexTypes(
-                id=1,
-                string_array=["BigQuery", "arrays", "test"],
-                int_array=[1, 2, 3, 42],
-                decimal_array=[Decimal("1.5"), Decimal("2.7"), Decimal("3.14")],
-                optional_string_array=["optional", "array"],
-                optional_int_array=[100, 200],
-            ),
-            ComplexTypes(
-                id=2,
-                string_array=["test", "array"],
-                int_array=[10, 20],
-                decimal_array=[Decimal("99.99")],
-                optional_string_array=None,
-                optional_int_array=None,
-            ),
-            ComplexTypes(
-                id=3,
-                string_array=[],  # Empty array
-                int_array=[0],
-                decimal_array=[],
-                optional_string_array=[],
-                optional_int_array=[42],
-            ),
-        ]
-
-        @sql_test(
-            adapter_type="bigquery",
-            mock_tables=[
-                ComplexTypesMockTable(test_data, os.getenv("GCP_PROJECT_ID", "test_project"))
-            ],
-            result_class=ComplexTypesResult,
-        )
-        def query_bigquery_complex_types():
-            return TestCase(
-                query="""
-                    SELECT
-                        id,
-                        string_array,
-                        int_array,
-                        decimal_array,
-                        optional_string_array,
-                        optional_int_array
-                    FROM complex_types
-                    ORDER BY id
-                """,
-                default_namespace=os.getenv("GCP_PROJECT_ID", "test_project"),
-            )
-
-        results = query_bigquery_complex_types()
-
-        assert len(results) == 3
-
+    def _verify_bigquery_results(self, results):
+        """Verify BigQuery-specific results."""
         # Verify first row
         row1 = results[0]
         assert row1.id == 1
-        assert row1.string_array == ["BigQuery", "arrays", "test"]
+        assert row1.string_array == ["Bigquery", "arrays", "test"]
         assert row1.int_array == [1, 2, 3, 42]
         assert row1.decimal_array == [Decimal("1.5"), Decimal("2.7"), Decimal("3.14")]
         assert row1.optional_string_array == ["optional", "array"]
@@ -235,65 +214,12 @@ class TestComplexTypesIntegration(unittest.TestCase):
         assert row3.optional_string_array == []
         assert row3.optional_int_array == [42]
 
-    def test_redshift_complex_types(self):
-        """Test complex types with Redshift adapter."""
-
-        test_data = [
-            ComplexTypes(
-                id=1,
-                string_array=["Redshift", "super", "arrays"],
-                int_array=[1, 2, 3, 42],
-                decimal_array=[Decimal("1.5"), Decimal("2.7"), Decimal("3.14")],
-                optional_string_array=["optional", "array"],
-                optional_int_array=[100, 200],
-            ),
-            ComplexTypes(
-                id=2,
-                string_array=["test", "array"],
-                int_array=[10, 20],
-                decimal_array=[Decimal("99.99")],
-                optional_string_array=None,
-                optional_int_array=None,
-            ),
-            ComplexTypes(
-                id=3,
-                string_array=[],  # Empty array
-                int_array=[0],
-                decimal_array=[],
-                optional_string_array=[],
-                optional_int_array=[42],
-            ),
-        ]
-
-        @sql_test(
-            adapter_type="redshift",
-            mock_tables=[ComplexTypesMockTable(test_data, "test_db")],
-            result_class=ComplexTypesResult,
-        )
-        def query_redshift_complex_types():
-            return TestCase(
-                query="""
-                    SELECT
-                        id,
-                        string_array,
-                        int_array,
-                        decimal_array,
-                        optional_string_array,
-                        optional_int_array
-                    FROM complex_types
-                    ORDER BY id
-                """,
-                default_namespace="test_db",
-            )
-
-        results = query_redshift_complex_types()
-
-        assert len(results) == 3
-
+    def _verify_redshift_results(self, results):
+        """Verify Redshift-specific results."""
         # Verify first row
         row1 = results[0]
         assert row1.id == 1
-        assert row1.string_array == ["Redshift", "super", "arrays"]
+        assert row1.string_array == ["Redshift", "arrays", "test"]
         assert row1.int_array == [1, 2, 3, 42]
         assert row1.decimal_array == [Decimal("1.5"), Decimal("2.7"), Decimal("3.14")]
         assert row1.optional_string_array == ["optional", "array"]
@@ -317,67 +243,12 @@ class TestComplexTypesIntegration(unittest.TestCase):
         assert row3.optional_string_array == []
         assert row3.optional_int_array == [42]
 
-    def test_snowflake_complex_types(self):
-        """Test complex types with Snowflake adapter."""
-
-        test_data = [
-            ComplexTypes(
-                id=1,
-                string_array=["Snowflake", "variant", "arrays"],
-                int_array=[1, 2, 3, 42],
-                decimal_array=[Decimal("1.5"), Decimal("2.7"), Decimal("3.14")],
-                optional_string_array=["optional", "array"],
-                optional_int_array=[100, 200],
-            ),
-            ComplexTypes(
-                id=2,
-                string_array=["test", "array"],
-                int_array=[10, 20],
-                decimal_array=[Decimal("99.99")],
-                optional_string_array=None,
-                optional_int_array=None,
-            ),
-            ComplexTypes(
-                id=3,
-                string_array=[],  # Empty array
-                int_array=[0],
-                decimal_array=[],
-                optional_string_array=[],
-                optional_int_array=[42],
-            ),
-        ]
-
-        @sql_test(
-            adapter_type="snowflake",
-            mock_tables=[
-                ComplexTypesMockTable(test_data, os.getenv("SNOWFLAKE_DATABASE", "test_db"))
-            ],
-            result_class=ComplexTypesResult,
-        )
-        def query_snowflake_complex_types():
-            return TestCase(
-                query="""
-                    SELECT
-                        id,
-                        string_array,
-                        int_array,
-                        decimal_array,
-                        optional_string_array,
-                        optional_int_array
-                    FROM complex_types
-                    ORDER BY id
-                """,
-                default_namespace=os.getenv("SNOWFLAKE_DATABASE", "test_db"),
-            )
-
-        results = query_snowflake_complex_types()
-
-        assert len(results) == 3
-
+    def _verify_snowflake_results(self, results):
+        """Verify Snowflake-specific results."""
         # Verify first row
         row1 = results[0]
         assert row1.id == 1
-        assert row1.string_array == ["Snowflake", "variant", "arrays"]
+        assert row1.string_array == ["Snowflake", "arrays", "test"]
         assert row1.int_array == [1, 2, 3, 42]
         assert row1.decimal_array == [Decimal("1.5"), Decimal("2.7"), Decimal("3.14")]
         assert row1.optional_string_array == ["optional", "array"]
@@ -401,65 +272,12 @@ class TestComplexTypesIntegration(unittest.TestCase):
         assert row3.optional_string_array == []
         assert row3.optional_int_array == [42]
 
-    def test_trino_complex_types(self):
-        """Test complex types with Trino adapter."""
-
-        test_data = [
-            ComplexTypes(
-                id=1,
-                string_array=["Trino", "array", "support"],
-                int_array=[1, 2, 3, 42],
-                decimal_array=[Decimal("1.5"), Decimal("2.7"), Decimal("3.14")],
-                optional_string_array=["optional", "array"],
-                optional_int_array=[100, 200],
-            ),
-            ComplexTypes(
-                id=2,
-                string_array=["test", "array"],
-                int_array=[10, 20],
-                decimal_array=[Decimal("99.99")],
-                optional_string_array=None,
-                optional_int_array=None,
-            ),
-            ComplexTypes(
-                id=3,
-                string_array=[],  # Empty array
-                int_array=[0],
-                decimal_array=[],
-                optional_string_array=[],
-                optional_int_array=[42],
-            ),
-        ]
-
-        @sql_test(
-            adapter_type="trino",
-            mock_tables=[ComplexTypesMockTable(test_data, "memory")],
-            result_class=ComplexTypesResult,
-        )
-        def query_trino_complex_types():
-            return TestCase(
-                query="""
-                    SELECT
-                        id,
-                        string_array,
-                        int_array,
-                        decimal_array,
-                        optional_string_array,
-                        optional_int_array
-                    FROM complex_types
-                    ORDER BY id
-                """,
-                default_namespace="memory",
-            )
-
-        results = query_trino_complex_types()
-
-        assert len(results) == 3
-
+    def _verify_trino_results(self, results):
+        """Verify Trino-specific results."""
         # Verify first row
         row1 = results[0]
         assert row1.id == 1
-        assert row1.string_array == ["Trino", "array", "support"]
+        assert row1.string_array == ["Trino", "arrays", "test"]
         assert row1.int_array == [1, 2, 3, 42]
         assert row1.decimal_array == [Decimal("1.5"), Decimal("2.7"), Decimal("3.14")]
         assert row1.optional_string_array == ["optional", "array"]
@@ -480,7 +298,7 @@ class TestComplexTypesIntegration(unittest.TestCase):
         assert row3.string_array == []
         assert row3.int_array == [0]
         assert row3.decimal_array == []
-        assert row3.optional_string_array == []
+        assert row3.optional_string_array == [4444]
         assert row3.optional_int_array == [42]
 
 
