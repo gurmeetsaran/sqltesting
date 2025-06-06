@@ -178,6 +178,55 @@ class TestFormatSQLValue:
         result = format_sql_value(obj, type(obj))
         assert result == "'custom_value'"
 
+    def test_null_array_handling(self):
+        """Test NULL array handling for different dialects."""
+        from datetime import date, datetime
+        from decimal import Decimal
+        from typing import List
+
+        # Athena NULL arrays
+        assert format_sql_value(None, List[str], "athena") == "CAST(NULL AS ARRAY(VARCHAR))"
+        assert format_sql_value(None, List[int], "athena") == "CAST(NULL AS ARRAY(INTEGER))"
+        assert format_sql_value(None, List[float], "athena") == "CAST(NULL AS ARRAY(DOUBLE))"
+        assert format_sql_value(None, List[bool], "athena") == "CAST(NULL AS ARRAY(BOOLEAN))"
+        assert (
+            format_sql_value(None, List[Decimal], "athena") == "CAST(NULL AS ARRAY(DECIMAL(38,9)))"
+        )
+        assert format_sql_value(None, List[date], "athena") == "CAST(NULL AS ARRAY(DATE))"
+        assert format_sql_value(None, List[datetime], "athena") == "CAST(NULL AS ARRAY(TIMESTAMP))"
+
+        # Trino NULL arrays (uses BIGINT instead of INTEGER)
+        assert format_sql_value(None, List[str], "trino") == "CAST(NULL AS ARRAY(VARCHAR))"
+        assert format_sql_value(None, List[int], "trino") == "CAST(NULL AS ARRAY(BIGINT))"
+        assert format_sql_value(None, List[float], "trino") == "CAST(NULL AS ARRAY(DOUBLE))"
+        assert format_sql_value(None, List[bool], "trino") == "CAST(NULL AS ARRAY(BOOLEAN))"
+        assert (
+            format_sql_value(None, List[Decimal], "trino") == "CAST(NULL AS ARRAY(DECIMAL(38,9)))"
+        )
+
+        # Other dialects
+        assert format_sql_value(None, List[str], "bigquery") == "NULL"
+        assert format_sql_value(None, List[str], "redshift") == "NULL::SUPER"
+        assert format_sql_value(None, List[str], "snowflake") == "NULL::VARIANT"
+        assert format_sql_value(None, List[str], "standard") == "NULL"
+
+    def test_array_value_formatting(self):
+        """Test array value formatting for different dialects."""
+        from typing import List
+
+        # Test non-NULL arrays
+        assert format_sql_value(["a", "b"], List[str], "athena") == "ARRAY['a', 'b']"
+        assert format_sql_value([1, 2, 3], List[int], "athena") == "ARRAY[1, 2, 3]"
+        assert format_sql_value([], List[str], "athena") == "ARRAY[]"
+
+        assert format_sql_value(["a", "b"], List[str], "bigquery") == "['a', 'b']"
+        assert format_sql_value([1, 2, 3], List[int], "bigquery") == "[1, 2, 3]"
+        assert format_sql_value([], List[str], "bigquery") == "[]"
+
+        assert format_sql_value(["a", "b"], List[str], "snowflake") == "ARRAY_CONSTRUCT('a', 'b')"
+        assert format_sql_value([1, 2, 3], List[int], "snowflake") == "ARRAY_CONSTRUCT(1, 2, 3)"
+        assert format_sql_value([], List[str], "snowflake") == "ARRAY_CONSTRUCT()"
+
 
 if __name__ == "__main__":
     pytest.main([__file__])

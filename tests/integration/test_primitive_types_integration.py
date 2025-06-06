@@ -1,6 +1,5 @@
 """Integration tests for primitive types across all database adapters."""
 
-import os
 from dataclasses import dataclass
 from datetime import date, datetime
 from decimal import Decimal
@@ -154,7 +153,7 @@ class TestPrimitiveTypesIntegration:
                     optional_timestamp=datetime(2000, 2, 29, 23, 59, 59),
                 ),
             ]
-            self.database_name = os.getenv("AWS_ATHENA_DATABASE", "test_db")
+            self.database_name = "test_db"
             self.expected_results = 3
 
         elif adapter_type == "bigquery":
@@ -192,7 +191,7 @@ class TestPrimitiveTypesIntegration:
                     optional_timestamp=None,
                 ),
             ]
-            self.database_name = os.getenv("GCP_PROJECT_ID", "test_project")
+            self.database_name = "test-project.test_dataset"
             self.expected_results = 2
 
         elif adapter_type == "redshift":
@@ -607,7 +606,7 @@ class TestSnowflakePrimitiveTypesIntegration:
                 optional_timestamp=None,
             ),
         ]
-        self.database_name = os.getenv("SNOWFLAKE_DATABASE", "test_db")
+        self.database_name = "test_db"
 
     def test_snowflake_primitive_types(self, use_physical_tables):
         """Test all primitive types with Snowflake adapter."""

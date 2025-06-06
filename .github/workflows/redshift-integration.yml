@@ -8,20 +8,40 @@ on:
   pull_request:
     branches: [master, main]
     paths:
+      # Adapter-specific files
       - 'src/sql_testing_library/_adapters/redshift.py'
+      - 'tests/integration/test_redshift_integration.py'
+
+      # Core files that affect all adapters
+      - 'src/sql_testing_library/_sql_utils.py'
       - 'src/sql_testing_library/_core.py'
       - 'src/sql_testing_library/_mock_table.py'
-      - 'tests/test_redshift*.py'
-      - 'tests/integration/test_redshift_integration.py'
+      - 'src/sql_testing_library/_types.py'
+
+      # Cross-adapter test files
+      - 'tests/integration/test_complex_types_integration.py'
+      - 'tests/integration/test_primitive_types_integration.py'
+
+      # Workflow file itself
       - '.github/workflows/redshift-integration.yml'
   push:
     branches: [master, main]
     paths:
+      # Adapter-specific files
       - 'src/sql_testing_library/_adapters/redshift.py'
+      - 'tests/integration/test_redshift_integration.py'
+
+      # Core files that affect all adapters
+      - 'src/sql_testing_library/_sql_utils.py'
       - 'src/sql_testing_library/_core.py'
       - 'src/sql_testing_library/_mock_table.py'
-      - 'tests/test_redshift*.py'
-      - 'tests/integration/test_redshift_integration.py'
+      - 'src/sql_testing_library/_types.py'
+
+      # Cross-adapter test files
+      - 'tests/integration/test_complex_types_integration.py'
+      - 'tests/integration/test_primitive_types_integration.py'
+
+      # Workflow file itself
       - '.github/workflows/redshift-integration.yml'
   workflow_dispatch:  # Allow manual trigger
   workflow_call:      # Allow workflow reuse

@@ -4,6 +4,7 @@ import unittest
 from dataclasses import dataclass
 from datetime import date, datetime
 from decimal import Decimal
+from typing import List, Optional
 from unittest import mock
 
 import pandas as pd
@@ -192,6 +193,67 @@ class TestBigQueryAdapter(unittest.TestCase):
                 # Verify data was loaded
                 mock_client.load_table_from_dataframe.assert_called_once()
                 mock_job.result.assert_called_once()  # Wait for job completion
+
+    def test_bigquery_schema_with_arrays(self, mock_bigquery_client):
+        """Test BigQuery schema generation with array types."""
+        mock_client = mock.MagicMock()
+        mock_bigquery_client.return_value = mock_client
+
+        # Mock bigquery.enums and SchemaField
+        with (
+            mock.patch("google.cloud.bigquery.enums") as mock_enums,
+            mock.patch("google.cloud.bigquery.SchemaField") as mock_schema_field,
+        ):
+            # Set up enum values
+            mock_enums.SqlTypeNames.STRING = "STRING"
+            mock_enums.SqlTypeNames.INT64 = "INT64"
+            mock_enums.SqlTypeNames.NUMERIC = "NUMERIC"
+
+            adapter = BigQueryAdapter(
+                project_id=self.project_id,
+                dataset_id=self.dataset_id,
+            )
+
+            # Create a mock table with array types
+            @dataclass
+            class ComplexData:
+                id: int
+                string_array: List[str]
+                int_array: List[int]
+                decimal_array: List[Decimal]
+                optional_string_array: Optional[List[str]] = None
+                optional_int_array: Optional[List[int]] = None
+
+            class ComplexMockTable(BaseMockTable):
+                def get_database_name(self) -> str:
+                    return "test_dataset"
+
+                def get_table_name(self) -> str:
+                    return "complex_data"
+
+            # Create mock table
+            mock_table = ComplexMockTable(
+                [
+                    ComplexData(1, ["a", "b"], [1, 2], [Decimal("1.5")], ["optional"], [100]),
+                ]
+            )
+
+            # Get the schema
+            adapter._get_bigquery_schema(mock_table)
+
+            # Verify SchemaField was called correctly for each field
+            expected_calls = [
+                mock.call("id", "INT64"),  # Regular field
+                mock.call("string_array", "STRING", mode="REPEATED"),  # Array field
+                mock.call("int_array", "INT64", mode="REPEATED"),  # Array field
+                mock.call("decimal_array", "NUMERIC", mode="REPEATED"),  # Array field
+                mock.call("optional_string_array", "STRING", mode="REPEATED"),  # Optional array
+                mock.call("optional_int_array", "INT64", mode="REPEATED"),  # Optional array
+            ]
+
+            # Check that all expected calls were made
+            mock_schema_field.assert_has_calls(expected_calls)
+            self.assertEqual(mock_schema_field.call_count, 6)
 
     def test_cleanup_temp_tables(self, mock_bigquery_client):
         """Test temp table cleanup."""
