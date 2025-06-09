@@ -220,7 +220,22 @@ class TrinoAdapter(DatabaseAdapter):
                     if non_none_types:
                         col_type = non_none_types[0]
 
-                trino_type = type_mapping.get(col_type, "VARCHAR")
+                # Handle List types
+                if hasattr(col_type, "__origin__") and col_type.__origin__ is list:
+                    element_type = get_args(col_type)[0] if get_args(col_type) else str
+                    element_sql_type = type_mapping.get(element_type, "VARCHAR")
+                    trino_type = f"ARRAY({element_sql_type})"
+                # Handle Dict/Map types
+                elif hasattr(col_type, "__origin__") and col_type.__origin__ is dict:
+                    type_args = get_args(col_type)
+                    key_type = type_args[0] if type_args else str
+                    value_type = type_args[1] if len(type_args) > 1 else str
+                    key_sql_type = type_mapping.get(key_type, "VARCHAR")
+                    value_sql_type = type_mapping.get(value_type, "VARCHAR")
+                    trino_type = f"MAP({key_sql_type}, {value_sql_type})"
+                else:
+                    trino_type = type_mapping.get(col_type, "VARCHAR")
+
                 column_defs.append(f'"{col_name}" {trino_type}')
 
             columns_sql = ",\n  ".join(column_defs)

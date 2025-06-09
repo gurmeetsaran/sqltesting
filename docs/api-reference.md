@@ -422,6 +422,7 @@ except TypeConversionError as e:
 | `Decimal` | DECIMAL/NUMERIC | Arbitrary precision |
 | `None` | NULL | Null values |
 | `List[T]` | ARRAY | Arrays of supported types |
+| `Dict[K, V]` | MAP | Maps (Athena/Trino only) |
 | `Optional[T]` | Nullable | Union[T, None] |
 
 ### Type Conversion
@@ -431,7 +432,7 @@ The library automatically handles type conversions between Python and SQL:
 ```python
 from decimal import Decimal
 from datetime import date, datetime
-from typing import List, Optional
+from typing import List, Dict, Optional
 
 @dataclass
 class ComplexData:
@@ -440,6 +441,15 @@ class ComplexData:
     created_at: datetime
     tags: List[str]
     notes: Optional[str]
+
+# Map types (Athena/Trino only)
+@dataclass
+class MapData:
+    user_id: int
+    preferences: Dict[str, str]      # MAP(VARCHAR, VARCHAR)
+    scores: Dict[str, int]           # MAP(VARCHAR, INTEGER/BIGINT)
+    attributes: Dict[int, str]       # MAP(INTEGER/BIGINT, VARCHAR)
+    optional_map: Optional[Dict[str, str]]  # Nullable MAP
 ```
 
 ## Configuration

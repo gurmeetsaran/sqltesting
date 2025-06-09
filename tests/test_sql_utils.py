@@ -227,6 +227,121 @@ class TestFormatSQLValue:
         assert format_sql_value([1, 2, 3], List[int], "snowflake") == "ARRAY_CONSTRUCT(1, 2, 3)"
         assert format_sql_value([], List[str], "snowflake") == "ARRAY_CONSTRUCT()"
 
+    def test_null_map_handling(self):
+        """Test NULL map handling for different dialects."""
+        from datetime import date, datetime
+        from decimal import Decimal
+        from typing import Dict
+
+        # Athena NULL maps
+        assert (
+            format_sql_value(None, Dict[str, str], "athena")
+            == "CAST(NULL AS MAP(VARCHAR, VARCHAR))"
+        )
+        assert (
+            format_sql_value(None, Dict[str, int], "athena")
+            == "CAST(NULL AS MAP(VARCHAR, INTEGER))"
+        )
+        assert (
+            format_sql_value(None, Dict[int, str], "athena")
+            == "CAST(NULL AS MAP(INTEGER, VARCHAR))"
+        )
+        assert (
+            format_sql_value(None, Dict[str, float], "athena")
+            == "CAST(NULL AS MAP(VARCHAR, DOUBLE))"
+        )
+        assert (
+            format_sql_value(None, Dict[str, bool], "athena")
+            == "CAST(NULL AS MAP(VARCHAR, BOOLEAN))"
+        )
+        assert (
+            format_sql_value(None, Dict[str, Decimal], "athena")
+            == "CAST(NULL AS MAP(VARCHAR, DECIMAL(38,9)))"
+        )
+        assert (
+            format_sql_value(None, Dict[str, date], "athena") == "CAST(NULL AS MAP(VARCHAR, DATE))"
+        )
+        assert (
+            format_sql_value(None, Dict[str, datetime], "athena")
+            == "CAST(NULL AS MAP(VARCHAR, TIMESTAMP))"
+        )
+
+        # Trino NULL maps (uses BIGINT instead of INTEGER)
+        assert (
+            format_sql_value(None, Dict[str, str], "trino") == "CAST(NULL AS MAP(VARCHAR, VARCHAR))"
+        )
+        assert (
+            format_sql_value(None, Dict[str, int], "trino") == "CAST(NULL AS MAP(VARCHAR, BIGINT))"
+        )
+        assert (
+            format_sql_value(None, Dict[int, str], "trino") == "CAST(NULL AS MAP(BIGINT, VARCHAR))"
+        )
+        assert (
+            format_sql_value(None, Dict[str, float], "trino")
+            == "CAST(NULL AS MAP(VARCHAR, DOUBLE))"
+        )
+        assert (
+            format_sql_value(None, Dict[str, bool], "trino")
+            == "CAST(NULL AS MAP(VARCHAR, BOOLEAN))"
+        )
+        assert (
+            format_sql_value(None, Dict[str, Decimal], "trino")
+            == "CAST(NULL AS MAP(VARCHAR, DECIMAL(38,9)))"
+        )
+
+        # Other dialects don't support maps yet
+        assert format_sql_value(None, Dict[str, str], "bigquery") == "NULL"
+        assert format_sql_value(None, Dict[str, str], "standard") == "NULL"
+
+    def test_map_value_formatting(self):
+        """Test map value formatting for different dialects."""
+        from decimal import Decimal
+        from typing import Dict
+
+        # Test non-NULL maps for Athena
+        assert (
+            format_sql_value({"a": "b"}, Dict[str, str], "athena") == "MAP(ARRAY['a'], ARRAY['b'])"
+        )
+        assert (
+            format_sql_value({"key": 42}, Dict[str, int], "athena")
+            == "MAP(ARRAY['key'], ARRAY[42])"
+        )
+        assert format_sql_value({}, Dict[str, str], "athena") == "MAP(ARRAY[], ARRAY[])"
+        assert (
+            format_sql_value({"x": 1, "y": 2}, Dict[str, int], "athena")
+            == "MAP(ARRAY['x', 'y'], ARRAY[1, 2])"
+        )
+
+        # Test non-NULL maps for Trino
+        assert (
+            format_sql_value({"a": "b"}, Dict[str, str], "trino") == "MAP(ARRAY['a'], ARRAY['b'])"
+        )
+        assert (
+            format_sql_value({"key": 42}, Dict[str, int], "trino") == "MAP(ARRAY['key'], ARRAY[42])"
+        )
+        assert format_sql_value({}, Dict[str, str], "trino") == "MAP(ARRAY[], ARRAY[])"
+        assert (
+            format_sql_value({"x": 1, "y": 2}, Dict[str, int], "trino")
+            == "MAP(ARRAY['x', 'y'], ARRAY[1, 2])"
+        )
+
+        # Test with different key/value types
+        assert (
+            format_sql_value({1: "one", 2: "two"}, Dict[int, str], "athena")
+            == "MAP(ARRAY[1, 2], ARRAY['one', 'two'])"
+        )
+        assert (
+            format_sql_value({"price": Decimal("19.99")}, Dict[str, Decimal], "athena")
+            == "MAP(ARRAY['price'], ARRAY[19.99])"
+        )
+
+        # Test that other dialects raise NotImplementedError
+        with pytest.raises(NotImplementedError, match="Map type not yet supported"):
+            format_sql_value({"a": "b"}, Dict[str, str], "bigquery")
+
+        with pytest.raises(NotImplementedError, match="Map type not yet supported"):
+            format_sql_value({"a": "b"}, Dict[str, str], "redshift")
+
 
 if __name__ == "__main__":
     pytest.main([__file__])

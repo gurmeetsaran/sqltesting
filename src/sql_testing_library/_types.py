@@ -39,6 +39,67 @@ class BaseTypeConverter:
                 return None
             target_type = self.get_optional_inner_type(target_type)
 
+        # Handle dict/map types
+        if hasattr(target_type, "__origin__") and target_type.__origin__ is dict:
+            # If value is already a dict, return it
+            if isinstance(value, dict):
+                return value
+
+            # If value is a string representation of a map, parse it
+            if isinstance(value, str):
+                # Parse string map format like '{key1=value1, key2=value2}' (Athena/Trino format)
+                if value.startswith("{") and value.endswith("}"):
+                    inner_value = value[1:-1].strip()
+                    if not inner_value:  # Empty map
+                        return {}
+
+                    # Get the key and value types from Dict[K, V]
+                    type_args = get_args(target_type)
+                    key_type = type_args[0] if type_args else str
+                    value_type = type_args[1] if len(type_args) > 1 else str
+
+                    # Split by comma and parse key=value pairs
+                    result = {}
+                    # Handle nested structures by tracking brackets
+                    pairs = []
+                    current_pair = ""
+                    bracket_count = 0
+
+                    for char in inner_value:
+                        if char in "{[":
+                            bracket_count += 1
+                        elif char in "}]":
+                            bracket_count -= 1
+                        elif char == "," and bracket_count == 0:
+                            pairs.append(current_pair.strip())
+                            current_pair = ""
+                            continue
+                        current_pair += char
+
+                    if current_pair.strip():
+                        pairs.append(current_pair.strip())
+
+                    for pair in pairs:
+                        # Split by first = to handle values that contain =
+                        parts = pair.split("=", 1)
+                        if len(parts) == 2:
+                            key_str, value_str = parts
+                            key_str = key_str.strip()
+                            value_str = value_str.strip()
+
+                            # Convert key and value to proper types
+                            converted_key = self.convert(key_str, key_type)
+                            converted_value = self.convert(value_str, value_type)
+                            result[converted_key] = converted_value
+
+                    return result
+                else:
+                    # If it doesn't look like map format, return empty dict
+                    return {}
+
+            # For other types, try to convert to dict
+            return {} if value is None else {}
+
         # Handle array/list types
         if hasattr(target_type, "__origin__") and target_type.__origin__ is list:
             # If value is already a list, return it

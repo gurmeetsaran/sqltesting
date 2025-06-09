@@ -10,6 +10,9 @@ This directory contains integration tests that require real database connections
 - **`test_bigquery_integration.py`**: Google BigQuery integration tests
 - **`test_trino_integration.py`**: Trino integration tests (Docker-based)
 - **`test_snowflake_integration.py`**: Snowflake integration tests
+- **`test_primitive_types_integration.py`**: Tests for basic data types across all adapters
+- **`test_complex_types_integration.py`**: Tests for array types across all adapters
+- **`test_map_types_integration.py`**: Tests for MAP types (Athena and Trino only)
 
 ## Running Integration Tests
 
@@ -101,6 +104,7 @@ docker stop trino && docker rm trino
 - Uses Memory connector (no external storage needed)
 - Full SQL feature support (joins, aggregations, window functions)
 - Same test cases as Athena (since both are based on Trino/Presto)
+- Supports complex types: Arrays and Maps (Dict[K, V])
 - Automatic setup and teardown in CI/CD
 
 ## CI/CD Integration

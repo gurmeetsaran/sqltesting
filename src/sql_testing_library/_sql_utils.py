@@ -87,9 +87,9 @@ def format_sql_value(value: Any, column_type: Type, dialect: str = "standard") -
     import pandas as pd
 
     # Handle NULL values
-    # Note: pd.isna() doesn't work on lists/arrays, so check for None first
+    # Note: pd.isna() doesn't work on lists/arrays/dicts, so check for None first
     # and only use pd.isna() on scalar values
-    if value is None or (not isinstance(value, (list, tuple)) and pd.isna(value)):
+    if value is None or (not isinstance(value, (list, tuple, dict)) and pd.isna(value)):
         # Check if column_type is a List type
         if hasattr(column_type, "__origin__") and column_type.__origin__ is list:
             # Get the element type from List[T]
@@ -122,6 +122,37 @@ def format_sql_value(value: Any, column_type: Type, dialect: str = "standard") -
             elif dialect == "snowflake":
                 # Snowflake VARIANT type handles NULL arrays
                 return "NULL::VARIANT"
+            else:
+                return "NULL"
+
+        # Check if column_type is a Dict/Map type
+        elif hasattr(column_type, "__origin__") and column_type.__origin__ is dict:
+            # Get the key and value types from Dict[K, V]
+            type_args = get_args(column_type)
+            key_type = type_args[0] if type_args else str
+            value_type = type_args[1] if len(type_args) > 1 else str
+
+            if dialect in ("athena", "trino"):
+                # Map Python types to SQL types for map key and value
+                def get_sql_type(py_type):
+                    if py_type == Decimal:
+                        return "DECIMAL(38,9)"
+                    elif py_type is int:
+                        return "INTEGER" if dialect == "athena" else "BIGINT"
+                    elif py_type is float:
+                        return "DOUBLE"
+                    elif py_type is bool:
+                        return "BOOLEAN"
+                    elif py_type is date:
+                        return "DATE"
+                    elif py_type == datetime:
+                        return "TIMESTAMP"
+                    else:
+                        return "VARCHAR"
+
+                sql_key_type = get_sql_type(key_type)
+                sql_value_type = get_sql_type(value_type)
+                return f"CAST(NULL AS MAP({sql_key_type}, {sql_value_type}))"
             else:
                 return "NULL"
 
@@ -216,6 +247,37 @@ def format_sql_value(value: Any, column_type: Type, dialect: str = "standard") -
                 formatted_element = format_sql_value(element, element_type, dialect)
                 formatted_elements.append(formatted_element)
             return f"ARRAY[{', '.join(formatted_elements)}]"
+
+    # Handle map/dict types
+    if hasattr(column_type, "__origin__") and column_type.__origin__ is dict:
+        from typing import get_args
+
+        # Ensure value is a dictionary
+        if not isinstance(value, dict):
+            # If it's not a dict, return an empty map
+            if dialect in ("athena", "trino"):
+                return "MAP(ARRAY[], ARRAY[])"
+            else:
+                raise NotImplementedError(f"Map type not yet supported for dialect: {dialect}")
+
+        # Get the key and value types from Dict[K, V]
+        type_args = get_args(column_type)
+        key_type = type_args[0] if type_args else str
+        value_type = type_args[1] if len(type_args) > 1 else str
+
+        # Return database-specific map syntax
+        if dialect in ("athena", "trino"):
+            # Both Athena and Trino use MAP(ARRAY[keys], ARRAY[values]) syntax
+            keys = []
+            values = []
+            for k, v in value.items():
+                keys.append(format_sql_value(k, key_type, dialect))
+                values.append(format_sql_value(v, value_type, dialect))
+            return f"MAP(ARRAY[{', '.join(keys)}], ARRAY[{', '.join(values)}])"
+        else:
+            # Other databases don't have native map support yet
+            # Could potentially use JSON for BigQuery, Redshift, Snowflake
+            raise NotImplementedError(f"Map type not yet supported for dialect: {dialect}")
 
     # Handle string types
     if column_type is str:
