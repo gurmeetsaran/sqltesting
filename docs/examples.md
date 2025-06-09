@@ -210,6 +210,76 @@ def test_customer_analytics():
     )
 ```
 
+### Working with Maps (Athena/Trino)
+
+Map types are supported for Athena and Trino adapters:
+
+```python
+from typing import Dict, Optional
+
+@dataclass
+class UserPreferences:
+    user_id: int
+    username: str
+    settings: Dict[str, str]           # String to string map
+    scores: Dict[str, int]             # String to integer map
+    metadata: Optional[Dict[str, str]] # Optional map
+
+class UserPreferencesMockTable(BaseMockTable):
+    def get_database_name(self) -> str:
+        return "analytics"
+
+    def get_table_name(self) -> str:
+        return "user_preferences"
+
+# Mock data with maps
+mock_data = [
+    UserPreferences(
+        user_id=1,
+        username="alice",
+        settings={"theme": "dark", "notifications": "enabled", "language": "en"},
+        scores={"level1": 100, "level2": 85, "level3": 92},
+        metadata={"source": "mobile", "version": "2.1"}
+    ),
+    UserPreferences(
+        user_id=2,
+        username="bob",
+        settings={"theme": "light", "notifications": "disabled"},
+        scores={"level1": 95},
+        metadata=None  # NULL map
+    ),
+    UserPreferences(
+        user_id=3,
+        username="charlie",
+        settings={},  # Empty map
+        scores={"level1": 88, "level2": 90},
+        metadata={}
+    )
+]
+
+# Query using map operations
+test_case = TestCase(
+    query="""
+        SELECT
+            username,
+            settings['theme'] as theme_preference,
+            settings['notifications'] as notifications_enabled,
+            MAP_KEYS(scores) as completed_levels,
+            MAP_VALUES(scores) as level_scores,
+            CARDINALITY(settings) as settings_count,
+            CASE
+                WHEN metadata IS NULL THEN 'No metadata'
+                WHEN CARDINALITY(metadata) = 0 THEN 'Empty metadata'
+                ELSE metadata['source']
+            END as data_source
+        FROM user_preferences
+        WHERE settings['theme'] IS NOT NULL
+        ORDER BY username
+    """,
+    default_namespace="analytics"
+)
+```
+
 ### Date and Time Operations
 
 Working with temporal data:

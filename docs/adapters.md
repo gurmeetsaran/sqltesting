@@ -323,13 +323,16 @@ adapter = redshift  # Default for all tests
 | Datetime | ✅ DATETIME | ✅ TIMESTAMP | ✅ TIMESTAMP | ✅ TIMESTAMP | ✅ TIMESTAMP |
 | Decimal | ✅ NUMERIC | ✅ DECIMAL | ✅ DECIMAL | ✅ DECIMAL | ✅ NUMBER |
 
-### Array Types
+### Complex Types
 
-| Type | BigQuery | Athena | Redshift | Trino | Snowflake |
-|------|----------|---------|----------|-------|-----------|
-| String Array | ✅ ARRAY | ✅ ARRAY | ✅ JSON | ✅ ARRAY | ✅ ARRAY |
-| Int Array | ✅ ARRAY | ✅ ARRAY | ✅ JSON | ✅ ARRAY | ✅ ARRAY |
-| Decimal Array | ✅ ARRAY | ✅ ARRAY | ✅ JSON | ✅ ARRAY | ✅ ARRAY |
+| Type | Python Type | BigQuery | Athena | Redshift | Trino | Snowflake |
+|------|-------------|----------|---------|----------|-------|-----------|
+| String Array | `List[str]` | ✅ ARRAY | ✅ ARRAY | ✅ JSON | ✅ ARRAY | ✅ ARRAY |
+| Int Array | `List[int]` | ✅ ARRAY | ✅ ARRAY | ✅ JSON | ✅ ARRAY | ✅ ARRAY |
+| Decimal Array | `List[Decimal]` | ✅ ARRAY | ✅ ARRAY | ✅ JSON | ✅ ARRAY | ✅ ARRAY |
+| String Map | `Dict[str, str]` | ❌ | ✅ MAP | ❌ | ✅ MAP | ❌ |
+| Int Map | `Dict[str, int]` | ❌ | ✅ MAP | ❌ | ✅ MAP | ❌ |
+| Mixed Map | `Dict[K, V]` | ❌ | ✅ MAP | ❌ | ✅ MAP | ❌ |
 
 ## Adapter-Specific SQL
 
@@ -347,17 +350,31 @@ SELECT *, ROW_NUMBER() OVER (PARTITION BY category) as rn
 FROM products
 ```
 
-### Athena/Trino
+### Athena/Trino Complex Type Operations
 
 ```sql
 -- Arrays with UNNEST
 SELECT * FROM UNNEST(ARRAY[1, 2, 3]) AS t(number)
 
--- Maps
+-- Creating Maps
 SELECT MAP(ARRAY['a', 'b'], ARRAY[1, 2]) as my_map
 
--- Lambdas
+-- Map operations
+SELECT
+    settings['theme'] as theme_preference,
+    MAP_KEYS(user_data) as all_keys,
+    MAP_VALUES(user_data) as all_values,
+    CARDINALITY(user_data) as map_size
+FROM user_preferences
+WHERE settings['notifications'] = 'enabled'
+
+-- Lambdas with arrays
 SELECT FILTER(ARRAY[1, 2, 3, 4], x -> x > 2) as filtered
+
+-- Complex map types supported by SQL Testing Library
+-- Python: Dict[str, str] → SQL: MAP(VARCHAR, VARCHAR)
+-- Python: Dict[str, int] → SQL: MAP(VARCHAR, INTEGER/BIGINT)
+-- Python: Dict[int, str] → SQL: MAP(INTEGER/BIGINT, VARCHAR)
 ```
 
 ### Redshift

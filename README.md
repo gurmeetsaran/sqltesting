@@ -79,16 +79,16 @@ The library supports different data types across database engines. All checkmark
 | **Decimal Array** | `List[Decimal]` | ✅ | ✅ | ✅ | ✅ | ✅ |
 | **Optional Array** | `Optional[List[T]]` | ✅ | ✅ | ✅ | ✅ | ✅ |
 | **Struct/Record** | `dict`/`dataclass` | ❌ | ❌ | ❌ | ❌ | ❌ |
-| **Map/Object** | `Dict[str, T]` | ❌ | ❌ | ❌ | ❌ | ❌ |
+| **Map/Object** | `Dict[K, V]` | ❌ | ✅ | ❌ | ✅ | ❌ |
 | **Nested Arrays** | `List[List[T]]` | ❌ | ❌ | ❌ | ❌ | ❌ |
 | **JSON Objects** | `JSON` | ❌ | ❌ | ❌ | ❌ | ❌ |
 
 ### Database-Specific Notes
 
 - **BigQuery**: NULL arrays become empty arrays `[]`; uses scientific notation for large decimals
-- **Athena**: 256KB query size limit; uses Athena SQL dialect for arrays
+- **Athena**: 256KB query size limit; supports arrays and maps using `ARRAY[]` and `MAP(ARRAY[], ARRAY[])` syntax
 - **Redshift**: Arrays implemented via JSON parsing; 16MB query size limit
-- **Trino**: Memory catalog for testing; excellent decimal precision
+- **Trino**: Memory catalog for testing; excellent decimal precision; supports arrays and maps
 - **Snowflake**: Column names normalized to lowercase; 1MB query size limit
 
 ## Execution Modes Support
