@@ -5,16 +5,6 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## Unreleased
-
-### Feat
-
-- **adapters**: add MAP datatype support for Athena and Trino adapters
-  - Support for `Dict[K, V]` Python types mapping to SQL `MAP(K_TYPE, V_TYPE)`
-  - Proper NULL map handling with type-specific casting
-  - Empty map support
-  - Comprehensive integration tests for various map scenarios
-
 ## 0.7.1 (2025-06-06)
 
 ### Fix
