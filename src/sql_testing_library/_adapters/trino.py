@@ -1,10 +1,7 @@
 """Trino adapter implementation."""
 
 import logging
-import time
-from datetime import date, datetime
-from decimal import Decimal
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Type, Union, get_args
+from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
 
 if TYPE_CHECKING:
@@ -12,9 +9,8 @@ if TYPE_CHECKING:
     import trino
 
 # Heavy import moved to function level for better performance
-from .._mock_table import BaseMockTable
 from .._types import BaseTypeConverter
-from .base import DatabaseAdapter
+from .presto import PrestoBaseAdapter, PrestoBaseTypeConverter
 
 
 try:
@@ -26,16 +22,16 @@ except ImportError:
     trino = None  # type: ignore
 
 
-class TrinoTypeConverter(BaseTypeConverter):
+class TrinoTypeConverter(PrestoBaseTypeConverter):
     """Trino-specific type converter."""
 
-    def convert(self, value: Any, target_type: Type) -> Any:
+    def convert(self, value: Any, target_type: type) -> Any:
         """Convert Trino result value to target type."""
         # Trino returns proper Python types in most cases, so use base converter
         return super().convert(value, target_type)
 
 
-class TrinoAdapter(DatabaseAdapter):
+class TrinoAdapter(PrestoBaseAdapter):
     """Trino adapter for SQL testing."""
 
     def __init__(
@@ -116,38 +112,6 @@ class TrinoAdapter(DatabaseAdapter):
         # For non-SELECT queries
         return pd.DataFrame()
 
-    def create_temp_table(self, mock_table: BaseMockTable) -> str:
-        """Create a temporary table in Trino using CREATE TABLE AS SELECT."""
-        timestamp = int(time.time() * 1000)
-        temp_table_name = f"temp_{mock_table.get_table_name()}_{timestamp}"
-
-        # In Trino, tables are qualified with catalog and schema
-        qualified_table_name = f"{self.catalog}.{self.schema}.{temp_table_name}"
-
-        # Generate CTAS statement (CREATE TABLE AS SELECT)
-        ctas_sql = self._generate_ctas_sql(temp_table_name, mock_table)
-
-        # Execute CTAS query
-        self.execute_query(ctas_sql)
-
-        return qualified_table_name
-
-    def create_temp_table_with_sql(self, mock_table: BaseMockTable) -> Tuple[str, str]:
-        """Create a temporary table and return both table name and SQL."""
-        timestamp = int(time.time() * 1000)
-        temp_table_name = f"temp_{mock_table.get_table_name()}_{timestamp}"
-
-        # In Trino, tables are qualified with catalog and schema
-        qualified_table_name = f"{self.catalog}.{self.schema}.{temp_table_name}"
-
-        # Generate CTAS statement (CREATE TABLE AS SELECT)
-        ctas_sql = self._generate_ctas_sql(temp_table_name, mock_table)
-
-        # Execute CTAS query
-        self.execute_query(ctas_sql)
-
-        return qualified_table_name, ctas_sql
-
     def cleanup_temp_tables(self, table_names: List[str]) -> None:
         """Clean up temporary tables."""
         for full_table_name in table_names:
@@ -172,12 +136,6 @@ class TrinoAdapter(DatabaseAdapter):
             except Exception as e:
                 logging.warning(f"Warning: Failed to drop table {full_table_name}: {e}")
 
-    def format_value_for_cte(self, value: Any, column_type: type) -> str:
-        """Format value for Trino CTE VALUES clause."""
-        from .._sql_utils import format_sql_value
-
-        return format_sql_value(value, column_type, dialect="trino")
-
     def get_type_converter(self) -> BaseTypeConverter:
         """Get Trino-specific type converter."""
         return TrinoTypeConverter()
@@ -187,112 +145,40 @@ class TrinoAdapter(DatabaseAdapter):
         # Trino doesn't have a documented size limit, but we'll use a reasonable default
         return 16 * 1024 * 1024  # 16MB
 
-    def _generate_ctas_sql(self, table_name: str, mock_table: BaseMockTable) -> str:
-        """Generate CREATE TABLE AS SELECT (CTAS) statement for Trino."""
-        df = mock_table.to_dataframe()
-        column_types = mock_table.get_column_types()
-        columns = list(df.columns)
+    def _get_qualified_table_name(self, table_name: str) -> str:
+        """Get the fully qualified table name for Trino."""
+        return f"{self.catalog}.{self.schema}.{table_name}"
 
-        # Qualify table name with schema but not catalog
-        # Catalog is specified in the current session context
-        qualified_table = f"{self.schema}.{table_name}"
+    def _get_qualified_table_name_for_ctas(self, table_name: str) -> str:
+        """Get the qualified table name for use in CTAS (schema.table)."""
+        return f"{self.schema}.{table_name}"
 
-        if df.empty:
-            # For empty tables, create an empty table with correct schema
-            # Type mapping from Python types to Trino types
-            type_mapping = {
-                str: "VARCHAR",
-                int: "BIGINT",
-                float: "DOUBLE",
-                bool: "BOOLEAN",
-                date: "DATE",
-                datetime: "TIMESTAMP",
-                Decimal: "DECIMAL(38,9)",
-            }
-
-            # Generate column definitions
-            column_defs = []
-            for col_name, col_type in column_types.items():
-                # Handle Optional types
-                if hasattr(col_type, "__origin__") and col_type.__origin__ is Union:
-                    # Extract the non-None type from Optional[T]
-                    non_none_types = [arg for arg in get_args(col_type) if arg is not type(None)]
-                    if non_none_types:
-                        col_type = non_none_types[0]
-
-                # Handle List types
-                if hasattr(col_type, "__origin__") and col_type.__origin__ is list:
-                    element_type = get_args(col_type)[0] if get_args(col_type) else str
-                    element_sql_type = type_mapping.get(element_type, "VARCHAR")
-                    trino_type = f"ARRAY({element_sql_type})"
-                # Handle Dict/Map types
-                elif hasattr(col_type, "__origin__") and col_type.__origin__ is dict:
-                    type_args = get_args(col_type)
-                    key_type = type_args[0] if type_args else str
-                    value_type = type_args[1] if len(type_args) > 1 else str
-                    key_sql_type = type_mapping.get(key_type, "VARCHAR")
-                    value_sql_type = type_mapping.get(value_type, "VARCHAR")
-                    trino_type = f"MAP({key_sql_type}, {value_sql_type})"
-                else:
-                    trino_type = type_mapping.get(col_type, "VARCHAR")
-
-                column_defs.append(f'"{col_name}" {trino_type}')
-
-            columns_sql = ",\n  ".join(column_defs)
-
-            # Create an empty table with the correct schema
-            # Memory catalog doesn't support table properties like format
-            if self.catalog == "memory":
-                return f"""
-                CREATE TABLE {qualified_table} (
-                  {columns_sql}
-                )
-                """
-            else:
-                return f"""
-                CREATE TABLE {qualified_table} (
-                  {columns_sql}
-                )
-                WITH (format = 'ORC')
-                """
+    def _get_empty_table_ddl(self, qualified_table: str, columns_sql: str) -> str:
+        """Get DDL for creating an empty table in Trino."""
+        if self.catalog == "memory":
+            return f"""
+            CREATE TABLE {qualified_table} (
+              {columns_sql}
+            )
+            """
         else:
-            # For tables with data, use CTAS with a VALUES clause
-            # Build a SELECT statement with literal values for the first row
-            select_expressions = []
+            return f"""
+            CREATE TABLE {qualified_table} (
+              {columns_sql}
+            )
+            WITH (format = 'ORC')
+            """
 
-            # Generate column expressions for the first row
-            first_row = df.iloc[0]
-            for col_name in columns:
-                col_type = column_types.get(col_name, str)
-                value = first_row[col_name]
-                formatted_value = self.format_value_for_cte(value, col_type)
-                select_expressions.append(f'{formatted_value} AS "{col_name}"')
-
-            # Start with the first row in the SELECT
-            select_sql = f"SELECT {', '.join(select_expressions)}"
-
-            # Add UNION ALL for each additional row
-            for i in range(1, len(df)):
-                row = df.iloc[i]
-                row_values = []
-                for col_name in columns:
-                    col_type = column_types.get(col_name, str)
-                    value = row[col_name]
-                    formatted_value = self.format_value_for_cte(value, col_type)
-                    row_values.append(formatted_value)
-
-                select_sql += f"\nUNION ALL SELECT {', '.join(row_values)}"
-
-            # Create the CTAS statement
-            # Memory catalog doesn't support table properties like format
-            if self.catalog == "memory":
-                return f"""
-                CREATE TABLE {qualified_table}
-                AS {select_sql}
-                """
-            else:
-                return f"""
-                CREATE TABLE {qualified_table}
-                WITH (format = 'ORC')
-                AS {select_sql}
-                """
+    def _get_ctas_ddl(self, qualified_table: str, select_sql: str) -> str:
+        """Get CTAS DDL for Trino."""
+        if self.catalog == "memory":
+            return f"""
+            CREATE TABLE {qualified_table}
+            AS {select_sql}
+            """
+        else:
+            return f"""
+            CREATE TABLE {qualified_table}
+            WITH (format = 'ORC')
+            AS {select_sql}
+            """
