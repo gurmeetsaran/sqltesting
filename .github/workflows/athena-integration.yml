@@ -6,6 +6,7 @@ on:
     paths:
       # Adapter-specific files
       - 'src/sql_testing_library/_adapters/athena.py'
+      - 'src/sql_testing_library/_adapters/presto.py'  # Base class for Athena
       - 'tests/integration/test_athena_integration.py'
 
       # Core files that affect all adapters
@@ -26,6 +27,7 @@ on:
     paths:
       # Adapter-specific files
       - 'src/sql_testing_library/_adapters/athena.py'
+      - 'src/sql_testing_library/_adapters/presto.py'  # Base class for Athena
       - 'tests/integration/test_athena_integration.py'
 
       # Core files that affect all adapters
