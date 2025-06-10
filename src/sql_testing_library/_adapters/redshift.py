@@ -32,6 +32,32 @@ class RedshiftTypeConverter(BaseTypeConverter):
 
     def convert(self, value: Any, target_type: Type) -> Any:
         """Convert Redshift result value to target type."""
+        # Handle None/NULL values first
+        if value is None:
+            return None
+
+        # Handle Optional types
+        if self.is_optional_type(target_type):
+            if value is None:
+                return None
+            target_type = self.get_optional_inner_type(target_type)
+
+        # Handle dict/map types from Redshift SUPER columns
+        if hasattr(target_type, "__origin__") and target_type.__origin__ is dict:
+            # Redshift returns SUPER types as Python dicts already
+            if isinstance(value, dict):
+                return value
+            # If it's a string (shouldn't happen with psycopg2), parse it
+            elif isinstance(value, str):
+                import json
+
+                try:
+                    return json.loads(value)
+                except json.JSONDecodeError:
+                    return {}
+            else:
+                return {}
+
         # Redshift returns proper Python types in most cases, so use base converter
         return super().convert(value, target_type)
 
@@ -190,7 +216,11 @@ class RedshiftAdapter(DatabaseAdapter):
                     if non_none_types:
                         col_type = non_none_types[0]
 
-                redshift_type = type_mapping.get(col_type, "VARCHAR")
+                # Handle dict/map types
+                if hasattr(col_type, "__origin__") and col_type.__origin__ is dict:
+                    redshift_type = "SUPER"
+                else:
+                    redshift_type = type_mapping.get(col_type, "VARCHAR")
                 column_defs.append(f'"{col_name}" {redshift_type}')
 
             columns_sql = ",\n  ".join(column_defs)
