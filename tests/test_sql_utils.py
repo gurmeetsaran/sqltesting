@@ -289,6 +289,11 @@ class TestFormatSQLValue:
             == "CAST(NULL AS MAP(VARCHAR, DECIMAL(38,9)))"
         )
 
+        # Redshift NULL maps use SUPER type
+        assert format_sql_value(None, Dict[str, str], "redshift") == "NULL::SUPER"
+        assert format_sql_value(None, Dict[str, int], "redshift") == "NULL::SUPER"
+        assert format_sql_value(None, Dict[int, str], "redshift") == "NULL::SUPER"
+
         # Other dialects don't support maps yet
         assert format_sql_value(None, Dict[str, str], "bigquery") == "NULL"
         assert format_sql_value(None, Dict[str, str], "standard") == "NULL"
@@ -335,12 +340,27 @@ class TestFormatSQLValue:
             == "MAP(ARRAY['price'], ARRAY[19.99])"
         )
 
-        # Test that other dialects raise NotImplementedError
+        # Test Redshift map formatting (uses JSON_PARSE)
+        result = format_sql_value({"a": "b"}, Dict[str, str], "redshift")
+        assert result == 'JSON_PARSE(\'{"a": "b"}\')'
+
+        result = format_sql_value({"key": 42}, Dict[str, int], "redshift")
+        assert result == "JSON_PARSE('{\"key\": 42}')"
+
+        assert format_sql_value({}, Dict[str, str], "redshift") == "JSON_PARSE('{}')"
+
+        # Test Redshift with Decimal values (should use DecimalEncoder)
+        assert (
+            format_sql_value({"price": Decimal("19.99")}, Dict[str, Decimal], "redshift")
+            == "JSON_PARSE('{\"price\": 19.99}')"
+        )
+
+        # Test that other dialects still raise NotImplementedError
         with pytest.raises(NotImplementedError, match="Map type not yet supported"):
             format_sql_value({"a": "b"}, Dict[str, str], "bigquery")
 
         with pytest.raises(NotImplementedError, match="Map type not yet supported"):
-            format_sql_value({"a": "b"}, Dict[str, str], "redshift")
+            format_sql_value({"a": "b"}, Dict[str, str], "snowflake")
 
 
 if __name__ == "__main__":

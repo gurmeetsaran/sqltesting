@@ -103,11 +103,14 @@ def test_user_query():
 
 ✅ **Supported Types**: String, Integer, Float, Boolean, Date, Datetime, Decimal, Arrays, Optional/Nullable types
 
+✅ **Partially Supported Types**:
+- Map/Object types (Dict[K, V]) - Supported in Athena, Trino, and Redshift
+
 ❌ **Not Yet Supported**:
 - Struct/Record types (nested objects)
-- Map/Object types (key-value pairs)
 - Nested Arrays (arrays of arrays)
 - JSON Objects (semi-structured data)
+- Map types in BigQuery and Snowflake
 
 ## 📚 Documentation
 

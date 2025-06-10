@@ -1,6 +1,17 @@
 """SQL utility functions for escaping and formatting values."""
 
+import json
+from decimal import Decimal
 from typing import Any, Type
+
+
+class DecimalEncoder(json.JSONEncoder):
+    """JSON encoder that handles Decimal types."""
+
+    def default(self, o):
+        if isinstance(o, Decimal):
+            return float(o)
+        return super().default(o)
 
 
 def escape_sql_string(value: str) -> str:
@@ -153,6 +164,9 @@ def format_sql_value(value: Any, column_type: Type, dialect: str = "standard") -
                 sql_key_type = get_sql_type(key_type)
                 sql_value_type = get_sql_type(value_type)
                 return f"CAST(NULL AS MAP({sql_key_type}, {sql_value_type}))"
+            elif dialect == "redshift":
+                # Redshift SUPER type handles NULL maps
+                return "NULL::SUPER"
             else:
                 return "NULL"
 
@@ -220,9 +234,6 @@ def format_sql_value(value: Any, column_type: Type, dialect: str = "standard") -
         elif dialect == "redshift":
             # Redshift uses JSON-like syntax for SUPER arrays
             # Format elements as JSON (double quotes for strings)
-            import json
-            from decimal import Decimal
-
             # Convert elements to JSON-serializable types
             json_elements = []
             for element in value:
@@ -274,9 +285,13 @@ def format_sql_value(value: Any, column_type: Type, dialect: str = "standard") -
                 keys.append(format_sql_value(k, key_type, dialect))
                 values.append(format_sql_value(v, value_type, dialect))
             return f"MAP(ARRAY[{', '.join(keys)}], ARRAY[{', '.join(values)}])"
+        elif dialect == "redshift":
+            # Redshift uses SUPER type with JSON-like syntax for maps
+            json_str = json.dumps(value, cls=DecimalEncoder)
+            return f"JSON_PARSE('{json_str}')"
         else:
             # Other databases don't have native map support yet
-            # Could potentially use JSON for BigQuery, Redshift, Snowflake
+            # Could potentially use JSON for BigQuery, Snowflake
             raise NotImplementedError(f"Map type not yet supported for dialect: {dialect}")
 
     # Handle string types

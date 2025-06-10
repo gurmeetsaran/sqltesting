@@ -12,6 +12,7 @@ A powerful Python framework for unit testing SQL queries with mock data injectio
 [![Pepy Total Downloads](https://img.shields.io/pepy/dt/sql-testing-library?label=PyPI%20Downloads)](https://pepy.tech/projects/sql-testing-library)
 [![codecov](https://codecov.io/gh/gurmeetsaran/sqltesting/branch/master/graph/badge.svg?token=CN3G5X5ZA5)](https://codecov.io/gh/gurmeetsaran/sqltesting)
 ![python version](https://img.shields.io/badge/python-3.9%2B-yellowgreen)
+[![Documentation](https://img.shields.io/badge/docs-GitHub%20Pages-blue)](https://gurmeetsaran.github.io/sqltesting/)
 
 ## 🎯 Motivation
 
@@ -78,8 +79,8 @@ The library supports different data types across database engines. All checkmark
 | **Integer Array** | `List[int]` | ✅ | ✅ | ✅ | ✅ | ✅ |
 | **Decimal Array** | `List[Decimal]` | ✅ | ✅ | ✅ | ✅ | ✅ |
 | **Optional Array** | `Optional[List[T]]` | ✅ | ✅ | ✅ | ✅ | ✅ |
+| **Map/Object** | `Dict[K, V]` | ❌ | ✅ | ✅ | ✅ | ❌ |
 | **Struct/Record** | `dict`/`dataclass` | ❌ | ❌ | ❌ | ❌ | ❌ |
-| **Map/Object** | `Dict[K, V]` | ❌ | ✅ | ❌ | ✅ | ❌ |
 | **Nested Arrays** | `List[List[T]]` | ❌ | ❌ | ❌ | ❌ | ❌ |
 | **JSON Objects** | `JSON` | ❌ | ❌ | ❌ | ❌ | ❌ |
 
@@ -87,7 +88,7 @@ The library supports different data types across database engines. All checkmark
 
 - **BigQuery**: NULL arrays become empty arrays `[]`; uses scientific notation for large decimals
 - **Athena**: 256KB query size limit; supports arrays and maps using `ARRAY[]` and `MAP(ARRAY[], ARRAY[])` syntax
-- **Redshift**: Arrays implemented via JSON parsing; 16MB query size limit
+- **Redshift**: Arrays and maps implemented via SUPER type (JSON parsing); 16MB query size limit
 - **Trino**: Memory catalog for testing; excellent decimal precision; supports arrays and maps
 - **Snowflake**: Column names normalized to lowercase; 1MB query size limit
 

@@ -210,9 +210,9 @@ def test_customer_analytics():
     )
 ```
 
-### Working with Maps (Athena/Trino)
+### Working with Maps (Athena/Trino/Redshift)
 
-Map types are supported for Athena and Trino adapters:
+Map types are supported for Athena, Trino, and Redshift adapters:
 
 ```python
 from typing import Dict, Optional
@@ -447,12 +447,49 @@ def test_athena_arrays():
     )
 ```
 
-### Redshift JSON Handling
+### Redshift JSON and Map Handling
 
-Working with JSON in Redshift:
+Working with JSON and map types in Redshift:
 
 ```python
-# Redshift adapter test
+# Redshift adapter test with maps (using SUPER type)
+@dataclass
+class UserActivity:
+    user_id: int
+    username: str
+    preferences: Dict[str, str]  # Stored as SUPER type
+    activity_scores: Dict[str, int]
+
+# Mock data with maps
+mock_data = [
+    UserActivity(
+        user_id=1,
+        username="alice",
+        preferences={"theme": "dark", "language": "en"},
+        activity_scores={"login": 100, "posts": 45}
+    )
+]
+
+@sql_test(
+    adapter_type="redshift",
+    mock_tables=[UserActivityMockTable(mock_data)],
+    result_class=dict
+)
+def test_redshift_maps():
+    return TestCase(
+        query="""
+            SELECT
+                username,
+                preferences.theme as theme_pref,
+                preferences.language as lang_pref,
+                activity_scores.login as login_score
+            FROM user_activity
+            WHERE preferences.theme = 'dark'
+        """,
+        default_namespace="analytics_db"
+    )
+
+# Traditional JSON handling in Redshift
 @sql_test(
     adapter_type="redshift",
     mock_tables=[user_events_mock],

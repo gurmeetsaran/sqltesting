@@ -151,7 +151,8 @@ port = 5439  # Optional, defaults to 5439
 
 - **PostgreSQL Compatible**: Based on PostgreSQL 8.0.2
 - **Temporary Tables**: Automatic cleanup at session end
-- **Array Support**: Via JSON parsing
+- **Array Support**: Via SUPER type (JSON parsing)
+- **Map Support**: Via SUPER type for Dict[K, V] types
 - **Query Limits**: 16MB limit for CTE mode
 - **Column Store**: Optimized for analytical queries
 
@@ -330,9 +331,9 @@ adapter = redshift  # Default for all tests
 | String Array | `List[str]` | ✅ ARRAY | ✅ ARRAY | ✅ JSON | ✅ ARRAY | ✅ ARRAY |
 | Int Array | `List[int]` | ✅ ARRAY | ✅ ARRAY | ✅ JSON | ✅ ARRAY | ✅ ARRAY |
 | Decimal Array | `List[Decimal]` | ✅ ARRAY | ✅ ARRAY | ✅ JSON | ✅ ARRAY | ✅ ARRAY |
-| String Map | `Dict[str, str]` | ❌ | ✅ MAP | ❌ | ✅ MAP | ❌ |
-| Int Map | `Dict[str, int]` | ❌ | ✅ MAP | ❌ | ✅ MAP | ❌ |
-| Mixed Map | `Dict[K, V]` | ❌ | ✅ MAP | ❌ | ✅ MAP | ❌ |
+| String Map | `Dict[str, str]` | ❌ | ✅ MAP | ✅ SUPER | ✅ MAP | ❌ |
+| Int Map | `Dict[str, int]` | ❌ | ✅ MAP | ✅ SUPER | ✅ MAP | ❌ |
+| Mixed Map | `Dict[K, V]` | ❌ | ✅ MAP | ✅ SUPER | ✅ MAP | ❌ |
 
 ## Adapter-Specific SQL
 
@@ -380,8 +381,17 @@ SELECT FILTER(ARRAY[1, 2, 3, 4], x -> x > 2) as filtered
 ### Redshift
 
 ```sql
--- JSON arrays
+-- JSON arrays via SUPER type
 SELECT JSON_PARSE('[1, 2, 3]') as numbers
+
+-- JSON maps via SUPER type
+SELECT JSON_PARSE('{"key1": "value1", "key2": "value2"}') as my_map
+
+-- Accessing SUPER elements
+SELECT
+    my_super_column[0] as first_element,
+    my_super_column.field_name as field_value
+FROM table_with_super
 
 -- Window functions
 SELECT *, RANK() OVER (ORDER BY sales DESC) as rank
