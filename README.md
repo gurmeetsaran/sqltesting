@@ -786,20 +786,83 @@ The adapter_type parameter will use the configuration from the corresponding sec
 
 ## Development Setup
 
+### Quick Start with Make
+
+The project includes a Makefile for common development tasks:
+
+```bash
+# Install all dependencies
+make install
+
+# Run unit tests
+make test
+
+# Run linting and type checking
+make lint
+
+# Format code
+make format
+
+# Run all checks (lint + format check + tests)
+make check
+
+# See all available commands
+make help
+```
+
+### Available Make Commands
+
+| Command | Description |
+|---------|-------------|
+| `make install` | Install all dependencies with poetry |
+| `make test` | Run unit tests with coverage |
+| `make test-unit` | Run unit tests (excludes integration tests) |
+| `make test-integration` | Run integration tests (requires DB credentials) |
+| `make test-all` | Run all tests (unit + integration) |
+| `make test-tox` | Run tests across all Python versions (3.9-3.12) |
+| `make lint` | Run ruff and mypy checks |
+| `make format` | Format code with black and ruff |
+| `make check` | Run all checks (lint + format + tests) |
+| `make clean` | Remove build artifacts and cache files |
+| `make build` | Build distribution packages |
+| `make docs` | Build documentation |
+
+### Testing Across Python Versions
+
+The project supports Python 3.9-3.12. You can test across all versions using:
+
+```bash
+# Using tox (automatically tests all Python versions)
+make test-tox
+
+# Or directly with tox
+tox
+
+# Test specific Python version
+tox -e py39  # Python 3.9
+tox -e py310 # Python 3.10
+tox -e py311 # Python 3.11
+tox -e py312 # Python 3.12
+```
+
 ### Code Quality
 
 The project uses comprehensive tools to ensure code quality:
 
 1. **Ruff** for linting and formatting
-2. **Pyright** for static type checking
-3. **Pre-commit hooks** for automated checks
+2. **Black** for code formatting
+3. **Mypy** for static type checking
+4. **Pre-commit hooks** for automated checks
 
 To set up the development environment:
 
 1. Install development dependencies:
    ```bash
-   # Install all dependencies including database adapters and dev tools
-   poetry install --with bigquery,athena,redshift,trino,snowflake,dev
+   # Using make
+   make install
+
+   # Or directly with poetry
+   poetry install --all-extras
    ```
 
 2. Set up pre-commit hooks:

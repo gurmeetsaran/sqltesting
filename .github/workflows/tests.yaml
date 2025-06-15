@@ -7,16 +7,28 @@ on:
 
 jobs:
   unit-tests:
-    name: Unit Tests (All Adapters)
-    runs-on: ubuntu-latest
+    name: Unit Tests - Python ${{ matrix.python-version }} on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python-version: ['3.9', '3.10', '3.11', '3.12']
+        exclude:
+          # Skip some combinations to reduce CI time/cost if needed
+          # Uncomment below to skip certain combinations
+          # - os: windows-latest
+          #   python-version: '3.9'
+          # - os: macos-latest
+          #   python-version: '3.9'
 
     steps:
     - uses: actions/checkout@v4
 
-    - name: Set up Python
+    - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v5
       with:
-        python-version: "3.10"
+        python-version: ${{ matrix.python-version }}
 
     - name: Install dependencies
       run: |
