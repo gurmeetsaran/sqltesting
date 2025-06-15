@@ -210,9 +210,9 @@ def test_customer_analytics():
     )
 ```
 
-### Working with Maps (Athena/Trino/Redshift)
+### Working with Maps (BigQuery/Athena/Trino/Redshift)
 
-Map types are supported for Athena, Trino, and Redshift adapters:
+Map types are supported for BigQuery, Athena, Trino, and Redshift adapters:
 
 ```python
 from typing import Dict, Optional
@@ -277,6 +277,26 @@ test_case = TestCase(
         ORDER BY username
     """,
     default_namespace="analytics"
+)
+
+# BigQuery-specific map query (stored as JSON)
+bigquery_test_case = TestCase(
+    query="""
+        SELECT
+            username,
+            JSON_EXTRACT_SCALAR(settings, '$.theme') as theme_preference,
+            JSON_EXTRACT_SCALAR(settings, '$.notifications') as notifications_enabled,
+            JSON_EXTRACT_SCALAR(metadata, '$.source') as data_source,
+            CASE
+                WHEN metadata IS NULL THEN 'No metadata'
+                WHEN metadata = '{}' THEN 'Empty metadata'
+                ELSE 'Has metadata'
+            END as metadata_status
+        FROM user_preferences
+        WHERE JSON_EXTRACT_SCALAR(settings, '$.theme') IS NOT NULL
+        ORDER BY username
+    """,
+    default_namespace="my-project.analytics"
 )
 ```
 
