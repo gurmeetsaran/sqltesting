@@ -160,6 +160,99 @@ class TestBigQueryIntegration(unittest.TestCase):
             # Restore original decorator
             pytest_plugin._sql_test_decorator = original_decorator_instance
 
+    def test_bigquery_dict_types(self, mock_bigquery):
+        """Test BigQuery dict/map type handling."""
+        from sql_testing_library import _pytest_plugin as pytest_plugin
+
+        # Configure mock BigQuery client
+        self.mock_client = mock_bigquery.return_value
+        self.mock_job = mock.Mock()
+        self.mock_table = mock.Mock()
+
+        # Mock query results for dict types
+        result_df = pd.DataFrame(
+            [
+                {
+                    "id": 1,
+                    "metadata": {"key1": "value1", "key2": "value2"},
+                    "scores": {"math": 95, "science": 88},
+                }
+            ]
+        )
+        self.mock_job.to_dataframe.return_value = result_df
+        self.mock_client.query.return_value = self.mock_job
+        self.mock_client.create_table.return_value = self.mock_table
+        self.mock_client.load_table_from_dataframe.return_value = self.mock_job
+
+        # Store original decorator instance
+        original_decorator_instance = getattr(pytest_plugin, "_sql_test_decorator", None)
+
+        # Create and set a new decorator instance
+        decorator = SQLTestDecorator()
+        pytest_plugin._sql_test_decorator = decorator
+
+        try:
+            # Configure for test
+            decorator.configure(mock.Mock(), self.config)
+
+            # Define test data with dict types
+            from typing import Dict
+
+            @dataclass
+            class TestData:
+                id: int
+                metadata: Dict[str, str]
+                scores: Dict[str, int]
+
+            class TestResult(BaseModel):
+                id: int
+                metadata: Dict[str, str]
+                scores: Dict[str, int]
+
+            class TestMockTable(BaseMockTable):
+                def get_database_name(self) -> str:
+                    return "test_dataset"
+
+                def get_table_name(self) -> str:
+                    return "dict_test"
+
+            # Create test data
+            test_data = [
+                TestData(
+                    id=1,
+                    metadata={"key1": "value1", "key2": "value2"},
+                    scores={"math": 95, "science": 88},
+                )
+            ]
+
+            # Define the test using sql_test decorator
+            @sql_test(
+                adapter_type="bigquery",
+                mock_tables=[TestMockTable(test_data)],
+                result_class=TestResult,
+            )
+            def test_bigquery_dict_query():
+                return TestCase(
+                    query="SELECT id, metadata, scores FROM dict_test WHERE id = 1",
+                    default_namespace="test_dataset",
+                )
+
+            # Execute the test
+            results = test_bigquery_dict_query()
+
+            # Verify results
+            self.assertEqual(len(results), 1)
+            self.assertEqual(results[0].id, 1)
+            self.assertEqual(results[0].metadata, {"key1": "value1", "key2": "value2"})
+            self.assertEqual(results[0].scores, {"math": 95, "science": 88})
+
+            # Verify BigQuery client was used
+            self.mock_client.query.assert_called()
+
+        finally:
+            # Restore original decorator
+            pytest_plugin._sql_test_decorator = original_decorator_instance
+
 
 if __name__ == "__main__":
     unittest.main()
