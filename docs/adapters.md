@@ -52,6 +52,7 @@ credentials_path = /path/to/service-account.json
 
 - **CTE Creation**: Uses UNION ALL pattern for compatibility with complex data types
 - **Array Support**: Full support for ARRAY types using `[element1, element2]` syntax
+- **Dict/Map Support**: Full support for Dict types stored as JSON strings
 - **Decimal Handling**: Automatic conversion for NUMERIC/DECIMAL types
 - **Query Limits**: ~1MB for CTE mode before switching to physical tables
 
@@ -77,11 +78,14 @@ class Transaction:
     amount: Decimal
     date: date
     tags: List[str]
+    metadata: Dict[str, str]  # Dict support added
 
-# BigQuery handles arrays and decimals natively
+# BigQuery handles arrays, decimals, and dicts (as JSON)
 transactions = TransactionsMockTable([
-    Transaction(1, Decimal("99.99"), date(2024, 1, 1), ["online", "credit"]),
-    Transaction(2, Decimal("149.50"), date(2024, 1, 2), ["store", "debit"])
+    Transaction(1, Decimal("99.99"), date(2024, 1, 1),
+                ["online", "credit"], {"status": "completed", "region": "US"}),
+    Transaction(2, Decimal("149.50"), date(2024, 1, 2),
+                ["store", "debit"], {"status": "pending", "region": "EU"})
 ])
 ```
 
@@ -331,9 +335,9 @@ adapter = redshift  # Default for all tests
 | String Array | `List[str]` | ✅ ARRAY | ✅ ARRAY | ✅ JSON | ✅ ARRAY | ✅ ARRAY |
 | Int Array | `List[int]` | ✅ ARRAY | ✅ ARRAY | ✅ JSON | ✅ ARRAY | ✅ ARRAY |
 | Decimal Array | `List[Decimal]` | ✅ ARRAY | ✅ ARRAY | ✅ JSON | ✅ ARRAY | ✅ ARRAY |
-| String Map | `Dict[str, str]` | ❌ | ✅ MAP | ✅ SUPER | ✅ MAP | ❌ |
-| Int Map | `Dict[str, int]` | ❌ | ✅ MAP | ✅ SUPER | ✅ MAP | ❌ |
-| Mixed Map | `Dict[K, V]` | ❌ | ✅ MAP | ✅ SUPER | ✅ MAP | ❌ |
+| String Map | `Dict[str, str]` | ✅ JSON | ✅ MAP | ✅ SUPER | ✅ MAP | ❌ |
+| Int Map | `Dict[str, int]` | ✅ JSON | ✅ MAP | ✅ SUPER | ✅ MAP | ❌ |
+| Mixed Map | `Dict[K, V]` | ✅ JSON | ✅ MAP | ✅ SUPER | ✅ MAP | ❌ |
 
 ## Adapter-Specific SQL
 
@@ -345,6 +349,18 @@ SELECT ARRAY[1, 2, 3] as numbers
 
 -- Structs
 SELECT STRUCT(1 as id, 'Alice' as name) as user
+
+-- JSON/Dict handling (stored as STRING columns)
+-- Python Dict[str, str] is stored as JSON string
+SELECT
+    JSON_EXTRACT_SCALAR(metadata, '$.status') as status,
+    JSON_EXTRACT_SCALAR(metadata, '$.region') as region
+FROM transactions
+
+-- Querying JSON data
+SELECT *
+FROM transactions
+WHERE JSON_EXTRACT_SCALAR(metadata, '$.status') = 'completed'
 
 -- Window functions
 SELECT *, ROW_NUMBER() OVER (PARTITION BY category) as rn

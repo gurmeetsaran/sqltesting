@@ -355,10 +355,14 @@ class TestFormatSQLValue:
             == "JSON_PARSE('{\"price\": 19.99}')"
         )
 
-        # Test that other dialects still raise NotImplementedError
-        with pytest.raises(NotImplementedError, match="Map type not yet supported"):
-            format_sql_value({"a": "b"}, Dict[str, str], "bigquery")
+        # Test BigQuery map formatting (uses JSON string)
+        result = format_sql_value({"a": "b"}, Dict[str, str], "bigquery")
+        assert result == '\'{"a": "b"}\''
 
+        result = format_sql_value({"key": 42}, Dict[str, int], "bigquery")
+        assert result == "'{\"key\": 42}'"
+
+        # Test that other dialects still raise NotImplementedError
         with pytest.raises(NotImplementedError, match="Map type not yet supported"):
             format_sql_value({"a": "b"}, Dict[str, str], "snowflake")
 

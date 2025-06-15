@@ -79,14 +79,13 @@ The library supports different data types across database engines. All checkmark
 | **Integer Array** | `List[int]` | ✅ | ✅ | ✅ | ✅ | ✅ |
 | **Decimal Array** | `List[Decimal]` | ✅ | ✅ | ✅ | ✅ | ✅ |
 | **Optional Array** | `Optional[List[T]]` | ✅ | ✅ | ✅ | ✅ | ✅ |
-| **Map/Object** | `Dict[K, V]` | ❌ | ✅ | ✅ | ✅ | ❌ |
-| **Struct/Record** | `dict`/`dataclass` | ❌ | ❌ | ❌ | ❌ | ❌ |
+| **Map/Dict** | `Dict[K, V]` | ✅ | ✅ | ✅ | ✅ | ❌ |
+| **Struct/Record** | `dataclass` | ❌ | ❌ | ❌ | ❌ | ❌ |
 | **Nested Arrays** | `List[List[T]]` | ❌ | ❌ | ❌ | ❌ | ❌ |
-| **JSON Objects** | `JSON` | ❌ | ❌ | ❌ | ❌ | ❌ |
 
 ### Database-Specific Notes
 
-- **BigQuery**: NULL arrays become empty arrays `[]`; uses scientific notation for large decimals
+- **BigQuery**: NULL arrays become empty arrays `[]`; uses scientific notation for large decimals; dict/map types stored as JSON strings
 - **Athena**: 256KB query size limit; supports arrays and maps using `ARRAY[]` and `MAP(ARRAY[], ARRAY[])` syntax
 - **Redshift**: Arrays and maps implemented via SUPER type (JSON parsing); 16MB query size limit
 - **Trino**: Memory catalog for testing; excellent decimal precision; supports arrays and maps
