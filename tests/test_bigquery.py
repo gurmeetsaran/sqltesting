@@ -165,17 +165,18 @@ class TestBigQueryIntegration(unittest.TestCase):
         from sql_testing_library import _pytest_plugin as pytest_plugin
 
         # Configure mock BigQuery client
-        self.mock_client = mock_bigquery.return_value
+        self.mock_client = mock.Mock()
         self.mock_job = mock.Mock()
         self.mock_table = mock.Mock()
 
         # Mock query results for dict types
+        # BigQuery returns JSON objects as strings
         result_df = pd.DataFrame(
             [
                 {
                     "id": 1,
-                    "metadata": {"key1": "value1", "key2": "value2"},
-                    "scores": {"math": 95, "science": 88},
+                    "metadata": '{"key1": "value1", "key2": "value2"}',
+                    "scores": '{"math": 95, "science": 88}',
                 }
             ]
         )
@@ -183,6 +184,10 @@ class TestBigQueryIntegration(unittest.TestCase):
         self.mock_client.query.return_value = self.mock_job
         self.mock_client.create_table.return_value = self.mock_table
         self.mock_client.load_table_from_dataframe.return_value = self.mock_job
+
+        # Configure mock to return our client
+        mock_bigquery.return_value = self.mock_client
+        mock_bigquery.from_service_account_json.return_value = self.mock_client
 
         # Store original decorator instance
         original_decorator_instance = getattr(pytest_plugin, "_sql_test_decorator", None)
@@ -193,7 +198,7 @@ class TestBigQueryIntegration(unittest.TestCase):
 
         try:
             # Configure for test
-            decorator.configure(mock.Mock(), self.config)
+            decorator._config_parser = self.mock_config
 
             # Define test data with dict types
             from typing import Dict
