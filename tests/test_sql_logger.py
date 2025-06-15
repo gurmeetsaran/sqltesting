@@ -138,9 +138,9 @@ class TestSQLLogger:
         # Save current directory
         original_cwd = Path.cwd()
 
-        try:
-            # Create a temporary directory structure
-            with tempfile.TemporaryDirectory() as tmpdir:
+        # Create a temporary directory structure
+        with tempfile.TemporaryDirectory() as tmpdir:
+            try:
                 project_root = Path(tmpdir)
                 subdir = project_root / "tests" / "integration"
                 subdir.mkdir(parents=True)
@@ -157,8 +157,9 @@ class TestSQLLogger:
                 # Should find project root - use resolve() to handle symlinks
                 assert logger.log_dir.resolve() == (project_root / ".sql_logs").resolve()
                 assert logger.log_dir.exists()
-        finally:
-            os.chdir(original_cwd)
+            finally:
+                # Always change back before tempdir cleanup
+                os.chdir(original_cwd)
 
     def test_environment_variable_override(self):
         """Test that SQL_TEST_LOG_DIR environment variable works."""
@@ -186,8 +187,8 @@ class TestSQLLogger:
         # Save current directory
         original_cwd = Path.cwd()
 
-        try:
-            with tempfile.TemporaryDirectory() as tmpdir:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            try:
                 # Change to temp directory with no project markers
                 os.chdir(tmpdir)
 
@@ -196,8 +197,9 @@ class TestSQLLogger:
                 # Should use current directory
                 assert logger.log_dir == Path(".sql_logs")
                 assert logger.log_dir.exists()
-        finally:
-            os.chdir(original_cwd)
+            finally:
+                # Always change back before tempdir cleanup
+                os.chdir(original_cwd)
 
     def test_should_log_with_environment_variable(self):
         """Test should_log respects SQL_TEST_LOG_ALL environment variable."""
@@ -259,8 +261,8 @@ class TestSQLLogger:
         """Test project root detection with .git directory."""
         original_cwd = Path.cwd()
 
-        try:
-            with tempfile.TemporaryDirectory() as tmpdir:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            try:
                 project_root = Path(tmpdir)
                 subdir = project_root / "src" / "tests"
                 subdir.mkdir(parents=True)
@@ -276,15 +278,16 @@ class TestSQLLogger:
 
                 # Should find project root by .git directory - use resolve()
                 assert logger.log_dir.resolve() == (project_root / ".sql_logs").resolve()
-        finally:
-            os.chdir(original_cwd)
+            finally:
+                # Always change back before tempdir cleanup
+                os.chdir(original_cwd)
 
     def test_project_root_detection_ignores_git_file(self):
         """Test that .git file (submodule) is ignored."""
         original_cwd = Path.cwd()
 
-        try:
-            with tempfile.TemporaryDirectory() as tmpdir:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            try:
                 project_root = Path(tmpdir)
                 subdir = project_root / "submodule"
                 subdir.mkdir(parents=True)
@@ -302,8 +305,9 @@ class TestSQLLogger:
 
                 # Should find parent project root, not stop at .git file - use resolve()
                 assert logger.log_dir.resolve() == (project_root / ".sql_logs").resolve()
-        finally:
-            os.chdir(original_cwd)
+            finally:
+                # Always change back before tempdir cleanup
+                os.chdir(original_cwd)
 
     def test_run_directory_creation(self):
         """Test that run directory is created with timestamp."""

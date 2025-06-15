@@ -50,6 +50,17 @@ class TypeConversionError(SQLTestingError):
         self.value = value
         self.target_type = target_type
         self.column_name = column_name
-        super().__init__(
-            f"Cannot convert '{value}' to {target_type.__name__} for column '{column_name}'"
-        )
+
+        # Handle type name extraction for various type forms
+        try:
+            type_name = target_type.__name__
+        except AttributeError:
+            # For types like Optional, Union, etc that don't have __name__
+            type_name = str(target_type)
+
+        if column_name:
+            message = f"Cannot convert '{value}' to {type_name} for column '{column_name}'"
+        else:
+            message = f"Cannot convert '{value}' to {type_name}"
+
+        super().__init__(message)

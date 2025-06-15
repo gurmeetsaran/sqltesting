@@ -15,12 +15,17 @@ jobs:
         os: [ubuntu-latest, windows-latest, macos-latest]
         python-version: ['3.9', '3.10', '3.11', '3.12']
         exclude:
-          # Skip some combinations to reduce CI time/cost if needed
-          # Uncomment below to skip certain combinations
-          # - os: windows-latest
-          #   python-version: '3.9'
-          # - os: macos-latest
-          #   python-version: '3.9'
+          # Exclude older Python versions on Windows/macOS to save CI time
+          - os: windows-latest
+            python-version: '3.10'
+          - os: windows-latest
+            python-version: '3.11'
+          - os: macos-latest
+            python-version: '3.9'  # psycopg2-binary has issues with Python 3.9 on macOS
+          - os: macos-latest
+            python-version: '3.10'
+          - os: macos-latest
+            python-version: '3.11'
 
     steps:
     - uses: actions/checkout@v4

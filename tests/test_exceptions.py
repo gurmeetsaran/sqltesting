@@ -227,6 +227,9 @@ class TestTypeConversionError(unittest.TestCase):
         error_str = str(error)
         self.assertIn("birth_date", error_str)
         self.assertIn("2023-13-45", error_str)
+        # The type representation might vary between Python versions
+        # Just check that some form of date type is mentioned
+        self.assertTrue("date" in error_str.lower() or "typing" in error_str.lower())
 
     def test_none_value(self):
         """Test with None value."""
