@@ -53,7 +53,7 @@ jobs:
 
   unit-tests:
     name: Unit Tests (Prerequisite)
-    uses: ./.github/workflows/tests.yaml
+    uses: ./.github/workflows/unit-tests-simple.yaml
 
   real-integration:
     name: Real Athena Integration Tests
