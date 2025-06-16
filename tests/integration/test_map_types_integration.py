@@ -61,12 +61,12 @@ class MapTypesMockTable(BaseMockTable):
 
 
 @pytest.mark.integration
-@pytest.mark.parametrize("adapter_type", ["athena", "trino", "redshift", "bigquery"])
+@pytest.mark.parametrize("adapter_type", ["athena", "trino", "redshift", "bigquery", "snowflake"])
 @pytest.mark.parametrize(
     "use_physical_tables", [False, True], ids=["cte_mode", "physical_tables_mode"]
 )
 class TestMapTypesIntegration:
-    """Integration tests for map types across Athena, Trino, Redshift, and BigQuery adapters."""
+    """Integration tests for map types across supported database adapters."""
 
     @pytest.fixture(autouse=True)
     def setup_test_data(self, adapter_type):
@@ -115,6 +115,8 @@ class TestMapTypesIntegration:
             self.database_name = "public"
         elif adapter_type == "bigquery":
             self.database_name = "test_dataset"
+        elif adapter_type == "snowflake":
+            self.database_name = "PUBLIC"
 
     def test_map_types_comprehensive(self, adapter_type, use_physical_tables):
         """Test all map types comprehensively for the specified adapter."""
@@ -154,6 +156,8 @@ class TestMapTypesIntegration:
             self._verify_redshift_results(results)
         elif adapter_type == "bigquery":
             self._verify_bigquery_results(results)
+        elif adapter_type == "snowflake":
+            self._verify_snowflake_results(results)
 
     def _verify_athena_results(self, results):
         """Verify Athena-specific results."""
@@ -277,6 +281,43 @@ class TestMapTypesIntegration:
             "total": Decimal("21.49"),
         }
         # BigQuery preserves integer keys in JSON
+        assert row1.mixed_map == {1: "first", 2: "second", 3: "third"}
+        assert row1.optional_string_map == {"optional": "value", "test": "data"}
+        assert row1.optional_int_map == {"a": 100, "b": 200}
+
+        # Verify second row (with nulls)
+        row2 = results[1]
+        assert row2.id == 2
+        assert row2.string_map == {"hello": "world"}
+        assert row2.int_map == {"single": 1}
+        assert row2.decimal_map == {"amount": Decimal("99.99")}
+        assert row2.mixed_map == {10: "ten"}
+        assert row2.optional_string_map is None
+        assert row2.optional_int_map is None
+
+        # Verify third row (with empty maps)
+        row3 = results[2]
+        assert row3.id == 3
+        assert row3.string_map == {}
+        assert row3.int_map == {"zero": 0}
+        assert row3.decimal_map == {}
+        assert row3.mixed_map == {42: "answer"}
+        assert row3.optional_string_map == {}
+        assert row3.optional_int_map == {"value": 42}
+
+    def _verify_snowflake_results(self, results):
+        """Verify Snowflake-specific results."""
+        # Verify first row
+        row1 = results[0]
+        assert row1.id == 1
+        assert row1.string_map == {"key1": "Snowflake", "key2": "maps", "key3": "test"}
+        assert row1.int_map == {"count": 42, "total": 100, "items": 3}
+        assert row1.decimal_map == {
+            "price": Decimal("19.99"),
+            "tax": Decimal("1.50"),
+            "total": Decimal("21.49"),
+        }
+        # Snowflake preserves integer keys in JSON
         assert row1.mixed_map == {1: "first", 2: "second", 3: "third"}
         assert row1.optional_string_map == {"optional": "value", "test": "data"}
         assert row1.optional_int_map == {"a": 100, "b": 200}
