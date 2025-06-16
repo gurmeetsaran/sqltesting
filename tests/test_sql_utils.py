@@ -362,9 +362,16 @@ class TestFormatSQLValue:
         result = format_sql_value({"key": 42}, Dict[str, int], "bigquery")
         assert result == "'{\"key\": 42}'"
 
+        # Test Snowflake map formatting
+        result = format_sql_value({"a": "b"}, Dict[str, str], "snowflake")
+        assert result == 'PARSE_JSON(\'{"a": "b"}\')'
+
+        result = format_sql_value({"key": 42}, Dict[str, int], "snowflake")
+        assert result == "PARSE_JSON('{\"key\": 42}')"
+
         # Test that other dialects still raise NotImplementedError
         with pytest.raises(NotImplementedError, match="Map type not yet supported"):
-            format_sql_value({"a": "b"}, Dict[str, str], "snowflake")
+            format_sql_value({"a": "b"}, Dict[str, str], "mysql")
 
 
 if __name__ == "__main__":

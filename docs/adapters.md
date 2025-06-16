@@ -253,7 +253,8 @@ role = DEVELOPER  # Optional
 
 - **Case Sensitivity**: Column names normalized to lowercase
 - **Temporary Tables**: Session-scoped cleanup
-- **Semi-Structured**: JSON/VARIANT support (limited)
+- **Semi-Structured**: Full JSON/VARIANT support including Dict/Map types
+- **Map Support**: Dict[K, V] types stored as VARIANT using PARSE_JSON
 - **Query Limits**: 1MB for CTE mode
 - **Time Travel**: Can query historical data
 
@@ -270,7 +271,6 @@ class MyMockTable(BaseMockTable):
 ### Known Limitations
 
 - Physical table mode has visibility issues in tests
-- Complex types (VARIANT, OBJECT) not fully supported
 - Case sensitivity requires careful handling
 
 ## Choosing an Adapter
@@ -335,9 +335,9 @@ adapter = redshift  # Default for all tests
 | String Array | `List[str]` | ✅ ARRAY | ✅ ARRAY | ✅ JSON | ✅ ARRAY | ✅ ARRAY |
 | Int Array | `List[int]` | ✅ ARRAY | ✅ ARRAY | ✅ JSON | ✅ ARRAY | ✅ ARRAY |
 | Decimal Array | `List[Decimal]` | ✅ ARRAY | ✅ ARRAY | ✅ JSON | ✅ ARRAY | ✅ ARRAY |
-| String Map | `Dict[str, str]` | ✅ JSON | ✅ MAP | ✅ SUPER | ✅ MAP | ❌ |
-| Int Map | `Dict[str, int]` | ✅ JSON | ✅ MAP | ✅ SUPER | ✅ MAP | ❌ |
-| Mixed Map | `Dict[K, V]` | ✅ JSON | ✅ MAP | ✅ SUPER | ✅ MAP | ❌ |
+| String Map | `Dict[str, str]` | ✅ JSON | ✅ MAP | ✅ SUPER | ✅ MAP | ✅ VARIANT |
+| Int Map | `Dict[str, int]` | ✅ JSON | ✅ MAP | ✅ SUPER | ✅ MAP | ✅ VARIANT |
+| Mixed Map | `Dict[K, V]` | ✅ JSON | ✅ MAP | ✅ SUPER | ✅ MAP | ✅ VARIANT |
 
 ## Adapter-Specific SQL
 
@@ -422,8 +422,23 @@ FROM sales_data
 -- Semi-structured data
 SELECT PARSE_JSON('{"name": "Alice"}') as user_data
 
+-- Dict/Map support via VARIANT type
+-- Python Dict[str, str] is stored as VARIANT using PARSE_JSON
+SELECT
+    metadata:status::STRING as status,
+    metadata:region::STRING as region
+FROM transactions
+WHERE metadata:status = 'completed'
+
 -- Flatten arrays
 SELECT VALUE FROM TABLE(FLATTEN(INPUT => ARRAY_CONSTRUCT(1, 2, 3)))
+
+-- Working with VARIANT columns containing maps
+SELECT
+    user_preferences,
+    user_preferences:theme::STRING as theme,
+    user_preferences:notifications::BOOLEAN as notifications_enabled
+FROM user_settings
 
 -- Time travel
 SELECT * FROM users AT(TIMESTAMP => '2024-01-01'::TIMESTAMP)

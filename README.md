@@ -79,7 +79,7 @@ The library supports different data types across database engines. All checkmark
 | **Integer Array** | `List[int]` | ✅ | ✅ | ✅ | ✅ | ✅ |
 | **Decimal Array** | `List[Decimal]` | ✅ | ✅ | ✅ | ✅ | ✅ |
 | **Optional Array** | `Optional[List[T]]` | ✅ | ✅ | ✅ | ✅ | ✅ |
-| **Map/Dict** | `Dict[K, V]` | ✅ | ✅ | ✅ | ✅ | ❌ |
+| **Map/Dict** | `Dict[K, V]` | ✅ | ✅ | ✅ | ✅ | ✅ |
 | **Struct/Record** | `dataclass` | ❌ | ❌ | ❌ | ❌ | ❌ |
 | **Nested Arrays** | `List[List[T]]` | ❌ | ❌ | ❌ | ❌ | ❌ |
 
@@ -89,7 +89,7 @@ The library supports different data types across database engines. All checkmark
 - **Athena**: 256KB query size limit; supports arrays and maps using `ARRAY[]` and `MAP(ARRAY[], ARRAY[])` syntax
 - **Redshift**: Arrays and maps implemented via SUPER type (JSON parsing); 16MB query size limit
 - **Trino**: Memory catalog for testing; excellent decimal precision; supports arrays and maps
-- **Snowflake**: Column names normalized to lowercase; 1MB query size limit
+- **Snowflake**: Column names normalized to lowercase; 1MB query size limit; dict/map types implemented via VARIANT type (JSON parsing)
 
 ## Execution Modes Support
 
@@ -991,7 +991,6 @@ The library has a few known limitations that are planned to be addressed in futu
 
 ### Snowflake Support
 - Physical table tests for Snowflake are currently skipped due to complex mocking requirements
-- Need better support for Snowflake-specific data types (VARIANT, OBJECT, ARRAY)
 
 ### General Improvements
 - Add support for more SQL dialects

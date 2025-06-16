@@ -170,6 +170,9 @@ def format_sql_value(value: Any, column_type: Type, dialect: str = "standard") -
             elif dialect == "bigquery":
                 # BigQuery JSON type handles NULL maps
                 return "NULL"
+            elif dialect == "snowflake":
+                # Snowflake VARIANT type handles NULL maps
+                return "NULL::VARIANT"
             else:
                 return "NULL"
 
@@ -298,6 +301,12 @@ def format_sql_value(value: Any, column_type: Type, dialect: str = "standard") -
             # Escape single quotes in JSON string for SQL
             json_str = json_str.replace("'", "''")
             return f"'{json_str}'"
+        elif dialect == "snowflake":
+            # Snowflake uses VARIANT type with PARSE_JSON function
+            json_str = json.dumps(value, cls=DecimalEncoder)
+            # Escape single quotes in JSON string for SQL
+            json_str = json_str.replace("'", "''")
+            return f"PARSE_JSON('{json_str}')"
         else:
             # Other databases don't have native map support yet
             raise NotImplementedError(f"Map type not yet supported for dialect: {dialect}")
