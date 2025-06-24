@@ -250,9 +250,14 @@ class BaseTypeConverter:
 
             # If value is a string representation of an array, parse it
             if isinstance(value, str):
-                # Parse string array format like '[hello, world, athena]' or '[1, 2, 3]'
-                elements = _parse_bracketed_string(value, "[", "]")
-                if not elements:
+                # Check if it's an array format
+                if value.startswith("[") and value.endswith("]"):
+                    # Parse string array format like '[hello, world, athena]' or '[1, 2, 3]'
+                    elements = _parse_bracketed_string(value, "[", "]")
+                    # Return empty list for empty arrays
+                    if not elements:
+                        return []
+                else:
                     # If it doesn't look like array format, try to convert as single element list
                     element_type = get_args(target_type)[0] if get_args(target_type) else str
                     converted_element = self.convert(value, element_type)
