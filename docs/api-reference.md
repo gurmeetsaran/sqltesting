@@ -330,11 +330,14 @@ from sql_testing_library.adapters import SnowflakeAdapter
 adapter = SnowflakeAdapter(
     account: str,
     user: str,
-    password: str,
     database: str,
     schema: str = "PUBLIC",
-    warehouse: str,
-    role: Optional[str] = None
+    warehouse: Optional[str] = None,
+    role: Optional[str] = None,
+    # Authentication (choose one):
+    private_key_path: Optional[str] = None,  # Path to private key file
+    private_key_passphrase: Optional[str] = None,  # If key is encrypted
+    password: Optional[str] = None,  # For accounts without MFA
 )
 ```
 

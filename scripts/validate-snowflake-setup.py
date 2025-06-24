@@ -13,17 +13,32 @@ from typing import List
 
 def check_environment_variables() -> List[str]:
     """Check if all required environment variables are set."""
+    authenticator = os.getenv("SNOWFLAKE_AUTHENTICATOR", "").lower()
+    has_private_key = os.getenv("SNOWFLAKE_PRIVATE_KEY") or os.getenv("SNOWFLAKE_PRIVATE_KEY_PATH")
+
+    # Base required vars
     required_vars = [
         "SNOWFLAKE_ACCOUNT",
         "SNOWFLAKE_USER",
-        "SNOWFLAKE_PASSWORD",
+    ]
+
+    # Password is only required if not using external browser auth or key-pair auth
+    if authenticator != "externalbrowser" and not has_private_key:
+        required_vars.append("SNOWFLAKE_PASSWORD")
+
+    # Database and warehouse are recommended but optional
+    recommended_vars = [
         "SNOWFLAKE_DATABASE",
         "SNOWFLAKE_WAREHOUSE"
     ]
 
     optional_vars = [
         "SNOWFLAKE_SCHEMA",
-        "SNOWFLAKE_ROLE"
+        "SNOWFLAKE_ROLE",
+        "SNOWFLAKE_AUTHENTICATOR",
+        "SNOWFLAKE_PRIVATE_KEY",
+        "SNOWFLAKE_PRIVATE_KEY_PATH",
+        "SNOWFLAKE_PRIVATE_KEY_PASSPHRASE"
     ]
 
     missing_vars = []
@@ -35,13 +50,40 @@ def check_environment_variables() -> List[str]:
             missing_vars.append(var)
             print(f"❌ {var}: Not set")
         else:
+            if var == "SNOWFLAKE_PASSWORD":
+                print(f"✅ {var}: Set (hidden)")
+            else:
+                print(f"✅ {var}: Set")
+
+    print("\n🔍 Checking recommended environment variables...")
+    for var in recommended_vars:
+        value = os.getenv(var)
+        if not value:
+            print(f"⚠️  {var}: Not set (recommended)")
+        else:
             print(f"✅ {var}: Set")
 
     print("\n🔍 Checking optional environment variables...")
     for var in optional_vars:
         value = os.getenv(var)
         if value:
-            print(f"✅ {var}: Set ({value})")
+            if var == "SNOWFLAKE_AUTHENTICATOR":
+                print(f"✅ {var}: Set ({value})")
+                if value.lower() == "externalbrowser":
+                    print("   ℹ️  Using external browser authentication (MFA)")
+            elif var == "SNOWFLAKE_PRIVATE_KEY":
+                print(f"✅ {var}: Set (key content hidden)")
+                print("   ℹ️  Using key-pair authentication")
+            elif var == "SNOWFLAKE_PRIVATE_KEY_PATH":
+                print(f"✅ {var}: Set ({value})")
+                if os.path.exists(value):
+                    print("   ✅ Key file exists")
+                else:
+                    print("   ❌ Key file not found")
+            elif var == "SNOWFLAKE_PRIVATE_KEY_PASSPHRASE":
+                print(f"✅ {var}: Set (hidden)")
+            else:
+                print(f"✅ {var}: Set ({value})")
         else:
             print(f"⚪ {var}: Not set (optional)")
 
@@ -67,25 +109,73 @@ def test_snowflake_connection() -> bool:
     warehouse = os.getenv("SNOWFLAKE_WAREHOUSE")
     schema = os.getenv("SNOWFLAKE_SCHEMA", "PUBLIC")
     role = os.getenv("SNOWFLAKE_ROLE")
+    authenticator = os.getenv("SNOWFLAKE_AUTHENTICATOR")
+    private_key = os.getenv("SNOWFLAKE_PRIVATE_KEY")
+    private_key_path = os.getenv("SNOWFLAKE_PRIVATE_KEY_PATH")
+    private_key_passphrase = os.getenv("SNOWFLAKE_PRIVATE_KEY_PASSPHRASE")
 
     try:
         # Test connection
         conn_params = {
             "account": account,
             "user": user,
-            "password": password,
-            "database": database,
-            "schema": schema,
         }
 
+        # Handle authentication
+        if private_key or private_key_path:
+            # Use key-pair authentication
+            if private_key:
+                conn_params["private_key"] = private_key.encode()
+            elif private_key_path:
+                with open(private_key_path, "rb") as key_file:
+                    key_content = key_file.read()
+
+                # Handle encrypted keys
+                if private_key_passphrase:
+                    from cryptography.hazmat.backends import default_backend
+                    from cryptography.hazmat.primitives.serialization import load_pem_private_key
+                    from cryptography.hazmat.primitives import serialization
+
+                    private_key_obj = load_pem_private_key(
+                        key_content,
+                        password=private_key_passphrase.encode(),
+                        backend=default_backend()
+                    )
+                    conn_params["private_key"] = private_key_obj.private_bytes(
+                        encoding=serialization.Encoding.DER,
+                        format=serialization.PrivateFormat.PKCS8,
+                        encryption_algorithm=serialization.NoEncryption()
+                    )
+                else:
+                    conn_params["private_key"] = key_content
+            print("ℹ️  Using key-pair authentication")
+        elif authenticator:
+            conn_params["authenticator"] = authenticator
+            if authenticator.lower() != "externalbrowser" and password:
+                conn_params["password"] = password
+        elif password:
+            conn_params["password"] = password
+        else:
+            print("❌ No authentication method provided")
+            return False
+
+        if database:
+            conn_params["database"] = database
+        if schema:
+            conn_params["schema"] = schema
         if warehouse:
             conn_params["warehouse"] = warehouse
         if role:
             conn_params["role"] = role
 
         print(f"Connecting to account: {account}")
-        print(f"Database: {database}, Schema: {schema}")
-        print(f"Warehouse: {warehouse}, Role: {role or 'default'}")
+        print(f"User: {user}")
+        if authenticator:
+            print(f"Authenticator: {authenticator}")
+        elif private_key or private_key_path:
+            print(f"Authentication: Key-pair")
+        print(f"Database: {database or 'default'}, Schema: {schema}")
+        print(f"Warehouse: {warehouse or 'default'}, Role: {role or 'default'}")
 
         conn = snowflake.connector.connect(**conn_params)
         cursor = conn.cursor()
@@ -134,7 +224,12 @@ def test_snowflake_connection() -> bool:
 
         # Provide specific troubleshooting tips
         error_str = str(e).lower()
-        if "incorrect username or password" in error_str:
+        if "multi-factor authentication" in error_str:
+            print("💡 Your account requires MFA. For CI/CD, use key-pair authentication:")
+            print("💡 1. Run: python scripts/setup-snowflake-keypair.py")
+            print("💡 2. Configure public key in Snowflake")
+            print("💡 3. Set SNOWFLAKE_PRIVATE_KEY or SNOWFLAKE_PRIVATE_KEY_PATH")
+        elif "incorrect username or password" in error_str:
             print("💡 Check your SNOWFLAKE_USER and SNOWFLAKE_PASSWORD")
         elif "account" in error_str:
             print("💡 Check your SNOWFLAKE_ACCOUNT format (e.g., 'abc12345.us-east-1')")
@@ -170,7 +265,17 @@ def validate_pytest_config() -> bool:
                     print("✅ Found [sql_testing.snowflake] section")
                     snowflake_config = config["sql_testing.snowflake"]
 
-                    required_keys = ["account", "user", "password", "database", "warehouse"]
+                    # Check authentication method
+                    authenticator = snowflake_config.get("authenticator", "").lower()
+                    has_private_key = "private_key_path" in snowflake_config
+
+                    # Base required keys
+                    required_keys = ["account", "user"]
+
+                    # Password is only required if not using external browser or key-pair
+                    if authenticator != "externalbrowser" and not has_private_key:
+                        required_keys.append("password")
+
                     missing_keys = []
 
                     for key in required_keys:
@@ -179,9 +284,15 @@ def validate_pytest_config() -> bool:
 
                     if missing_keys:
                         print(f"❌ Missing required keys in [sql_testing.snowflake]: {missing_keys}")
+                        if "password" in missing_keys:
+                            print("💡 Either provide password, use key-pair auth, or set authenticator=externalbrowser")
                         return False
                     else:
                         print("✅ All required Snowflake configuration keys present")
+                        if authenticator == "externalbrowser":
+                            print("   ℹ️  Using external browser authentication (MFA)")
+                        elif has_private_key:
+                            print("   ℹ️  Using key-pair authentication")
 
                 elif "sql_testing" in config:
                     adapter = config["sql_testing"].get("adapter", "")

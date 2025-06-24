@@ -776,6 +776,8 @@ class TestSQLTestDecoratorAdditionalCoverage(unittest.TestCase):
                 schema="test_schema",
                 warehouse="test_warehouse",
                 role="test_role",
+                private_key_path=None,
+                private_key_passphrase=None,
             )
 
     def test_create_framework_trino_success_no_auth(self):
