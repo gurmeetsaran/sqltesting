@@ -558,6 +558,72 @@ test_case = TestCase(
     """,
     default_namespace="sales_db"
 )
+
+# Working with lists of structs
+@dataclass
+class OrderItem:
+    product_id: int
+    quantity: int
+    unit_price: Decimal
+
+@dataclass
+class Order:
+    order_id: int
+    customer_id: int
+    items: List[OrderItem]  # List of structs
+    order_date: date
+
+# Mock data with list of structs
+orders_data = [
+    Order(
+        order_id=1,
+        customer_id=100,
+        items=[
+            OrderItem(product_id=1, quantity=2, unit_price=Decimal("29.99")),
+            OrderItem(product_id=2, quantity=1, unit_price=Decimal("49.99")),
+            OrderItem(product_id=3, quantity=3, unit_price=Decimal("19.99"))
+        ],
+        order_date=date(2024, 1, 15)
+    ),
+    Order(
+        order_id=2,
+        customer_id=101,
+        items=[
+            OrderItem(product_id=2, quantity=5, unit_price=Decimal("49.99"))
+        ],
+        order_date=date(2024, 1, 16)
+    )
+]
+
+# Query using list of structs
+@sql_test(
+    adapter_type="athena",  # or "trino"
+    mock_tables=[OrdersMockTable(orders_data)],
+    result_class=dict
+)
+def test_order_items_analysis():
+    return TestCase(
+        query="""
+            SELECT
+                order_id,
+                customer_id,
+                CARDINALITY(items) as num_items,
+                -- Access first item details
+                items[1].product_id as first_product_id,
+                items[1].quantity as first_product_qty,
+                -- Calculate total using array operations
+                REDUCE(
+                    items,
+                    0.0,
+                    (total, item) -> total + (item.quantity * item.unit_price),
+                    total -> total
+                ) as order_total
+            FROM orders
+            WHERE CARDINALITY(items) > 0
+            ORDER BY order_id
+        """,
+        default_namespace="test_db"
+    )
 ```
 
 ### BigQuery-Specific Features

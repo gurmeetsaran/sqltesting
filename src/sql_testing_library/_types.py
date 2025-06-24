@@ -222,9 +222,16 @@ class BaseTypeConverter:
 
         # Handle array/list types
         if hasattr(target_type, "__origin__") and target_type.__origin__ is list:
-            # If value is already a list, return it
+            # If value is already a list, convert each element
             if isinstance(value, list):
-                return value
+                # Get the element type from List[T]
+                element_type = get_args(target_type)[0] if get_args(target_type) else str
+                # Convert each element to the proper type
+                converted_elements = []
+                for element in value:
+                    converted_element = self.convert(element, element_type)
+                    converted_elements.append(converted_element)
+                return converted_elements
 
             # Handle numpy arrays (BigQuery returns arrays as numpy arrays)
             import numpy as np
@@ -350,9 +357,13 @@ class BaseTypeConverter:
                         if value_str.startswith("{") and value_str.endswith("}"):
                             converted_value = self.convert(value_str, field_type)
                         else:
-                            # Parse the string value to appropriate type
-                            parsed_value = _parse_string_value(value_str)
-                            converted_value = self.convert(parsed_value, field_type)
+                            # If the target type is string, use the value as-is
+                            # Otherwise, parse the string value to appropriate type
+                            if field_type is str:
+                                converted_value = value_str
+                            else:
+                                parsed_value = _parse_string_value(value_str)
+                                converted_value = self.convert(parsed_value, field_type)
                         result[field_name] = converted_value
 
                     return _create_struct_instance(target_type, result)

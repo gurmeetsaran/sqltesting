@@ -620,6 +620,7 @@ def test_query_full_struct():
 - **Type Safety**: Full type conversion between Python objects and SQL ROW types
 - **NULL Handling**: Proper handling of optional struct fields
 - **WHERE Clause**: Use struct fields in filtering conditions
+- **List of Structs**: Full support for `List[StructType]` with array operations
 
 **SQL Type Mapping:**
 - Python dataclass/Pydantic model → SQL `ROW(field1 type1, field2 type2, ...)`

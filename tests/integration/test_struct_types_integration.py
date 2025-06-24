@@ -339,6 +339,96 @@ class TestStructTypesIntegration:
         assert results[2].has_optional_person is True
         assert results[2].optional_person_name == "Charlie Davis"
 
+    def test_list_of_structs(self, adapter_type, use_physical_tables):
+        """Test support for list of structs."""
+        from typing import List
+
+        @dataclass
+        class ListOfStructsData:
+            id: int
+            addresses: List[Address]
+
+        class ListOfStructsResult(BaseModel):
+            id: int
+            num_addresses: int
+            first_city: Optional[str]
+
+        # Mock table with list of structs
+        class ListOfStructsMockTable(BaseMockTable):
+            def get_database_name(self) -> str:
+                if adapter_type == "athena":
+                    return "test_db"
+                return "memory"
+
+            def get_table_name(self) -> str:
+                return "list_structs"
+
+        # Test data with lists of structs
+        test_data = [
+            ListOfStructsData(
+                id=1,
+                addresses=[
+                    Address(street="123 Main St", city="New York", zip_code="10001"),
+                    Address(street="456 Park Ave", city="New York", zip_code="10002"),
+                    Address(street="789 Broadway", city="New York", zip_code="10003"),
+                ],
+            ),
+            ListOfStructsData(
+                id=2,
+                addresses=[
+                    Address(street="321 Oak St", city="Boston", zip_code="02101"),
+                ],
+            ),
+            ListOfStructsData(
+                id=3,
+                addresses=[],  # Empty list
+            ),
+        ]
+
+        @sql_test(
+            adapter_type=adapter_type,
+            mock_tables=[ListOfStructsMockTable(test_data)],
+            result_class=ListOfStructsResult,
+        )
+        def query_list_of_structs():
+            return TestCase(
+                query="""
+                    SELECT
+                        id,
+                        CARDINALITY(addresses) AS num_addresses,
+                        CASE
+                            WHEN CARDINALITY(addresses) > 0
+                            THEN addresses[1].city
+                            ELSE NULL
+                        END AS first_city
+                    FROM list_structs
+                    ORDER BY id
+                """,
+                default_namespace=self.database_name,
+                use_physical_tables=use_physical_tables,
+            )
+
+        # Run the query
+        results = query_list_of_structs()
+
+        # Verify results
+        assert len(results) == 3
+
+        # First row has 3 addresses
+        assert results[0].id == 1
+        assert results[0].num_addresses == 3
+        assert results[0].first_city == "New York"
+
+        # Second row has 1 address
+        assert results[1].id == 2
+        assert results[1].num_addresses == 1
+        assert results[1].first_city == "Boston"
+
+        # Third row has empty list
+        assert results[2].id == 3
+        assert results[2].num_addresses == 0
+        assert results[2].first_city is None
+
 
 if __name__ == "__main__":
     pytest.main([__file__])

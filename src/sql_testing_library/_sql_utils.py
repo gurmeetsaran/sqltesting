@@ -202,8 +202,13 @@ def format_sql_value(value: Any, column_type: Type, dialect: str = "standard") -
             element_type = get_args(column_type)[0] if get_args(column_type) else str
 
             if dialect in ("athena", "trino"):
+                # Check if element type is a struct
+                if is_struct_type(element_type):
+                    # Get the SQL type for the struct
+                    sql_element_type = get_sql_type_string(element_type, dialect)
+                    return f"CAST(NULL AS ARRAY({sql_element_type}))"
                 # Map Python types to SQL types for array elements
-                if element_type == Decimal:
+                elif element_type == Decimal:
                     sql_element_type = "DECIMAL(38,9)"
                 elif element_type is int:
                     sql_element_type = "INTEGER" if dialect == "athena" else "BIGINT"
