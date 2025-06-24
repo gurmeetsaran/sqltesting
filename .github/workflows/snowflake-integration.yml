@@ -1,5 +1,29 @@
 name: Snowflake Integration Tests
 
+# This workflow uses key-pair authentication for Snowflake to support MFA-enabled accounts.
+#
+# Required GitHub Secrets:
+# - SNOWFLAKE_ACCOUNT: Your Snowflake account identifier (e.g., ORGNAME-ACCOUNTNAME)
+# - SNOWFLAKE_USER: Snowflake username configured with RSA public key
+# - SNOWFLAKE_PRIVATE_KEY: The private key content (including -----BEGIN/END----- headers)
+#   IMPORTANT: Copy the ENTIRE private key file content, including:
+#   - The -----BEGIN RSA PRIVATE KEY----- header
+#   - All the key content (base64 encoded)
+#   - The -----END RSA PRIVATE KEY----- footer
+#   - Preserve all newlines - paste exactly as shown in the file
+#
+# Optional GitHub Variables:
+# - SNOWFLAKE_DATABASE: Database name (defaults to TEST_DB)
+# - SNOWFLAKE_SCHEMA: Schema name (defaults to PUBLIC)
+# - SNOWFLAKE_WAREHOUSE: Warehouse name (optional)
+# - SNOWFLAKE_ROLE: Role name (optional)
+#
+# Setup Instructions:
+# 1. Generate RSA key pair: python scripts/setup-snowflake-keypair.py
+# 2. Configure public key in Snowflake: ALTER USER <username> SET RSA_PUBLIC_KEY='<public_key>';
+# 3. Add private key to GitHub Secrets (Settings > Secrets > Actions > New repository secret)
+# 4. Name the secret SNOWFLAKE_PRIVATE_KEY and paste the entire private key content
+
 on:
   pull_request:
     branches: [master, main]
@@ -92,8 +116,8 @@ jobs:
             exit 1
           fi
 
-          if [ -z "${{ secrets.SNOWFLAKE_PASSWORD }}" ]; then
-            echo "❌ SNOWFLAKE_PASSWORD secret not set"
+          if [ -z "${{ secrets.SNOWFLAKE_PRIVATE_KEY }}" ]; then
+            echo "❌ SNOWFLAKE_PRIVATE_KEY secret not set"
             exit 1
           fi
 
@@ -108,7 +132,8 @@ jobs:
           echo "[sql_testing.snowflake]" >> pytest.ini
           echo "account = ${{ secrets.SNOWFLAKE_ACCOUNT }}" >> pytest.ini
           echo "user = ${{ secrets.SNOWFLAKE_USER }}" >> pytest.ini
-          echo "password = ${{ secrets.SNOWFLAKE_PASSWORD }}" >> pytest.ini
+          # Use key-pair authentication for CI/CD with MFA
+          # The private key is provided via environment variable
           echo "database = ${{ vars.SNOWFLAKE_DATABASE || 'TEST_DB' }}" >> pytest.ini
           echo "schema = ${{ vars.SNOWFLAKE_SCHEMA || 'PUBLIC' }}" >> pytest.ini
 
@@ -123,15 +148,20 @@ jobs:
           fi
 
           echo "✅ Generated pytest.ini for Snowflake integration tests"
-          # Show config without sensitive data
-          echo "Configuration (secrets masked):"
-          sed 's/password = .*/password = ***MASKED***/g' pytest.ini
+          # Show config
+          echo "Configuration:"
+          cat pytest.ini
 
       - name: Set Snowflake environment variables
         run: |
           echo "SNOWFLAKE_ACCOUNT=${{ secrets.SNOWFLAKE_ACCOUNT }}" >> $GITHUB_ENV
           echo "SNOWFLAKE_USER=${{ secrets.SNOWFLAKE_USER }}" >> $GITHUB_ENV
-          echo "SNOWFLAKE_PASSWORD=${{ secrets.SNOWFLAKE_PASSWORD }}" >> $GITHUB_ENV
+
+          # Handle multiline private key
+          echo "SNOWFLAKE_PRIVATE_KEY<<EOF" >> $GITHUB_ENV
+          echo "${{ secrets.SNOWFLAKE_PRIVATE_KEY }}" >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
+
           echo "SNOWFLAKE_DATABASE=${{ vars.SNOWFLAKE_DATABASE || 'TEST_DB' }}" >> $GITHUB_ENV
           echo "SNOWFLAKE_SCHEMA=${{ vars.SNOWFLAKE_SCHEMA || 'PUBLIC' }}" >> $GITHUB_ENV
 
@@ -154,11 +184,53 @@ jobs:
           try:
               import snowflake.connector
 
-              # Test connection
+              # Debug: Check if private key exists and its format
+              private_key_env = os.getenv('SNOWFLAKE_PRIVATE_KEY')
+              if not private_key_env:
+                  print('❌ SNOWFLAKE_PRIVATE_KEY environment variable is not set')
+                  sys.exit(1)
+
+              print(f'✅ Private key found, length: {len(private_key_env)} characters')
+
+              # Check key format
+              if not private_key_env.startswith('-----BEGIN'):
+                  print('❌ Private key does not start with -----BEGIN')
+                  print('First 50 chars:', repr(private_key_env[:50]))
+                  sys.exit(1)
+
+              private_key = private_key_env.encode()
+
+              # Import cryptography modules
+              from cryptography.hazmat.backends import default_backend
+              from cryptography.hazmat.primitives import serialization
+              from cryptography.hazmat.primitives.serialization import load_pem_private_key
+
+              try:
+                  # Load PEM private key and convert to DER
+                  private_key_obj = load_pem_private_key(
+                      private_key,
+                      password=None,
+                      backend=default_backend()
+                  )
+                  print('✅ Private key loaded successfully')
+              except Exception as e:
+                  print(f'❌ Failed to load private key: {e}')
+                  print('Key starts with:', repr(private_key_env[:50]))
+                  print('Key ends with:', repr(private_key_env[-50:]))
+                  sys.exit(1)
+
+              # Convert to DER format for Snowflake
+              private_key_der = private_key_obj.private_bytes(
+                  encoding=serialization.Encoding.DER,
+                  format=serialization.PrivateFormat.PKCS8,
+                  encryption_algorithm=serialization.NoEncryption()
+              )
+
+              # Test connection with key-pair authentication
               conn = snowflake.connector.connect(
                   account=os.getenv('SNOWFLAKE_ACCOUNT'),
                   user=os.getenv('SNOWFLAKE_USER'),
-                  password=os.getenv('SNOWFLAKE_PASSWORD'),
+                  private_key=private_key_der,
                   database=os.getenv('SNOWFLAKE_DATABASE', 'TEST_DB'),
                   schema=os.getenv('SNOWFLAKE_SCHEMA', 'PUBLIC'),
                   warehouse=os.getenv('SNOWFLAKE_WAREHOUSE'),

@@ -342,11 +342,18 @@ credentials_path = <path to credentials json>
 # [sql_testing.snowflake]
 # account = <account-identifier>
 # user = <snowflake_user>
-# password = <snowflake_password>
 # database = <test_database>
 # schema = <PUBLIC>  # Optional: default schema is 'PUBLIC'
 # warehouse = <compute_wh>  # Required: specify a warehouse
 # role = <role_name>  # Optional: specify a role
+#
+# # Authentication (choose one):
+# # Option 1: Key-pair authentication (recommended for MFA)
+# private_key_path = </path/to/private_key.pem>
+# # Or use environment variable SNOWFLAKE_PRIVATE_KEY
+#
+# # Option 2: Password authentication (for accounts without MFA)
+# password = <snowflake_password>
 ```
 
 ### Database Context Understanding

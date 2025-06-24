@@ -242,11 +242,18 @@ pip install sql-testing-library[snowflake]
 [sql_testing.snowflake]
 account = my-account.us-west-2
 user = snowflake_user
-password = snowflake_password
 database = TEST_DB
 schema = PUBLIC
 warehouse = COMPUTE_WH
 role = DEVELOPER  # Optional
+
+# Authentication (choose one):
+# Option 1: Key-pair authentication (recommended for MFA)
+private_key_path = /path/to/private_key.pem
+# Or use environment variable SNOWFLAKE_PRIVATE_KEY
+
+# Option 2: Password authentication (for accounts without MFA)
+password = snowflake_password
 ```
 
 ### Features

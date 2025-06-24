@@ -128,11 +128,18 @@ password = trino_password
 [sql_testing.snowflake]
 account = account-identifier
 user = snowflake_user
-password = snowflake_password
 database = test_database
 schema = PUBLIC  # Optional, defaults to 'PUBLIC'
 warehouse = compute_wh  # Required
 role = my_role  # Optional
+
+# Authentication (choose one):
+# Option 1: Key-pair authentication (recommended for MFA)
+private_key_path = /path/to/private_key.pem
+# Or use environment variable SNOWFLAKE_PRIVATE_KEY
+
+# Option 2: Password authentication (for accounts without MFA)
+password = snowflake_password
 ```
 
 ## Writing Your First Test
