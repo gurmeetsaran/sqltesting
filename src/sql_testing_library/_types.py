@@ -149,8 +149,9 @@ def _parse_key_value_pairs(
             # Convert key to proper type
             converted_key = converter.convert(key_str, key_type)
 
-            # Get value type - if value_type is callable, call it with the key
-            if callable(value_type):
+            # Get value type - if value_type is a custom callable (not a type), call it with the key
+            # Built-in types like int, str, float are callable but shouldn't be called here
+            if callable(value_type) and not isinstance(value_type, type):
                 actual_value_type = value_type(key_str)
             else:
                 actual_value_type = value_type
