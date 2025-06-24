@@ -193,6 +193,8 @@ unfixable = ["T201", "T203"]
 # Allow print statements in test files for debugging and output
 "tests/test_*.py" = ["T201"]
 "tests/*/test_*.py" = ["T201"]
+# Allow print statements in example files
+"examples/*.py" = ["T201"]
 
 [tool.ruff.lint.isort]
 lines-after-imports = 2

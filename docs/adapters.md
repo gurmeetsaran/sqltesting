@@ -115,6 +115,8 @@ aws_secret_access_key = YOUR_SECRET
 - **Presto SQL**: Uses Presto/Trino SQL dialect
 - **Query Limits**: 256KB limit for CTE mode
 - **External Tables**: Physical tables backed by S3 data
+- **Struct/ROW Types**: Full support for nested structures using dataclasses or Pydantic models
+- **Map Types**: Native MAP support for Dict[K, V] types
 
 ### Database Context
 
@@ -211,6 +213,8 @@ password = my_password
 - **Multi-Catalog**: Can query across catalogs
 - **Distributed**: Scales across cluster
 - **Query Limits**: ~16MB for CTE mode
+- **Struct/ROW Types**: Full support for nested structures using dataclasses or Pydantic models
+- **Map Types**: Native MAP support for Dict[K, V] types
 
 ### Database Context
 
@@ -338,6 +342,8 @@ adapter = redshift  # Default for all tests
 | String Map | `Dict[str, str]` | ✅ JSON | ✅ MAP | ✅ SUPER | ✅ MAP | ✅ VARIANT |
 | Int Map | `Dict[str, int]` | ✅ JSON | ✅ MAP | ✅ SUPER | ✅ MAP | ✅ VARIANT |
 | Mixed Map | `Dict[K, V]` | ✅ JSON | ✅ MAP | ✅ SUPER | ✅ MAP | ✅ VARIANT |
+| Struct | `dataclass` | ❌ | ✅ ROW | ❌ | ✅ ROW | ❌ |
+| Struct | `Pydantic model` | ❌ | ✅ ROW | ❌ | ✅ ROW | ❌ |
 
 ## Adapter-Specific SQL
 
@@ -392,6 +398,21 @@ SELECT FILTER(ARRAY[1, 2, 3, 4], x -> x > 2) as filtered
 -- Python: Dict[str, str] → SQL: MAP(VARCHAR, VARCHAR)
 -- Python: Dict[str, int] → SQL: MAP(VARCHAR, INTEGER/BIGINT)
 -- Python: Dict[int, str] → SQL: MAP(INTEGER/BIGINT, VARCHAR)
+
+-- Struct/ROW types (Athena/Trino only)
+-- Using named fields with dot notation
+SELECT
+    employee.name,
+    employee.address.city,
+    employee.address.zip_code
+FROM employees
+WHERE employee.salary > 100000
+    AND employee.address.state = 'CA'
+
+-- Creating ROW values
+SELECT CAST(ROW('John', 30, ROW('123 Main St', 'NYC', '10001'))
+    AS ROW(name VARCHAR, age INTEGER, address ROW(street VARCHAR, city VARCHAR, zip VARCHAR)))
+    AS person_info
 ```
 
 ### Redshift

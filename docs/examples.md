@@ -412,6 +412,154 @@ def test_sales_ranking():
 
 ## Database-Specific Examples
 
+### Working with Structs (Athena/Trino)
+
+Struct types are supported for Athena and Trino adapters using dataclasses or Pydantic models:
+
+```python
+from dataclasses import dataclass
+from typing import Optional
+from decimal import Decimal
+
+@dataclass
+class Address:
+    street: str
+    city: str
+    state: str
+    zip_code: str
+
+@dataclass
+class Employee:
+    employee_id: int
+    name: str
+    salary: Decimal
+    address: Address  # Nested struct
+    is_active: bool
+
+class EmployeesMockTable(BaseMockTable):
+    def get_database_name(self) -> str:
+        return "hr_db"
+
+    def get_table_name(self) -> str:
+        return "employees"
+
+class EmployeeLocationResult(BaseModel):
+    name: str
+    city: str
+    state: str
+    salary: Decimal
+
+# Mock data with structs
+mock_data = [
+    Employee(
+        employee_id=1,
+        name="Alice Johnson",
+        salary=Decimal("120000.50"),
+        address=Address(
+            street="123 Main St",
+            city="New York",
+            state="NY",
+            zip_code="10001"
+        ),
+        is_active=True
+    ),
+    Employee(
+        employee_id=2,
+        name="Bob Smith",
+        salary=Decimal("95000.00"),
+        address=Address(
+            street="456 Oak Ave",
+            city="San Francisco",
+            state="CA",
+            zip_code="94102"
+        ),
+        is_active=True
+    ),
+    Employee(
+        employee_id=3,
+        name="Charlie Brown",
+        salary=Decimal("105000.75"),
+        address=Address(
+            street="789 Pine Rd",
+            city="Seattle",
+            state="WA",
+            zip_code="98101"
+        ),
+        is_active=False
+    )
+]
+
+@sql_test(
+    adapter_type="athena",  # or "trino"
+    mock_tables=[EmployeesMockTable(mock_data)],
+    result_class=EmployeeLocationResult
+)
+def test_employee_locations():
+    return TestCase(
+        query="""
+            SELECT
+                name,
+                address.city as city,
+                address.state as state,
+                salary
+            FROM employees
+            WHERE is_active = true
+                AND address.state IN ('NY', 'CA')
+            ORDER BY name
+        """,
+        default_namespace="hr_db"
+    )
+
+# Test with WHERE clause on struct fields
+@sql_test(
+    adapter_type="trino",
+    mock_tables=[EmployeesMockTable(mock_data)],
+    result_class=dict
+)
+def test_employees_by_city():
+    return TestCase(
+        query="""
+            SELECT
+                name,
+                address.street as street_address,
+                address.city || ', ' || address.state || ' ' || address.zip_code as full_address
+            FROM employees
+            WHERE address.city = 'New York'
+        """,
+        default_namespace="hr_db"
+    )
+
+# Using Pydantic models for structs
+from pydantic import BaseModel
+
+class ContactInfo(BaseModel):
+    email: str
+    phone: str
+    preferred_contact: str
+
+class Customer(BaseModel):
+    customer_id: int
+    name: str
+    contact: ContactInfo
+    total_purchases: Decimal
+
+# Query with nested struct access
+test_case = TestCase(
+    query="""
+        SELECT
+            name,
+            contact.email as email,
+            contact.preferred_contact as contact_method,
+            total_purchases
+        FROM customers
+        WHERE contact.preferred_contact = 'email'
+            AND total_purchases > 1000
+        ORDER BY total_purchases DESC
+    """,
+    default_namespace="sales_db"
+)
+```
+
 ### BigQuery-Specific Features
 
 Using BigQuery SQL features in your queries (note: the library creates CTEs using UNION ALL, not STRUCT):

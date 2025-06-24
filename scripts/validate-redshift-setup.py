@@ -18,6 +18,7 @@ import os
 import sys
 from typing import Dict, Optional
 
+
 try:
     import boto3
     import psycopg2
@@ -62,7 +63,7 @@ def check_aws_connectivity(region: str) -> bool:
         # Test basic AWS connectivity
         sts_client = boto3.client("sts", region_name=region)
         identity = sts_client.get_caller_identity()
-        print(f"  ✅ AWS Authentication successful")
+        print("  ✅ AWS Authentication successful")
         print(f"  ✅ Account ID: {identity.get('Account')}")
         print(f"  ✅ User ARN: {identity.get('Arn')}")
 
@@ -72,12 +73,12 @@ def check_aws_connectivity(region: str) -> bool:
         # Try to list namespaces (this tests read permissions)
         try:
             namespaces = redshift_client.list_namespaces()
-            print(f"  ✅ Redshift Serverless list permissions: OK")
+            print("  ✅ Redshift Serverless list permissions: OK")
             print(f"  ℹ️  Found {len(namespaces.get('namespaces', []))} existing namespaces")
         except ClientError as e:
             if e.response['Error']['Code'] == 'AccessDenied':
-                print(f"  ❌ Redshift Serverless permissions: Access denied")
-                print(f"     Required permissions: redshift-serverless:ListNamespaces")
+                print("  ❌ Redshift Serverless permissions: Access denied")
+                print("     Required permissions: redshift-serverless:ListNamespaces")
                 return False
             else:
                 print(f"  ⚠️  Redshift Serverless API test failed: {e}")
@@ -85,10 +86,10 @@ def check_aws_connectivity(region: str) -> bool:
         return True
 
     except NoCredentialsError:
-        print(f"  ❌ AWS credentials not found")
-        print(f"     Please configure AWS credentials:")
-        print(f"     - Set AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY environment variables")
-        print(f"     - Or run 'aws configure'")
+        print("  ❌ AWS credentials not found")
+        print("     Please configure AWS credentials:")
+        print("     - Set AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY environment variables")
+        print("     - Or run 'aws configure'")
         return False
     except Exception as e:
         print(f"  ❌ AWS connectivity failed: {e}")
@@ -97,11 +98,10 @@ def check_aws_connectivity(region: str) -> bool:
 
 def check_redshift_serverless_availability(region: str, namespace: str, workgroup: str) -> Optional[Dict]:
     """Check if Redshift Serverless resources exist and are available."""
-    print(f"\n🔍 Checking Redshift Serverless resources...")
+    print("\n🔍 Checking Redshift Serverless resources...")
 
     # Import and use the management script
     import subprocess
-    import json
 
     try:
         # Use the management script to check status
@@ -110,7 +110,7 @@ def check_redshift_serverless_availability(region: str, namespace: str, workgrou
         ], capture_output=True, text=True)
 
         if result.returncode == 0:
-            print(f"  ✅ Redshift cluster status checked using management script")
+            print("  ✅ Redshift cluster status checked using management script")
             # Try to get endpoint if resources exist
             endpoint_result = subprocess.run([
                 "python", "scripts/manage-redshift-cluster.py", "--region", region, "endpoint",
@@ -137,7 +137,7 @@ def check_redshift_serverless_availability(region: str, namespace: str, workgrou
                 except FileNotFoundError:
                     pass
         else:
-            print(f"  ⚠️  Redshift resources not available - will be created during testing")
+            print("  ⚠️  Redshift resources not available - will be created during testing")
 
         return None
 
@@ -148,7 +148,7 @@ def check_redshift_serverless_availability(region: str, namespace: str, workgrou
 
 def test_redshift_connection(connection_info: Dict) -> bool:
     """Test direct connection to Redshift if endpoint is available."""
-    print(f"\n🔍 Testing direct Redshift connection...")
+    print("\n🔍 Testing direct Redshift connection...")
 
     try:
         # Get credentials from environment variables
@@ -156,8 +156,8 @@ def test_redshift_connection(connection_info: Dict) -> bool:
         admin_password = os.getenv("REDSHIFT_ADMIN_PASSWORD")
 
         if not admin_password:
-            print(f"  ⚠️  REDSHIFT_ADMIN_PASSWORD not set, skipping connection test")
-            print(f"     Set this environment variable to test direct connections")
+            print("  ⚠️  REDSHIFT_ADMIN_PASSWORD not set, skipping connection test")
+            print("     Set this environment variable to test direct connections")
             return False
 
         connection_string = (
@@ -174,7 +174,7 @@ def test_redshift_connection(connection_info: Dict) -> bool:
         # Test basic query
         cursor.execute("SELECT version()")
         version = cursor.fetchone()[0]
-        print(f"  ✅ Connection successful")
+        print("  ✅ Connection successful")
         print(f"  ✅ Redshift version: {version[:50]}...")
 
         # Test create/drop table permissions
@@ -186,7 +186,7 @@ def test_redshift_connection(connection_info: Dict) -> bool:
         """)
         cursor.execute("DROP TABLE IF EXISTS test_table")
         conn.commit()
-        print(f"  ✅ Create/drop table permissions: OK")
+        print("  ✅ Create/drop table permissions: OK")
 
         cursor.close()
         conn.close()
@@ -194,14 +194,14 @@ def test_redshift_connection(connection_info: Dict) -> bool:
 
     except Exception as e:
         print(f"  ❌ Connection failed: {e}")
-        print(f"     This might be normal if Redshift is not running")
+        print("     This might be normal if Redshift is not running")
         return False
 
 
 def check_required_permissions() -> None:
     """Display required IAM permissions for Redshift integration testing."""
-    print(f"\n📋 Required IAM Permissions for Redshift Integration Testing:")
-    print(f"""
+    print("\n📋 Required IAM Permissions for Redshift Integration Testing:")
+    print("""
     The AWS user/role needs the following permissions:
 
     Redshift Serverless permissions:
@@ -223,10 +223,10 @@ def check_required_permissions() -> None:
     - ec2:AuthorizeSecurityGroupIngress (for automatic security group configuration)
 
     Example IAM policy:
-    {{
+    {
         "Version": "2012-10-17",
         "Statement": [
-            {{
+            {
                 "Effect": "Allow",
                 "Action": [
                     "redshift-serverless:*",
@@ -240,9 +240,9 @@ def check_required_permissions() -> None:
                     "ec2:AuthorizeSecurityGroupIngress"
                 ],
                 "Resource": "*"
-            }}
+            }
         ]
-    }}
+    }
 
     Note: Redshift Serverless resources incur costs. The free trial provides
     $300 in credits for new users. Monitor your usage in the AWS console.
@@ -263,13 +263,13 @@ def main():
     region = env_vars["AWS_REGION"]
 
     if not env_vars["AWS_ACCESS_KEY_ID"] or not env_vars["AWS_SECRET_ACCESS_KEY"]:
-        print(f"\n❌ Missing required AWS credentials")
+        print("\n❌ Missing required AWS credentials")
         check_required_permissions()
         sys.exit(1)
 
     # Check AWS connectivity
     if not check_aws_connectivity(region):
-        print(f"\n❌ AWS connectivity check failed")
+        print("\n❌ AWS connectivity check failed")
         check_required_permissions()
         sys.exit(1)
 
@@ -282,30 +282,30 @@ def main():
         connection_success = test_redshift_connection(connection_info)
 
     # Summary
-    print(f"\n📊 Validation Summary:")
-    print(f"=" * 30)
-    print(f"✅ Environment variables: OK")
-    print(f"✅ AWS connectivity: OK")
+    print("\n📊 Validation Summary:")
+    print("=" * 30)
+    print("✅ Environment variables: OK")
+    print("✅ AWS connectivity: OK")
     print(f"ℹ️  Redshift resources: {'Available' if connection_info else 'Will be created during testing'}")
     print(f"{'✅' if connection_success else 'ℹ️ '} Direct connection: {'OK' if connection_success else 'Not tested (resources not available)'}")
 
-    print(f"\n🎯 Next Steps:")
+    print("\n🎯 Next Steps:")
     if connection_info and connection_success:
-        print(f"  • Your environment is fully configured for Redshift testing")
-        print(f"  • You can run integration tests immediately")
+        print("  • Your environment is fully configured for Redshift testing")
+        print("  • You can run integration tests immediately")
     else:
-        print(f"  • Use the management script to create/manage Redshift resources:")
-        print(f"    python scripts/manage-redshift-cluster.py create")
-        print(f"  • Run integration tests manually:")
-        print(f"    poetry run pytest tests/integration/test_redshift_integration.py -v")
-        print(f"  • Clean up resources when done:")
-        print(f"    python scripts/manage-redshift-cluster.py destroy")
+        print("  • Use the management script to create/manage Redshift resources:")
+        print("    python scripts/manage-redshift-cluster.py create")
+        print("  • Run integration tests manually:")
+        print("    poetry run pytest tests/integration/test_redshift_integration.py -v")
+        print("  • Clean up resources when done:")
+        print("    python scripts/manage-redshift-cluster.py destroy")
 
-    print(f"\n💰 Cost Information:")
-    print(f"  • Redshift Serverless costs ~$3/hour minimum when active")
-    print(f"  • Free trial provides $300 credit for new users")
-    print(f"  • Resources are automatically cleaned up after tests")
-    print(f"  • Monitor usage in AWS console to avoid unexpected charges")
+    print("\n💰 Cost Information:")
+    print("  • Redshift Serverless costs ~$3/hour minimum when active")
+    print("  • Free trial provides $300 credit for new users")
+    print("  • Resources are automatically cleaned up after tests")
+    print("  • Monitor usage in AWS console to avoid unexpected charges")
 
     check_required_permissions()
 

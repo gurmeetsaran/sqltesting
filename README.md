@@ -80,16 +80,16 @@ The library supports different data types across database engines. All checkmark
 | **Decimal Array** | `List[Decimal]` | ✅ | ✅ | ✅ | ✅ | ✅ |
 | **Optional Array** | `Optional[List[T]]` | ✅ | ✅ | ✅ | ✅ | ✅ |
 | **Map/Dict** | `Dict[K, V]` | ✅ | ✅ | ✅ | ✅ | ✅ |
-| **Struct/Record** | `dataclass` | ❌ | ❌ | ❌ | ❌ | ❌ |
+| **Struct/Record** | `dataclass` | ❌ | ✅ | ❌ | ✅ | ❌ |
 | **Nested Arrays** | `List[List[T]]` | ❌ | ❌ | ❌ | ❌ | ❌ |
 
 ### Database-Specific Notes
 
-- **BigQuery**: NULL arrays become empty arrays `[]`; uses scientific notation for large decimals; dict/map types stored as JSON strings
-- **Athena**: 256KB query size limit; supports arrays and maps using `ARRAY[]` and `MAP(ARRAY[], ARRAY[])` syntax
-- **Redshift**: Arrays and maps implemented via SUPER type (JSON parsing); 16MB query size limit
-- **Trino**: Memory catalog for testing; excellent decimal precision; supports arrays and maps
-- **Snowflake**: Column names normalized to lowercase; 1MB query size limit; dict/map types implemented via VARIANT type (JSON parsing)
+- **BigQuery**: NULL arrays become empty arrays `[]`; uses scientific notation for large decimals; dict/map types stored as JSON strings; struct types not yet supported
+- **Athena**: 256KB query size limit; supports arrays and maps using `ARRAY[]` and `MAP(ARRAY[], ARRAY[])` syntax; supports struct types using `ROW` with named fields (dataclasses and Pydantic models)
+- **Redshift**: Arrays and maps implemented via SUPER type (JSON parsing); 16MB query size limit; struct types not yet supported
+- **Trino**: Memory catalog for testing; excellent decimal precision; supports arrays, maps, and struct types using `ROW` with named fields (dataclasses and Pydantic models)
+- **Snowflake**: Column names normalized to lowercase; 1MB query size limit; dict/map types implemented via VARIANT type (JSON parsing); struct types not yet supported
 
 ## Execution Modes Support
 
@@ -507,6 +507,124 @@ def test_pattern_3():
         result_class=UserResult
     )
 ```
+
+### Working with Struct Types (Athena and Trino)
+
+The library supports struct/record types using Python dataclasses or Pydantic models for Athena and Trino:
+
+```python
+from dataclasses import dataclass
+from decimal import Decimal
+from pydantic import BaseModel
+from sql_testing_library import sql_test, TestCase
+from sql_testing_library.mock_table import BaseMockTable
+
+# Define nested structs using dataclasses
+@dataclass
+class Address:
+    street: str
+    city: str
+    state: str
+    zip_code: str
+
+@dataclass
+class Employee:
+    id: int
+    name: str
+    salary: Decimal
+    address: Address  # Nested struct
+    is_active: bool = True
+
+# Or use Pydantic models
+class AddressPydantic(BaseModel):
+    street: str
+    city: str
+    state: str
+    zip_code: str
+
+class EmployeeResultPydantic(BaseModel):
+    id: int
+    name: str
+    city: str  # Extracted from nested struct
+
+# Mock table with struct data
+class EmployeesMockTable(BaseMockTable):
+    def get_database_name(self) -> str:
+        return "test_db"
+
+    def get_table_name(self) -> str:
+        return "employees"
+
+# Test with struct types
+@sql_test(
+    adapter_type="athena",  # or "trino"
+    mock_tables=[
+        EmployeesMockTable([
+            Employee(
+                id=1,
+                name="Alice Johnson",
+                salary=Decimal("120000.00"),
+                address=Address(
+                    street="123 Tech Lane",
+                    city="San Francisco",
+                    state="CA",
+                    zip_code="94105"
+                ),
+                is_active=True
+            ),
+            Employee(
+                id=2,
+                name="Bob Smith",
+                salary=Decimal("95000.00"),
+                address=Address(
+                    street="456 Oak Ave",
+                    city="New York",
+                    state="NY",
+                    zip_code="10001"
+                ),
+                is_active=False
+            )
+        ])
+    ],
+    result_class=EmployeeResultPydantic
+)
+def test_struct_with_dot_notation():
+    return TestCase(
+        query="""
+            SELECT
+                id,
+                name,
+                address.city as city  -- Access nested field with dot notation
+            FROM employees
+            WHERE address.state = 'CA'  -- Use struct fields in WHERE clause
+        """,
+        default_namespace="test_db"
+    )
+
+# You can also query entire structs
+@sql_test(
+    adapter_type="trino",
+    mock_tables=[EmployeesMockTable([...])],
+    result_class=dict  # Returns full struct as dict
+)
+def test_query_full_struct():
+    return TestCase(
+        query="SELECT id, name, address FROM employees",
+        default_namespace="test_db"
+    )
+```
+
+**Struct Type Features:**
+- **Nested Structures**: Support for deeply nested structs using dataclasses or Pydantic models
+- **Dot Notation**: Access struct fields using `struct.field` syntax in queries
+- **Type Safety**: Full type conversion between Python objects and SQL ROW types
+- **NULL Handling**: Proper handling of optional struct fields
+- **WHERE Clause**: Use struct fields in filtering conditions
+
+**SQL Type Mapping:**
+- Python dataclass/Pydantic model → SQL `ROW(field1 type1, field2 type2, ...)`
+- Nested structs are fully supported
+- All struct values are properly cast to ensure type consistency
 
 3. **Run with pytest**:
 

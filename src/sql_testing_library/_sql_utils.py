@@ -1,8 +1,61 @@
 """SQL utility functions for escaping and formatting values."""
 
 import json
+from dataclasses import is_dataclass
+from datetime import date, datetime
 from decimal import Decimal
-from typing import Any, Type
+from typing import Any, Dict, Type, get_type_hints
+
+
+# SQL type mappings for different dialects
+SQL_TYPE_MAPPINGS: Dict[str, Dict[Type, str]] = {
+    "athena": {
+        str: "VARCHAR",
+        int: "BIGINT",
+        float: "DOUBLE",
+        bool: "BOOLEAN",
+        date: "DATE",
+        datetime: "TIMESTAMP",
+        Decimal: "DECIMAL(38,9)",
+    },
+    "trino": {
+        str: "VARCHAR",
+        int: "BIGINT",
+        float: "DOUBLE",
+        bool: "BOOLEAN",
+        date: "DATE",
+        datetime: "TIMESTAMP",
+        Decimal: "DECIMAL(38,9)",
+    },
+    # Can be extended for other dialects
+    "bigquery": {
+        str: "STRING",
+        int: "INT64",
+        float: "FLOAT64",
+        bool: "BOOL",
+        date: "DATE",
+        datetime: "DATETIME",
+        Decimal: "NUMERIC",
+    },
+    "redshift": {
+        str: "VARCHAR",
+        int: "BIGINT",
+        float: "DOUBLE PRECISION",
+        bool: "BOOLEAN",
+        date: "DATE",
+        datetime: "TIMESTAMP",
+        Decimal: "DECIMAL(38,9)",
+    },
+    "snowflake": {
+        str: "VARCHAR",
+        int: "NUMBER",
+        float: "FLOAT",
+        bool: "BOOLEAN",
+        date: "DATE",
+        datetime: "TIMESTAMP",
+        Decimal: "NUMBER(38,9)",
+    },
+}
 
 
 class DecimalEncoder(json.JSONEncoder):
@@ -79,6 +132,41 @@ def escape_bigquery_string(value: str) -> str:
         return escape_sql_string(value)
 
 
+def get_sql_type_string(py_type: Type, dialect: str) -> str:
+    """
+    Get SQL type string for a Python type based on dialect.
+
+    Args:
+        py_type: Python type to convert
+        dialect: SQL dialect name
+
+    Returns:
+        SQL type string
+    """
+    # Import here to avoid circular imports
+    from ._types import is_struct_type
+
+    # Get type mapping for the dialect, fallback to athena if not found
+    type_mapping = SQL_TYPE_MAPPINGS.get(dialect, SQL_TYPE_MAPPINGS.get("athena", {}))
+
+    # Check if it's a basic type
+    if py_type in type_mapping:
+        return type_mapping[py_type]
+
+    # Check if it's a struct type
+    if is_struct_type(py_type):
+        # Build nested ROW type recursively
+        nested_hints = get_type_hints(py_type)
+        nested_fields = []
+        for nested_name, nested_type in nested_hints.items():
+            nested_sql = get_sql_type_string(nested_type, dialect)
+            nested_fields.append(f"{nested_name} {nested_sql}")
+        return f"ROW({', '.join(nested_fields)})"
+
+    # For other complex types, default to VARCHAR
+    return type_mapping.get(str, "VARCHAR")
+
+
 def format_sql_value(value: Any, column_type: Type, dialect: str = "standard") -> str:
     """
     Format a Python value as a SQL literal based on column type and SQL dialect.
@@ -96,6 +184,13 @@ def format_sql_value(value: Any, column_type: Type, dialect: str = "standard") -
     from typing import get_args
 
     import pandas as pd
+
+    # Import struct checking utilities
+    from ._types import is_struct_type
+
+    # Handle struct types before NULL checking
+    if is_struct_type(column_type):
+        return _format_struct_value(value, column_type, dialect)
 
     # Handle NULL values
     # Note: pd.isna() doesn't work on lists/arrays/dicts, so check for None first
@@ -363,3 +458,53 @@ def format_sql_value(value: Any, column_type: Type, dialect: str = "standard") -
     # Default: convert to string
     else:
         return escape_sql_string(str(value))
+
+
+def _format_struct_value(value: Any, struct_type: Type, dialect: str) -> str:
+    """
+    Format a struct value (dataclass or Pydantic model instance) as SQL literal.
+
+    Args:
+        value: Struct instance (dataclass or Pydantic model)
+        struct_type: The struct type
+        dialect: SQL dialect
+
+    Returns:
+        Formatted SQL struct/ROW literal
+    """
+    # Import here to avoid circular imports
+    from ._types import is_pydantic_model_class
+
+    # For Athena/Trino
+    if dialect in ("athena", "trino"):
+        # Get type hints for building ROW type definition
+        type_hints = get_type_hints(struct_type)
+
+        # Build the ROW type definition using the global function
+        row_type = get_sql_type_string(struct_type, dialect)
+
+        # Handle NULL struct values
+        if value is None:
+            return f"CAST(NULL AS {row_type})"
+
+        # Format non-NULL struct values
+        field_values = []
+        for field_name, field_type in type_hints.items():
+            # Get the field value
+            if is_dataclass(value):
+                field_value = getattr(value, field_name, None)
+            elif is_pydantic_model_class(type(value)):
+                field_value = getattr(value, field_name, None)
+            else:
+                # If it's a dict
+                field_value = value.get(field_name) if isinstance(value, dict) else None
+
+            # Format the field value recursively using format_sql_value
+            formatted_value = format_sql_value(field_value, field_type, dialect)
+            field_values.append(formatted_value)
+
+        return f"CAST(ROW({', '.join(field_values)}) AS {row_type})"
+
+    # For other databases, struct support would need to be implemented
+    else:
+        raise NotImplementedError(f"Struct type not yet supported for dialect: {dialect}")
