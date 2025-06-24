@@ -55,7 +55,7 @@ Each adapter requires specific environment variables. See the main documentation
 - **BigQuery**: `GOOGLE_APPLICATION_CREDENTIALS`, `GCP_PROJECT_ID`
 - **Redshift**: `REDSHIFT_HOST`, `REDSHIFT_USER`, etc.
 - **Trino**: Docker-based (no external credentials needed)
-- **Snowflake**: `SNOWFLAKE_ACCOUNT`, `SNOWFLAKE_USER`, `SNOWFLAKE_PASSWORD`, `SNOWFLAKE_DATABASE`, `SNOWFLAKE_WAREHOUSE` (optional), `SNOWFLAKE_ROLE` (optional)
+- **Snowflake**: `SNOWFLAKE_ACCOUNT`, `SNOWFLAKE_USER`, `SNOWFLAKE_PRIVATE_KEY` (for MFA), `SNOWFLAKE_DATABASE`, `SNOWFLAKE_WAREHOUSE` (optional), `SNOWFLAKE_ROLE` (optional)
 
 ### Markers
 All integration tests must use appropriate pytest markers:

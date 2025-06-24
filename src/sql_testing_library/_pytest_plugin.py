@@ -176,19 +176,34 @@ class SQLTestDecorator:
             schema = adapter_config.get("schema", "PUBLIC")
             warehouse = adapter_config.get("warehouse")
             role = adapter_config.get("role")
+            private_key_path = adapter_config.get("private_key_path")
+            private_key_passphrase = adapter_config.get("private_key_passphrase")
 
-            if not all([account, user, password, database, warehouse]):
-                raise ValueError(
-                    "Snowflake adapter requires 'account', 'user', 'password', "
-                    "'database', and 'warehouse' in configuration"
-                )
+            # Check required fields based on authentication method
+            has_private_key = private_key_path or os.environ.get("SNOWFLAKE_PRIVATE_KEY")
 
-            # All required values are now guaranteed to exist
+            if has_private_key:
+                # For key-pair auth, we just need account and user
+                if not all([account, user]):
+                    raise ValueError(
+                        "Snowflake adapter with key-pair authentication requires "
+                        "'account' and 'user' in configuration"
+                    )
+            else:
+                # For password-based auth, we need password
+                if not all([account, user, password]):
+                    raise ValueError(
+                        "Snowflake adapter requires 'account', 'user', and 'password' "
+                        "in configuration (or use key-pair authentication for CI/CD)"
+                    )
+
+            # Database and warehouse are recommended but not always required
+            if not database:
+                database = ""  # Let adapter handle empty database
+
+            # Ensure non-None values for required parameters
             assert account is not None
             assert user is not None
-            assert password is not None
-            assert database is not None
-            assert warehouse is not None
 
             database_adapter = SnowflakeAdapter(
                 account=account,
@@ -198,6 +213,8 @@ class SQLTestDecorator:
                 schema=schema,
                 warehouse=warehouse,
                 role=role,
+                private_key_path=private_key_path,
+                private_key_passphrase=private_key_passphrase,
             )
         else:
             raise ValueError(f"Unsupported adapter type: {adapter_type}")

@@ -1,10 +1,11 @@
 """Snowflake adapter implementation."""
 
 import logging
+import os
 import time
 from datetime import date, datetime
 from decimal import Decimal
-from typing import TYPE_CHECKING, Any, List, Optional, Tuple, Type, Union, get_args
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Type, Union, get_args
 
 
 if TYPE_CHECKING:
@@ -67,11 +68,13 @@ class SnowflakeAdapter(DatabaseAdapter):
         self,
         account: str,
         user: str,
-        password: str,
-        database: str,
+        password: Optional[str] = None,
+        database: str = "",
         schema: str = "PUBLIC",
         warehouse: Optional[str] = None,
         role: Optional[str] = None,
+        private_key_path: Optional[str] = None,
+        private_key_passphrase: Optional[str] = None,
     ) -> None:
         if not has_snowflake:
             raise ImportError(
@@ -88,7 +91,77 @@ class SnowflakeAdapter(DatabaseAdapter):
         self.schema = schema
         self.warehouse = warehouse
         self.role = role
+        self.private_key_path = private_key_path
+        self.private_key_passphrase = private_key_passphrase
         self.conn: Optional[Any] = None
+        self._private_key: Optional[bytes] = None
+
+    def _load_private_key(self) -> bytes:
+        """Load private key from file or environment variable and convert to DER format."""
+        if self._private_key:
+            return self._private_key
+
+        # Try to load from file path
+        if self.private_key_path and os.path.exists(self.private_key_path):
+            with open(self.private_key_path, "rb") as key_file:
+                private_key_data = key_file.read()
+        # Try to load from environment variable
+        elif os.environ.get("SNOWFLAKE_PRIVATE_KEY"):
+            private_key_data = os.environ["SNOWFLAKE_PRIVATE_KEY"].encode()
+        else:
+            raise ValueError(
+                "Private key not found. Provide private_key_path or "
+                "set SNOWFLAKE_PRIVATE_KEY environment variable"
+            )
+
+        # Import cryptography modules
+        from cryptography.hazmat.backends import default_backend
+        from cryptography.hazmat.primitives import serialization
+        from cryptography.hazmat.primitives.serialization import (
+            load_der_private_key,
+            load_pem_private_key,
+        )
+
+        # Determine if we have a passphrase
+        passphrase_str = self.private_key_passphrase or os.environ.get(
+            "SNOWFLAKE_PRIVATE_KEY_PASSPHRASE"
+        )
+        passphrase = passphrase_str.encode() if passphrase_str else None
+
+        try:
+            # Check if it's already in DER format
+            if not private_key_data.startswith(b"-----"):
+                # Already in DER format, try to load it
+                try:
+                    private_key_obj = load_der_private_key(
+                        private_key_data, password=passphrase, backend=default_backend()
+                    )
+                    private_key = private_key_data
+                except Exception:
+                    # Not valid DER, treat as PEM
+                    pass
+
+            # Load PEM private key (handles both PKCS#1 and PKCS#8)
+            if private_key_data.startswith(b"-----"):
+                private_key_obj = load_pem_private_key(
+                    private_key_data, password=passphrase, backend=default_backend()
+                )
+
+                # Convert to DER format (PKCS#8) for Snowflake
+                private_key = private_key_obj.private_bytes(
+                    encoding=serialization.Encoding.DER,
+                    format=serialization.PrivateFormat.PKCS8,
+                    encryption_algorithm=serialization.NoEncryption(),
+                )
+        except Exception as e:
+            raise ValueError(
+                f"Failed to load private key: {e}. "
+                "Ensure the key is in PEM format (PKCS#1 or PKCS#8) "
+                "and the passphrase (if any) is correct."
+            ) from e
+
+        self._private_key = private_key
+        return private_key
 
     def _get_connection(self) -> Any:
         """Get or create a connection to Snowflake."""
@@ -96,13 +169,30 @@ class SnowflakeAdapter(DatabaseAdapter):
 
         # Create a new connection if needed
         if self.conn is None:
-            conn_params = {
+            conn_params: Dict[str, Any] = {
                 "account": self.account,
                 "user": self.user,
-                "password": self.password,
-                "database": self.database,
-                "schema": self.schema,
             }
+
+            # Add optional parameters
+            if self.database:
+                conn_params["database"] = self.database
+
+            if self.schema:
+                conn_params["schema"] = self.schema
+
+            # Handle authentication
+            if self.private_key_path or os.environ.get("SNOWFLAKE_PRIVATE_KEY"):
+                # Use key-pair authentication
+                conn_params["private_key"] = self._load_private_key()
+            elif self.password:
+                conn_params["password"] = self.password
+            else:
+                raise ValueError(
+                    "No authentication method provided. Please provide one of: "
+                    "1) password, 2) private_key_path, or "
+                    "3) set SNOWFLAKE_PRIVATE_KEY environment variable"
+                )
 
             if self.warehouse:
                 conn_params["warehouse"] = self.warehouse

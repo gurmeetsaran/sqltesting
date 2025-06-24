@@ -17,7 +17,7 @@ Click **New repository secret** for each of the following:
 |-------------|-------------|---------|
 | `SNOWFLAKE_ACCOUNT` | Snowflake account identifier | `abc12345.us-east-1` |
 | `SNOWFLAKE_USER` | Snowflake username | `test_user` |
-| `SNOWFLAKE_PASSWORD` | Snowflake password | `SecurePassword123` |
+| `SNOWFLAKE_PRIVATE_KEY` | RSA private key content (for MFA accounts) | `-----BEGIN RSA PRIVATE KEY-----...` |
 
 ### Variables (Non-Sensitive Configuration)
 Click on the **Variables** tab, then **New repository variable** for each:
@@ -31,7 +31,12 @@ Click on the **Variables** tab, then **New repository variable** for each:
 
 ### 🔐 Setting up Snowflake User
 
-Create a dedicated user for GitHub Actions with minimal permissions:
+Create a dedicated user for GitHub Actions with minimal permissions.
+
+**Note**: For accounts with MFA enabled, you must use key-pair authentication. Generate keys using:
+```bash
+python scripts/setup-snowflake-keypair.py
+```
 
 #### 1. Create Database and Schema
 ```sql
@@ -57,15 +62,25 @@ GRANT ALL PRIVILEGES ON FUTURE TABLES IN SCHEMA TEST_DB.SQLTESTING TO ROLE githu
 -- Grant warehouse usage (CRITICAL: replace COMPUTE_WH with your actual warehouse name)
 GRANT USAGE ON WAREHOUSE COMPUTE_WH TO ROLE github_actions_role;
 
--- Create user
+-- Create user with RSA public key for key-pair authentication (recommended for MFA)
 CREATE USER github_actions_user
-  PASSWORD = 'SecurePassword123'
   DEFAULT_ROLE = github_actions_role
   DEFAULT_WAREHOUSE = COMPUTE_WH
-  DEFAULT_NAMESPACE = TEST_DB.SQLTESTING;
+  DEFAULT_NAMESPACE = TEST_DB.SQLTESTING
+  RSA_PUBLIC_KEY = '<your_public_key_content>';  -- Generate using scripts/setup-snowflake-keypair.py
 
 -- Grant role to user
 GRANT ROLE github_actions_role TO USER github_actions_user;
+
+-- Alternative: Create service user (exempt from MFA)
+CREATE USER github_actions_service
+  TYPE = SERVICE
+  DEFAULT_ROLE = github_actions_role
+  DEFAULT_WAREHOUSE = COMPUTE_WH
+  DEFAULT_NAMESPACE = TEST_DB.SQLTESTING
+  RSA_PUBLIC_KEY = '<your_public_key_content>';
+
+GRANT ROLE github_actions_role TO USER github_actions_service;
 ```
 
 #### 3. Minimal Permissions Policy
@@ -203,9 +218,18 @@ This will:
 
 #### Snowflake Authentication Error
 ```
-❌ Snowflake authentication failed: Incorrect username or password
+❌ Snowflake authentication failed: Multi-factor authentication is required
 ```
-**Solution**: Verify credentials in GitHub secrets match Snowflake user
+**Solution**: Switch to key-pair authentication:
+1. Run `python scripts/setup-snowflake-keypair.py`
+2. Configure public key in Snowflake
+3. Update GitHub secret with private key
+
+#### Private Key Loading Error
+```
+❌ Failed to load private key: Could not deserialize key data
+```
+**Solution**: Ensure private key is properly formatted in GitHub secrets (include headers)
 
 #### Permission Denied
 ```
@@ -228,17 +252,26 @@ This will:
 ## 🛡️ Security Best Practices
 
 ### ✅ Current Implementation
-- Snowflake credentials stored as GitHub secrets (encrypted)
+- **Key-pair authentication** for MFA-enabled accounts
+- **Private keys** stored as GitHub secrets (encrypted)
+- **No passwords** in CI/CD (more secure)
 - Minimal user permissions
 - Automatic cleanup of test resources (temporary tables)
 - No credentials in logs or code
 - Dedicated test database/schema
 
-### 🔒 Additional Security (Optional)
-- Use Snowflake key-pair authentication instead of password
-- Enable network policies to restrict access by IP
-- Set up resource monitors to prevent unexpected costs
-- Enable query tags for better cost tracking
+### 🔒 Security Best Practices
+
+#### Key-Pair Authentication (Required for MFA)
+- Generate keys: `python scripts/setup-snowflake-keypair.py`
+- Set public key: `ALTER USER <user> SET RSA_PUBLIC_KEY='<key>';`
+- Store private key in GitHub secrets as `SNOWFLAKE_PRIVATE_KEY`
+
+#### Additional Security Measures
+- **Service Users**: Use `TYPE = SERVICE` for CI/CD (exempt from MFA)
+- **Network Policies**: Restrict access by IP
+- **Resource Monitors**: Prevent unexpected costs
+- **Query Tags**: Better cost tracking
 
 ## 📈 Scaling for Multiple Environments
 

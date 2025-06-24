@@ -45,8 +45,16 @@ credentials_path = ${GOOGLE_APPLICATION_CREDENTIALS}
 # [sql_testing.snowflake]
 # account = ${SNOWFLAKE_ACCOUNT}
 # user = ${SNOWFLAKE_USER}
-# password = ${SNOWFLAKE_PASSWORD}
 # database = ${SNOWFLAKE_DATABASE}
 # schema = ${SNOWFLAKE_SCHEMA:-PUBLIC}  # Optional: default schema is 'PUBLIC'
 # warehouse = ${SNOWFLAKE_WAREHOUSE}    # Required: specify a warehouse
 # role = ${SNOWFLAKE_ROLE}              # Optional: specify a role
+#
+# # Authentication options (choose one):
+# # Option 1: Password authentication
+# password = ${SNOWFLAKE_PASSWORD}
+#
+# # Option 2: Key-pair authentication (recommended for CI/CD with MFA)
+# # private_key_path = ${SNOWFLAKE_PRIVATE_KEY_PATH}  # Path to private key file
+# # Or use environment variable SNOWFLAKE_PRIVATE_KEY with key content
+# # private_key_passphrase = ${SNOWFLAKE_PRIVATE_KEY_PASSPHRASE}  # Optional: if key is encrypted
