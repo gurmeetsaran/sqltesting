@@ -41,7 +41,7 @@ Automatically switches between CTE injection and physical tables based on query 
 Seamlessly integrates with pytest using the `@sql_test` decorator.
 
 ### 📊 Comprehensive Type Support
-Supports primitive types, arrays, decimals, dates, and optional values across all databases.
+Supports primitive types, arrays, decimals, dates, optional values, and struct types (Athena/Trino) across databases.
 
 ### 🔍 SQL Logging & Debugging
 Automatic SQL logging with formatted output, temp table queries, and full error tracebacks for easy debugging.
@@ -101,10 +101,21 @@ def test_user_query():
 
 ### Data Types Support
 
-✅ **Supported Types**: String, Integer, Float, Boolean, Date, Datetime, Decimal, Arrays, Map/Dict types (Dict[K, V]), Optional/Nullable types
+✅ **Supported Types**:
+- String
+- Integer
+- Float
+- Boolean
+- Date
+- Datetime
+- Decimal
+- Arrays
+- Map/Dict types (Dict[K, V])
+- Optional/Nullable types
+- Struct/Record types (Athena/Trino only - using dataclasses or Pydantic models)
 
 ❌ **Not Yet Supported**:
-- Struct/Record types (nested objects)
+- Struct/Record types for BigQuery, Redshift, and Snowflake
 - Nested Arrays (arrays of arrays)
 
 ## 📚 Documentation

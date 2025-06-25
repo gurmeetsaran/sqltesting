@@ -18,11 +18,11 @@ Note: The 'destroy' command now automatically removes security group rules that
 """
 
 import argparse
-import json
 import os
 import sys
 import time
-from typing import Dict, Optional, Tuple
+from typing import Dict, Optional
+
 
 try:
     import boto3
@@ -294,7 +294,7 @@ class RedshiftClusterManager:
                 print(f"❌ Unexpected error: {e}")
                 return False
 
-        print(f"⏰ Timeout waiting for workgroup deletion")
+        print("⏰ Timeout waiting for workgroup deletion")
         return False
 
     def delete_namespace(self, namespace_name: str) -> bool:
@@ -313,7 +313,7 @@ class RedshiftClusterManager:
                 return True
             elif error_code == 'ConflictException':
                 print(f"⚠️  Cannot delete namespace: {e}")
-                print(f"ℹ️  This usually means workgroup is still being deleted. Try waiting longer.")
+                print("ℹ️  This usually means workgroup is still being deleted. Try waiting longer.")
                 return False
             else:
                 print(f"❌ Failed to delete namespace: {e}")
@@ -349,7 +349,7 @@ class RedshiftClusterManager:
                 print(f"❌ Unexpected error: {e}")
                 return False
 
-        print(f"⏰ Timeout waiting for namespace deletion")
+        print("⏰ Timeout waiting for namespace deletion")
         return False
 
     def generate_pytest_config(
@@ -454,7 +454,7 @@ port = {endpoint_info['port']}"""
                     rule.get('ToPort') == 5439 and
                     rule.get('IpProtocol') == 'tcp'):
                     redshift_rule_exists = True
-                    print(f"ℹ️  Redshift port 5439 rule already exists in security group")
+                    print("ℹ️  Redshift port 5439 rule already exists in security group")
                     break
 
             if not redshift_rule_exists:
@@ -480,7 +480,7 @@ port = {endpoint_info['port']}"""
         except ClientError as e:
             error_code = e.response['Error']['Code']
             if error_code == 'InvalidGroup.Duplicate':
-                print(f"ℹ️  Security group rule already exists")
+                print("ℹ️  Security group rule already exists")
             else:
                 print(f"⚠️  Warning: Could not configure security group {security_group_id}: {e}")
         except Exception as e:
@@ -540,7 +540,7 @@ port = {endpoint_info['port']}"""
             if cleanup_success:
                 print(f"✅ Security group cleanup completed for workgroup: {workgroup_name}")
             else:
-                print(f"⚠️  Some security group rules could not be removed")
+                print("⚠️  Some security group rules could not be removed")
             return cleanup_success
 
         except ClientError as e:
@@ -605,7 +605,7 @@ port = {endpoint_info['port']}"""
                 print(f"ℹ️  Security group {security_group_id} not found, skipping rule removal")
                 return True
             elif error_code == 'InvalidGroupId.NotFound':
-                print(f"ℹ️  Security group rule not found, may have been already removed")
+                print("ℹ️  Security group rule not found, may have been already removed")
                 return True
             else:
                 print(f"⚠️  Warning: Could not remove rules from security group {security_group_id}: {e}")
@@ -710,10 +710,10 @@ def main():
 
         # Configure security group for connectivity
         if success:
-            print(f"🔧 Configuring security group for Redshift connectivity...")
+            print("🔧 Configuring security group for Redshift connectivity...")
             if not manager.configure_security_group_for_workgroup(args.workgroup):
-                print(f"⚠️  Warning: Security group configuration failed. You may need to manually configure security groups.")
-                print(f"ℹ️  Required: Allow inbound TCP traffic on port 5439")
+                print("⚠️  Warning: Security group configuration failed. You may need to manually configure security groups.")
+                print("ℹ️  Required: Allow inbound TCP traffic on port 5439")
 
         # Generate config if requested
         if success and args.generate_config:
@@ -727,10 +727,10 @@ def main():
                 )
 
                 print(config)
-                print(f"✅ Sample pytest.ini configuration file")
+                print("✅ Sample pytest.ini configuration file")
 
     elif args.command == "status":
-        print(f"📊 Checking status of Redshift resources")
+        print("📊 Checking status of Redshift resources")
         status = manager.get_status(args.namespace, args.workgroup)
 
         print(f"Namespace ({args.namespace}): {status.get('namespace', 'UNKNOWN')}")
@@ -756,16 +756,16 @@ def main():
                 else:
                     psql_cmd = f"psql -h {endpoint_info['host']} -p {endpoint_info['port']} -U {args.admin_user} -d {args.database}"
 
-                print(f"\n🔗 Manual Connection Commands:")
-                print(f"psql command:")
+                print("\n🔗 Manual Connection Commands:")
+                print("psql command:")
                 print(f"  {psql_cmd}")
 
                 if not args.admin_password:
-                    print(f"\nNote: Set REDSHIFT_ADMIN_PASSWORD environment variable for automatic password inclusion")
+                    print("\nNote: Set REDSHIFT_ADMIN_PASSWORD environment variable for automatic password inclusion")
 
             if args.generate_config:
                 if not args.quiet:
-                    print(f"\n📋 Pytest Configuration:")
+                    print("\n📋 Pytest Configuration:")
                 config = manager.generate_pytest_config(
                     endpoint_info,
                     args.database,
@@ -774,7 +774,7 @@ def main():
                 )
                 if not args.quiet:
                     print(config)
-                    print(f"\n✅ Sample pytest.ini configuration generated")
+                    print("\n✅ Sample pytest.ini configuration generated")
                 else:
                     # In quiet mode, just write the config file
                     with open("pytest.ini", "w") as f:
@@ -791,15 +791,15 @@ def main():
         success = manager.cleanup_security_group_for_workgroup(args.workgroup)
 
     elif args.command == "destroy":
-        print(f"🗑️  Destroying Redshift Serverless resources")
+        print("🗑️  Destroying Redshift Serverless resources")
 
         # First, clean up security group rules while workgroup still exists (unless skipped)
         if not args.skip_sg_cleanup:
-            print(f"🧹 Cleaning up security group rules...")
+            print("🧹 Cleaning up security group rules...")
             if not manager.cleanup_security_group_for_workgroup(args.workgroup):
-                print(f"⚠️  Warning: Security group cleanup failed, but continuing with resource deletion")
+                print("⚠️  Warning: Security group cleanup failed, but continuing with resource deletion")
         else:
-            print(f"ℹ️  Skipping security group cleanup (--skip-sg-cleanup specified)")
+            print("ℹ️  Skipping security group cleanup (--skip-sg-cleanup specified)")
 
         # Delete workgroup first
         if not manager.delete_workgroup(args.workgroup):
@@ -808,7 +808,7 @@ def main():
         # Always wait for workgroup deletion before deleting namespace
         # This is required because namespace deletion will fail if workgroup still exists
         if success:
-            print(f"⏳ Waiting for workgroup deletion to complete (required before namespace deletion)...")
+            print("⏳ Waiting for workgroup deletion to complete (required before namespace deletion)...")
             success = manager.wait_for_workgroup_deletion(args.workgroup)
 
         # Delete namespace only after workgroup is fully deleted
@@ -818,7 +818,7 @@ def main():
 
         # Always wait for namespace deletion to complete (just like workgroup deletion)
         if success:
-            print(f"⏳ Waiting for namespace deletion to complete...")
+            print("⏳ Waiting for namespace deletion to complete...")
             success = manager.wait_for_namespace_deletion(args.namespace)
 
     # Exit with appropriate code

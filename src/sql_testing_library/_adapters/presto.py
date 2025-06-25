@@ -6,7 +6,7 @@ from decimal import Decimal
 from typing import Any, List, Tuple, Type, Union, get_args
 
 from .._mock_table import BaseMockTable
-from .._types import BaseTypeConverter
+from .._types import BaseTypeConverter, is_struct_type
 from .base import DatabaseAdapter
 
 
@@ -78,6 +78,8 @@ class PrestoBaseAdapter(DatabaseAdapter):
 
     def _get_sql_type(self, python_type: Type) -> str:
         """Convert Python type to SQL type string."""
+        from .._sql_utils import get_sql_type_string
+
         # Handle Optional types
         if hasattr(python_type, "__origin__") and python_type.__origin__ is Union:
             # Extract the non-None type from Optional[T]
@@ -85,10 +87,14 @@ class PrestoBaseAdapter(DatabaseAdapter):
             if non_none_types:
                 python_type = non_none_types[0]
 
+        # Handle struct types (dataclass or Pydantic model)
+        if is_struct_type(python_type):
+            return get_sql_type_string(python_type, self.get_sqlglot_dialect())
+
         # Handle List types
         if hasattr(python_type, "__origin__") and python_type.__origin__ is list:
             element_type = get_args(python_type)[0] if get_args(python_type) else str
-            element_sql_type = self.TYPE_MAPPING.get(element_type, "VARCHAR")
+            element_sql_type = self._get_sql_type(element_type)  # Recursive call for nested types
             return f"ARRAY({element_sql_type})"
 
         # Handle Dict/Map types
@@ -96,12 +102,20 @@ class PrestoBaseAdapter(DatabaseAdapter):
             type_args = get_args(python_type)
             key_type = type_args[0] if type_args else str
             value_type = type_args[1] if len(type_args) > 1 else str
-            key_sql_type = self.TYPE_MAPPING.get(key_type, "VARCHAR")
-            value_sql_type = self.TYPE_MAPPING.get(value_type, "VARCHAR")
+            key_sql_type = self._get_sql_type(key_type)  # Recursive call for nested types
+            value_sql_type = self._get_sql_type(value_type)  # Recursive call for nested types
             return f"MAP({key_sql_type}, {value_sql_type})"
 
-        # Regular types
-        return self.TYPE_MAPPING.get(python_type, "VARCHAR")
+        # Regular types - use the mapping
+        dialect = self.get_sqlglot_dialect()
+        return get_sql_type_string(python_type, dialect)
+
+    def _get_struct_sql_type(self, struct_type: Type) -> str:
+        """Get SQL ROW type definition for a struct (dataclass or Pydantic model)."""
+        from .._sql_utils import get_sql_type_string
+
+        dialect = self.get_sqlglot_dialect()
+        return get_sql_type_string(struct_type, dialect)
 
     def _generate_column_definitions(self, column_types: dict) -> str:
         """Generate SQL column definitions from column types."""

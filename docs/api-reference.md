@@ -427,6 +427,8 @@ except TypeConversionError as e:
 | `List[T]` | ARRAY | Arrays of supported types |
 | `Dict[K, V]` | MAP | Maps (Athena/Trino only) |
 | `Optional[T]` | Nullable | Union[T, None] |
+| `dataclass` | STRUCT/ROW | Structs (Athena/Trino only) |
+| `Pydantic model` | STRUCT/ROW | Structs (Athena/Trino only) |
 
 ### Type Conversion
 
@@ -453,6 +455,32 @@ class MapData:
     scores: Dict[str, int]           # MAP(VARCHAR, INTEGER/BIGINT)
     attributes: Dict[int, str]       # MAP(INTEGER/BIGINT, VARCHAR)
     optional_map: Optional[Dict[str, str]]  # Nullable MAP
+
+# Struct types (Athena/Trino only)
+@dataclass
+class Address:
+    street: str
+    city: str
+    zip_code: str
+
+@dataclass
+class Person:
+    name: str
+    age: int
+    address: Address  # Nested struct
+
+# Pydantic models also work
+from pydantic import BaseModel
+
+class AddressPydantic(BaseModel):
+    street: str
+    city: str
+    zip_code: str
+
+class PersonPydantic(BaseModel):
+    name: str
+    age: int
+    address: AddressPydantic
 ```
 
 ## Configuration

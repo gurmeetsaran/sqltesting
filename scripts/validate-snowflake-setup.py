@@ -8,7 +8,7 @@ and tests basic connectivity to Snowflake.
 
 import os
 import sys
-from typing import List, Optional
+from typing import List
 
 
 def check_environment_variables() -> List[str]:
