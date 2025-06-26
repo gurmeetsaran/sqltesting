@@ -98,7 +98,7 @@ The library supports two execution modes for mock data injection. **CTE Mode is 
 | Execution Mode | Description | BigQuery | Athena | Redshift | Trino | Snowflake |
 |----------------|-------------|----------|--------|----------|-------|-----------|
 | **CTE Mode** | Mock data injected as Common Table Expressions | ✅ | ✅ | ✅ | ✅ | ✅ |
-| **Physical Tables** | Mock data created as temporary tables | ✅ | ✅ | ✅ | ✅ | ⚠️* |
+| **Physical Tables** | Mock data created as temporary tables | ✅ | ✅ | ✅ | ✅ | ✅ |
 
 ### Execution Mode Details
 
@@ -249,7 +249,7 @@ def test_physical_tables():
 **Notes:**
 - **CTE Mode**: Default mode, works with all database engines, suitable for most use cases
 - **Physical Tables**: Used automatically when CTE queries exceed database size limits or when explicitly requested
-- **⚠️ Snowflake Physical Tables**: Currently disabled in test environment due to temporary table visibility limitations. CTE mode works perfectly for all use cases.
+- **Snowflake**: Full support for both CTE and physical table modes
 
 ## Installation
 
@@ -1114,9 +1114,6 @@ For detailed usage and configuration options, see the example files included.
 ## Known Limitations and TODOs
 
 The library has a few known limitations that are planned to be addressed in future updates:
-
-### Snowflake Support
-- Physical table tests for Snowflake are currently skipped due to complex mocking requirements
 
 ### General Improvements
 - Add support for more SQL dialects
