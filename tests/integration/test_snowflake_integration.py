@@ -78,7 +78,7 @@ class CustomersMockTable(BaseMockTable):
     """Mock table for customers data."""
 
     def get_database_name(self) -> str:
-        return "test_db.public"
+        return "test_db.sqltesting"
 
     def get_table_name(self) -> str:
         return "customers"
@@ -88,7 +88,7 @@ class OrdersMockTable(BaseMockTable):
     """Mock table for orders data."""
 
     def get_database_name(self) -> str:
-        return "test_db.public"
+        return "test_db.sqltesting"
 
     def get_table_name(self) -> str:
         return "orders"
@@ -98,7 +98,7 @@ class ProductsMockTable(BaseMockTable):
     """Mock table for products data."""
 
     def get_database_name(self) -> str:
-        return "test_db.public"
+        return "test_db.sqltesting"
 
     def get_table_name(self) -> str:
         return "products"
@@ -108,8 +108,8 @@ class ProductsMockTable(BaseMockTable):
 @pytest.mark.snowflake
 @pytest.mark.parametrize(
     "use_physical_tables",
-    [False],  # Physical tables disabled due to environment limitations
-    ids=["cte_mode"],
+    [False, True],
+    ids=["cte_mode", "physical_tables_mode"],
 )
 class TestSnowflakeIntegration:
     """Integration tests for Snowflake adapter using real database connections."""
@@ -186,7 +186,7 @@ class TestSnowflakeIntegration:
                         CAST(0.00 AS DECIMAL(10,2)) as total_amount
                     FROM customers WHERE customer_id = 1
                 """,
-                default_namespace="test_db.public",
+                default_namespace="test_db.sqltesting",
                 use_physical_tables=use_physical_tables,
             )
 
@@ -222,7 +222,7 @@ class TestSnowflakeIntegration:
                     GROUP BY c.customer_id, c.name
                     ORDER BY total_spent DESC
                 """,
-                default_namespace="test_db.public",
+                default_namespace="test_db.sqltesting",
                 use_physical_tables=use_physical_tables,
             )
 
@@ -253,7 +253,7 @@ class TestSnowflakeIntegration:
                     WHERE signup_date >= DATE '2023-02-01'
                     ORDER BY signup_date DESC
                 """,
-                default_namespace="test_db.public",
+                default_namespace="test_db.sqltesting",
                 use_physical_tables=use_physical_tables,
             )
 
@@ -283,7 +283,7 @@ class TestSnowflakeIntegration:
                     WHERE DATE(order_date) >= DATE '2023-04-01'
                     AND status IN ('completed', 'pending')
                 """,
-                default_namespace="test_db.public",
+                default_namespace="test_db.sqltesting",
                 use_physical_tables=use_physical_tables,
             )
 
@@ -329,7 +329,7 @@ class TestSnowflakeIntegration:
                     WHERE lifetime_value IS NOT NULL OR customer_id = 2
                     ORDER BY customer_id
                 """,
-                default_namespace="test_db.public",
+                default_namespace="test_db.sqltesting",
                 use_physical_tables=use_physical_tables,
             )
 
@@ -360,7 +360,7 @@ class TestSnowflakeIntegration:
                     WHERE LENGTH(name) > 8
                     ORDER BY name
                 """,
-                default_namespace="test_db.public",
+                default_namespace="test_db.sqltesting",
                 use_physical_tables=use_physical_tables,
             )
 
@@ -390,7 +390,7 @@ class TestSnowflakeIntegration:
                     HAVING COUNT(*) >= 1
                     ORDER BY avg_price DESC
                 """,
-                default_namespace="test_db.public",
+                default_namespace="test_db.sqltesting",
                 use_physical_tables=use_physical_tables,
             )
 
@@ -422,7 +422,7 @@ class TestSnowflakeIntegration:
                     AND lifetime_value > CAST(1000.00 AS DECIMAL(10,2))
                     ORDER BY lifetime_value DESC
                 """,
-                default_namespace="test_db.public",
+                default_namespace="test_db.sqltesting",
                 use_physical_tables=use_physical_tables,
             )
 
@@ -467,7 +467,7 @@ class TestSnowflakeIntegration:
                     WHERE total_spent > CAST(0.00 AS DECIMAL(10,2))
                     ORDER BY total_spent DESC
                 """,
-                default_namespace="test_db.public",
+                default_namespace="test_db.sqltesting",
                 use_physical_tables=use_physical_tables,
             )
 
@@ -504,7 +504,7 @@ class TestSnowflakeIntegration:
                         END
                     ORDER BY avg_price DESC
                 """,
-                default_namespace="test_db.public",
+                default_namespace="test_db.sqltesting",
                 use_physical_tables=use_physical_tables,
             )
 
@@ -544,7 +544,7 @@ class TestSnowflakeIntegration:
                     )
                     ORDER BY c.customer_id
                 """,
-                default_namespace="test_db.public",
+                default_namespace="test_db.sqltesting",
                 use_physical_tables=use_physical_tables,
             )
 
@@ -574,7 +574,7 @@ class TestSnowflakeIntegration:
                     WHERE EXTRACT(YEAR FROM order_date) = 2023
                     AND EXTRACT(MONTH FROM order_date) >= 3
                 """,
-                default_namespace="test_db.public",
+                default_namespace="test_db.sqltesting",
                 use_physical_tables=use_physical_tables,
             )
 
@@ -603,7 +603,7 @@ class TestSnowflakeIntegration:
                     WHERE price BETWEEN CAST(100.00 AS DECIMAL(10,2))
                                    AND CAST(1000.00 AS DECIMAL(10,2))
                 """,
-                default_namespace="test_db.public",
+                default_namespace="test_db.sqltesting",
                 use_physical_tables=use_physical_tables,
             )
 
@@ -636,7 +636,7 @@ class TestSnowflakeIntegration:
                     FROM premium_customers
                     ORDER BY lifetime_value DESC
                 """,
-                default_namespace="test_db.public",
+                default_namespace="test_db.sqltesting",
                 use_physical_tables=use_physical_tables,
             )
 
@@ -651,8 +651,8 @@ class TestSnowflakeIntegration:
 
         This test demonstrates the key role of default_namespace for Snowflake:
         - Query uses unqualified table names: 'customers' and 'orders'
-        - default_namespace='test_db.public' qualifies them to:
-          'test_db.public.customers' and 'test_db.public.orders'
+        - default_namespace='test_db.sqltesting' qualifies them to:
+          'test_db.sqltesting.customers' and 'test_db.sqltesting.orders'
         - These qualified names must match mock table get_qualified_name() values
         """
 
@@ -690,14 +690,14 @@ class TestSnowflakeIntegration:
                 # default_namespace provides the namespace to qualify table names
                 # 'customers' becomes 'test_db.public.customers'
                 # 'orders' becomes 'test_db.public.orders'
-                default_namespace="test_db.public",
+                default_namespace="test_db.sqltesting",
                 use_physical_tables=use_physical_tables,
             )
 
         results = query_unqualified_tables()
 
         # Assertions - verifies that unqualified 'customers' and 'orders' tables
-        # were correctly resolved to 'test_db.public.customers' and 'test_db.public.orders'
+        # were correctly resolved to 'test_db.sqltesting.customers' and 'test_db.sqltesting.orders'
         # and matched with mock tables
         assert len(results) == 2
         assert results[0].customer_id == 1
@@ -713,9 +713,9 @@ class TestSnowflakeIntegration:
         """Test case-insensitive table name matching (now generic for all SQL databases).
 
         This test verifies that case-insensitive matching works correctly:
-        - Mock tables use lowercase database context: 'test_db.public'
+        - Mock tables use lowercase database context: 'test_db.sqltesting'
         - SQL query uses mixed case table names: 'CUSTOMERS', 'orders'
-        - execution_database uses lowercase: 'test_db.public'
+        - execution_database uses lowercase: 'test_db.sqltesting'
         - Framework should match these case-insensitively (generic SQL behavior)
         """
 
@@ -737,8 +737,8 @@ class TestSnowflakeIntegration:
         def query_mixed_case_tables():
             return TestCase(
                 # Note: SQL uses mixed case table names to test case-insensitive matching
-                # 'CUSTOMERS' (uppercase) should match mock table 'test_db.public.customers'
-                # 'orders' (lowercase) should match mock table 'test_db.public.orders'
+                # 'CUSTOMERS' (uppercase) should match mock table 'test_db.sqltesting.customers'
+                # 'orders' (lowercase) should match mock table 'test_db.sqltesting.orders'
                 query="""
                     SELECT
                         c.customer_id,
@@ -753,15 +753,15 @@ class TestSnowflakeIntegration:
                     ORDER BY c.customer_id
                 """,
                 # execution_database uses lowercase - should work with mixed case table names
-                default_namespace="test_db.public",
+                default_namespace="test_db.sqltesting",
                 use_physical_tables=use_physical_tables,
             )
 
         results = query_mixed_case_tables()
 
         # Assertions - verifies that mixed case table names 'CUSTOMERS' and 'orders'
-        # were correctly matched with lowercase mock tables 'test_db.public.customers'
-        # and 'test_db.public.orders' using case-insensitive matching
+        # were correctly matched with lowercase mock tables 'test_db.sqltesting.customers'
+        # and 'test_db.sqltesting.orders' using case-insensitive matching
         assert len(results) == 2
         assert results[0].customer_id == 1
         assert results[0].customer_name == "Alice"

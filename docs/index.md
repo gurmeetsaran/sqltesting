@@ -95,9 +95,7 @@ def test_user_query():
 | **Athena** | ✅ | ✅ | 256KB |
 | **Redshift** | ✅ | ✅ | 16MB |
 | **Trino** | ✅ | ✅ | ~16MB |
-| **Snowflake** | ✅ | ⚠️* | 1MB |
-
-*Physical tables in Snowflake currently have limitations in test environments.
+| **Snowflake** | ✅ | ✅ | 1MB |
 
 ### Data Types Support
 

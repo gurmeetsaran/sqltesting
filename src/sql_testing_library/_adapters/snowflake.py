@@ -369,7 +369,7 @@ class SnowflakeAdapter(DatabaseAdapter):
                     snowflake_type = "VARIANT"
                 else:
                     snowflake_type = type_mapping.get(col_type, "VARCHAR")
-                column_defs.append(f'"{col_name}" {snowflake_type}')
+                column_defs.append(f"{col_name} {snowflake_type}")
 
             columns_sql = ",\n  ".join(column_defs)
 
@@ -390,7 +390,7 @@ class SnowflakeAdapter(DatabaseAdapter):
                 col_type = column_types.get(col_name, str)
                 value = first_row[col_name]
                 formatted_value = self.format_value_for_cte(value, col_type)
-                select_expressions.append(f'{formatted_value} AS "{col_name}"')
+                select_expressions.append(f"{formatted_value} AS {col_name}")
 
             # Start with the first row in the SELECT
             select_sql = f"SELECT {', '.join(select_expressions)}"

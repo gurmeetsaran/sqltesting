@@ -563,11 +563,11 @@ class TestPrimitiveTypesIntegration:
 @pytest.mark.snowflake
 @pytest.mark.parametrize(
     "use_physical_tables",
-    [False],  # Physical tables disabled for Snowflake due to environment limitations
-    ids=["cte_mode"],
+    [False, True],
+    ids=["cte_mode", "physical_tables_mode"],
 )
 class TestSnowflakePrimitiveTypesIntegration:
-    """Integration tests for primitive types with Snowflake adapter (CTE mode only)."""
+    """Integration tests for primitive types with Snowflake adapter."""
 
     @pytest.fixture(autouse=True)
     def setup_snowflake_data(self):
@@ -606,7 +606,7 @@ class TestSnowflakePrimitiveTypesIntegration:
                 optional_timestamp=None,
             ),
         ]
-        self.database_name = "test_db"
+        self.database_name = "test_db.sqltesting"
 
     def test_snowflake_primitive_types(self, use_physical_tables):
         """Test all primitive types with Snowflake adapter."""
