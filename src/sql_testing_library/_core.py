@@ -556,8 +556,29 @@ class SQLTestFramework:
                             break
 
                     if replacement_name:
-                        # Create a new Table node with the replacement name
-                        new_table = exp.Table(this=exp.Identifier(this=replacement_name))
+                        # Parse the replacement name to handle schema qualification
+                        parts = replacement_name.split(".")
+                        # Only quote identifiers for Snowflake physical tables (which contain TEMP_)
+                        should_quote = "TEMP_" in replacement_name and dialect == "snowflake"
+
+                        if len(parts) == 3:
+                            # catalog.schema.table format
+                            new_table = exp.Table(
+                                this=exp.Identifier(this=parts[2], quoted=should_quote),
+                                db=exp.Identifier(this=parts[1], quoted=should_quote),
+                                catalog=exp.Identifier(this=parts[0], quoted=should_quote),
+                            )
+                        elif len(parts) == 2:
+                            # schema.table format
+                            new_table = exp.Table(
+                                this=exp.Identifier(this=parts[1], quoted=should_quote),
+                                db=exp.Identifier(this=parts[0], quoted=should_quote),
+                            )
+                        else:
+                            # Just table name
+                            new_table = exp.Table(
+                                this=exp.Identifier(this=replacement_name, quoted=should_quote)
+                            )
 
                         # Preserve the table alias if it exists
                         if hasattr(node, "alias") and node.alias:

@@ -116,14 +116,12 @@ class TestMapTypesIntegration:
         elif adapter_type == "bigquery":
             self.database_name = "test_dataset"
         elif adapter_type == "snowflake":
-            self.database_name = "PUBLIC"
+            self.database_name = "test_db.sqltesting"
 
     def test_map_types_comprehensive(self, adapter_type, use_physical_tables):
         """Test all map types comprehensively for the specified adapter."""
 
-        # Skip physical table mode for Snowflake due to known issues
-        if adapter_type == "snowflake" and use_physical_tables:
-            pytest.skip("Snowflake has known issues with physical table mode")
+        # Physical table mode for Snowflake is now supported
 
         @sql_test(
             adapter_type=adapter_type,
