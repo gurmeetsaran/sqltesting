@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 0.13.0 (2025-06-27)
+
+### Feat
+
+- add pytest-xdist support for parallel test execution (#105)
+
+### Fix
+
+- **snowflake**: fix issue related to physical view for snowflake (#104)
+
 ## 0.12.0 (2025-06-25)
 
 ### Feat
