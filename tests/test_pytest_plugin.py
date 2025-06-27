@@ -602,7 +602,8 @@ class TestPytestHooks(unittest.TestCase):
         """Test pytest_configure hook."""
         from sql_testing_library._pytest_plugin import pytest_configure
 
-        mock_config = mock.Mock()
+        mock_config = mock.Mock(spec=["addinivalue_line"])
+        # By using spec, hasattr(config, 'workerinput') will return False
 
         # Call the hook
         pytest_configure(mock_config)
@@ -611,6 +612,37 @@ class TestPytestHooks(unittest.TestCase):
         mock_config.addinivalue_line.assert_called_once_with(
             "markers", "sql_test: mark test as a SQL test"
         )
+
+    def test_pytest_configure_with_xdist(self):
+        """Test pytest_configure hook with xdist worker."""
+        import os
+
+        from sql_testing_library._pytest_plugin import pytest_configure
+
+        mock_config = mock.Mock()
+        # Simulate xdist worker with workerinput
+        mock_config.workerinput = {"workerid": "gw0"}
+
+        # Store original env var if it exists
+        original_env = os.environ.get("PYTEST_XDIST_WORKER")
+
+        try:
+            # Call the hook
+            pytest_configure(mock_config)
+
+            # Verify marker was added
+            mock_config.addinivalue_line.assert_called_once_with(
+                "markers", "sql_test: mark test as a SQL test"
+            )
+
+            # Verify worker ID was set in environment
+            self.assertEqual(os.environ.get("PYTEST_XDIST_WORKER"), "gw0")
+        finally:
+            # Restore original environment
+            if original_env is None and "PYTEST_XDIST_WORKER" in os.environ:
+                del os.environ["PYTEST_XDIST_WORKER"]
+            elif original_env is not None:
+                os.environ["PYTEST_XDIST_WORKER"] = original_env
 
     def test_pytest_runtest_call_sql_test(self):
         """Test pytest_runtest_call hook with SQL test."""

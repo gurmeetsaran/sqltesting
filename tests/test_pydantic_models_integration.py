@@ -182,6 +182,7 @@ class TestPydanticModelsIntegration(unittest.TestCase):
             ),
         ]
 
+    @pytest.mark.bigquery
     def test_bigquery_pydantic_models(self):
         """Test BigQuery adapter with Pydantic models for input and output."""
 
@@ -248,6 +249,7 @@ class TestPydanticModelsIntegration(unittest.TestCase):
         assert jane_summary.is_active is True
         assert jane_summary.department_id == 102
 
+    @pytest.mark.athena
     def test_athena_pydantic_models(self):
         """Test Athena adapter with Pydantic models for input and output."""
 
@@ -294,6 +296,7 @@ class TestPydanticModelsIntegration(unittest.TestCase):
         assert john_summary.total_orders == 3
         assert john_summary.is_active is True
 
+    @pytest.mark.redshift
     def test_redshift_pydantic_models(self):
         """Test Redshift adapter with Pydantic models for input and output."""
 
@@ -341,6 +344,7 @@ class TestPydanticModelsIntegration(unittest.TestCase):
             assert hasattr(result, "full_name")
             assert hasattr(result, "total_orders")
 
+    @pytest.mark.trino
     def test_trino_pydantic_models(self):
         """Test Trino adapter with Pydantic models for input and output."""
 
@@ -381,6 +385,7 @@ class TestPydanticModelsIntegration(unittest.TestCase):
         assert isinstance(results[0], UserOrderSummary)
         assert isinstance(results[1], UserOrderSummary)
 
+    @pytest.mark.snowflake
     def test_snowflake_pydantic_models(self):
         """Test Snowflake adapter with Pydantic models for input and output."""
 

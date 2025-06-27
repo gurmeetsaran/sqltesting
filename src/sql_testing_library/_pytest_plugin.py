@@ -489,8 +489,14 @@ def pytest_collection_modifyitems(config: pytest.Config, items: List[Item]) -> N
 
 
 def pytest_configure(config: pytest.Config) -> None:
-    """Register custom markers."""
+    """Register custom markers and configure xdist worker detection."""
     config.addinivalue_line("markers", "sql_test: mark test as a SQL test")
+
+    # Set up pytest-xdist worker ID if running in parallel
+    if hasattr(config, "workerinput"):
+        # We're running with pytest-xdist
+        worker_id = config.workerinput["workerid"]  # type: ignore[attr-defined]
+        os.environ["PYTEST_XDIST_WORKER"] = worker_id
 
 
 def pytest_runtest_call(item: Item) -> None:
