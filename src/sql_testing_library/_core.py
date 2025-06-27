@@ -1,6 +1,7 @@
 """Core SQL testing framework."""
 
 import os
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
 from typing import (
     TYPE_CHECKING,
@@ -54,6 +55,9 @@ class SQLTestCase(Generic[T]):
     description: Optional[str] = None
     adapter_type: Optional[AdapterType] = None
     log_sql: Optional[bool] = None
+    # Parallel execution settings
+    parallel_table_creation: bool = True  # Default to True for better performance
+    max_workers: Optional[int] = None
     # Backward compatibility
     execution_database: Optional[str] = None
 
@@ -148,9 +152,20 @@ class SQLTestFramework:
 
             if test_case.use_physical_tables:
                 # Create physical temporary tables
-                final_query = self._execute_with_physical_tables(
-                    test_case.query, table_mapping, test_case.mock_tables, temp_table_queries
-                )
+                if test_case.parallel_table_creation and len(table_mapping) > 1:
+                    # Use parallel execution for multiple tables
+                    final_query = self._execute_with_physical_tables_parallel(
+                        test_case.query,
+                        table_mapping,
+                        test_case.mock_tables,
+                        temp_table_queries,
+                        test_case.max_workers,
+                    )
+                else:
+                    # Use sequential execution for single table or when parallel is disabled
+                    final_query = self._execute_with_physical_tables(
+                        test_case.query, table_mapping, test_case.mock_tables, temp_table_queries
+                    )
             else:
                 # Generate query with CTEs
                 final_query = self._generate_cte_query(
@@ -647,6 +662,101 @@ class SQLTestFramework:
                         replacement_mapping[original_name] = f"temp_{original_name}_failed"
                 # Re-raise the original exception
                 raise
+
+        # Replace table names and return modified query
+        return self._replace_table_names_in_query(query, replacement_mapping)
+
+    def _execute_with_physical_tables_parallel(
+        self,
+        query: str,
+        table_mapping: Dict[str, BaseMockTable],
+        mock_tables: List[BaseMockTable],
+        temp_table_queries: List[str],
+        max_workers: Optional[int] = None,
+    ) -> str:
+        """Execute query using physical temporary tables created in parallel."""
+        import threading
+
+        # Thread-safe collection for results
+        replacement_mapping = {}
+        errors = {}
+        lock = threading.Lock()
+
+        def create_single_table(item):
+            """Create a single table and return results."""
+            original_name, mock_table = item
+            try:
+                # Check if adapter has method to get temp table SQL
+                if hasattr(self.adapter, "create_temp_table_with_sql"):
+                    temp_table_name, create_sql = self.adapter.create_temp_table_with_sql(
+                        mock_table
+                    )
+                    return original_name, temp_table_name, create_sql, None
+                else:
+                    temp_table_name = self.adapter.create_temp_table(mock_table)
+                    # Try to generate approximate SQL for logging
+                    create_sql = f"-- CREATE TEMP TABLE {temp_table_name} (SQL not captured)"
+                    return original_name, temp_table_name, create_sql, None
+            except Exception as e:
+                # If table creation fails, still try to capture the SQL for debugging
+                create_sql = None
+                if hasattr(self.adapter, "create_temp_table_with_sql") and hasattr(
+                    mock_table, "get_table_name"
+                ):
+                    try:
+                        temp_table_name, create_sql = self.adapter.create_temp_table_with_sql(
+                            mock_table
+                        )
+                    except Exception:
+                        # If even SQL generation fails, add a placeholder
+                        create_sql = (
+                            f"-- CREATE TEMP TABLE for {original_name} (SQL generation failed)"
+                        )
+
+                if create_sql is None:
+                    create_sql = f"-- CREATE TEMP TABLE for {original_name} (SQL generation failed)"
+
+                return original_name, None, create_sql, e
+
+        # Determine number of workers
+        if max_workers is None:
+            # Smart defaults based on table count
+            table_count = len(table_mapping)
+            if table_count <= 2:
+                max_workers = table_count  # No benefit from thread overhead for 1-2 tables
+            elif table_count <= 5:
+                max_workers = 3  # Moderate parallelism for small sets
+            elif table_count <= 10:
+                max_workers = 5  # Good parallelism without overwhelming most databases
+            else:
+                max_workers = 8  # Cap at 8 for large table counts
+
+        # Create tables in parallel
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            # Submit all table creation tasks
+            futures = {
+                executor.submit(create_single_table, item): item for item in table_mapping.items()
+            }
+
+            # Collect results as they complete
+            for future in as_completed(futures):
+                original_name, temp_table_name, create_sql, error = future.result()
+
+                with lock:
+                    if create_sql:
+                        temp_table_queries.append(create_sql)
+
+                    if error is None and temp_table_name:
+                        self.temp_tables.append(temp_table_name)
+                        replacement_mapping[original_name] = temp_table_name
+                    else:
+                        errors[original_name] = error
+                        replacement_mapping[original_name] = f"temp_{original_name}_failed"
+
+        # If any errors occurred, raise the first one
+        if errors:
+            first_error = next(iter(errors.values()))
+            raise first_error
 
         # Replace table names and return modified query
         return self._replace_table_names_in_query(query, replacement_mapping)

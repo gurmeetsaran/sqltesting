@@ -362,6 +362,8 @@ def sql_test(
     use_physical_tables: Optional[bool] = None,
     adapter_type: Optional[AdapterType] = None,
     log_sql: Optional[bool] = None,
+    parallel_table_creation: Optional[bool] = None,
+    max_workers: Optional[int] = None,
 ) -> Callable[[Callable[[], SQLTestCase[T]]], Callable[[], List[T]]]:
     """
     Decorator to mark a function as a SQL test.
@@ -383,6 +385,16 @@ def sql_test(
                      from [sql_testing.{adapter_type}] section.
         log_sql: Optional flag to log the generated SQL to a file.
                  If provided, overrides log_sql in SQLTestCase.
+        parallel_table_creation: Optional flag to enable parallel table creation
+                                when using physical tables. Defaults to True.
+                                Only effective when use_physical_tables=True and
+                                multiple tables exist.
+        max_workers: Optional maximum number of parallel workers for table creation.
+                    If not specified, uses smart defaults:
+                    - 1-2 tables: same as table count
+                    - 3-5 tables: 3 workers
+                    - 6-10 tables: 5 workers
+                    - 11+ tables: 8 workers
     """
 
     def decorator(func: Callable[[], SQLTestCase[T]]) -> Callable[[], List[T]]:
@@ -421,6 +433,12 @@ def sql_test(
 
             if log_sql is not None:
                 test_case.log_sql = log_sql
+
+            if parallel_table_creation is not None:
+                test_case.parallel_table_creation = parallel_table_creation
+
+            if max_workers is not None:
+                test_case.max_workers = max_workers
 
             # Get framework and execute test
             framework = _sql_test_decorator.get_framework(test_case.adapter_type)
