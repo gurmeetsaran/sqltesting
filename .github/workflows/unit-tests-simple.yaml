@@ -23,7 +23,7 @@ jobs:
 
     - name: Run unit tests (exclude integration tests)
       run: |
-        poetry run pytest -m "not integration" --maxfail=5
+        poetry run pytest -n auto -m "not integration" --maxfail=5
 
     - name: Summary
       if: always()

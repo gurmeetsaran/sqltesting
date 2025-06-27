@@ -172,6 +172,7 @@ jobs:
         run: |
           # Run only tests marked with both 'integration' and 'bigquery' markers
           poetry run pytest tests/integration/ -v \
+            -n auto \
             --tb=short \
             --maxfail=3 \
             -m "integration and bigquery" \

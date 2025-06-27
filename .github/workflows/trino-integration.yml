@@ -173,7 +173,7 @@ jobs:
       - name: Run Trino integration tests
         run: |
           echo "Running Trino integration tests..."
-          poetry run pytest tests/integration/ -v --tb=short -m "integration and trino" --reruns 2 --reruns-delay 5 --cov=src/sql_testing_library --cov-report=xml:coverage-trino-integration.xml
+          poetry run pytest tests/integration/ -v -n auto --tb=short -m "integration and trino" --reruns 2 --reruns-delay 5 --cov=src/sql_testing_library --cov-report=xml:coverage-trino-integration.xml
         timeout-minutes: 15
 
       - name: Upload Trino integration coverage to Codecov

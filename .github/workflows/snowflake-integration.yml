@@ -259,7 +259,7 @@ jobs:
       - name: Run Snowflake integration tests with coverage
         run: |
           echo "Running Snowflake integration tests..."
-          poetry run pytest tests/integration/ -v --tb=short -m "integration and snowflake" --reruns 2 --reruns-delay 5 \
+          poetry run pytest tests/integration/ -v -n auto --tb=short -m "integration and snowflake" --reruns 2 --reruns-delay 5 \
             --cov=src/sql_testing_library \
             --cov-report=xml:coverage-snowflake-integration.xml
         timeout-minutes: 20

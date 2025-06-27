@@ -2,6 +2,8 @@
 
 import os
 import re
+import threading
+import uuid
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -17,6 +19,7 @@ class SQLLogger:
     # Class variable to store the run directory for the current test session
     _run_directory: Optional[Path] = None
     _run_id: Optional[str] = None
+    _lock = threading.Lock()  # Thread lock for concurrent access
 
     def __init__(self, log_dir: Optional[str] = None) -> None:
         """Initialize SQL logger.
@@ -66,19 +69,44 @@ class SQLLogger:
         self.log_dir.mkdir(parents=True, exist_ok=True)
         self._logged_files: List[str] = []
 
+    def _get_worker_id(self) -> Optional[str]:
+        """Get pytest-xdist worker ID if running in parallel.
+
+        Returns:
+            Worker ID (e.g., 'gw0', 'gw1') or None if running serially
+        """
+        # Check for pytest-xdist worker ID in environment
+        worker_id = os.environ.get("PYTEST_XDIST_WORKER")
+        if worker_id:
+            return worker_id
+
+        # Alternative: Check for pytest-xdist worker input (for older versions)
+        # This would be set in conftest.py if needed
+        return os.environ.get("PYTEST_CURRENT_TEST_WORKER")
+
     def _ensure_run_directory(self) -> Path:
         """Ensure run directory exists, creating it if necessary.
 
         Returns:
             Path to the run directory
         """
-        # Create run directory if not already created for this session
-        if SQLLogger._run_directory is None:
-            # Generate run ID with timestamp
-            timestamp = datetime.now().strftime("%Y%m%dT%H%M%S")
-            SQLLogger._run_id = f"runid_{timestamp}"
-            SQLLogger._run_directory = self.log_dir / SQLLogger._run_id
-            SQLLogger._run_directory.mkdir(parents=True, exist_ok=True)
+        with SQLLogger._lock:
+            # Create run directory if not already created for this session
+            if SQLLogger._run_directory is None:
+                # Generate run ID with timestamp
+                timestamp = datetime.now().strftime("%Y%m%dT%H%M%S")
+
+                # Check if running in parallel mode
+                worker_id = self._get_worker_id()
+                if worker_id:
+                    # Include worker ID in run directory name for parallel execution
+                    SQLLogger._run_id = f"runid_{timestamp}_{worker_id}"
+                else:
+                    # Serial execution - use standard run ID
+                    SQLLogger._run_id = f"runid_{timestamp}"
+
+                SQLLogger._run_directory = self.log_dir / SQLLogger._run_id
+                SQLLogger._run_directory.mkdir(parents=True, exist_ok=True)
         return SQLLogger._run_directory
 
     def should_log(self, log_sql: Optional[bool] = None) -> bool:
@@ -138,9 +166,19 @@ class SQLLogger:
         if failed:
             components.append("FAILED")
 
+        # Add worker ID if running in parallel
+        worker_id = self._get_worker_id()
+        if worker_id:
+            components.append(f"w{worker_id}")
+
         # Add timestamp for uniqueness
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")[:-3]  # Milliseconds
         components.append(timestamp)
+
+        # Add a short UUID suffix to absolutely guarantee uniqueness
+        # This handles edge cases where tests might start at exactly the same millisecond
+        unique_suffix = str(uuid.uuid4())[:8]
+        components.append(unique_suffix)
 
         # Join with double underscore for clarity
         filename = "__".join(components) + ".sql"
