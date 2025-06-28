@@ -155,13 +155,22 @@ def get_sql_type_string(py_type: Type, dialect: str) -> str:
 
     # Check if it's a struct type
     if is_struct_type(py_type):
-        # Build nested ROW type recursively
+        # Build nested struct type recursively
         nested_hints = get_type_hints(py_type)
         nested_fields = []
         for nested_name, nested_type in nested_hints.items():
             nested_sql = get_sql_type_string(nested_type, dialect)
-            nested_fields.append(f"{nested_name} {nested_sql}")
-        return f"ROW({', '.join(nested_fields)})"
+            if dialect == "bigquery":
+                # BigQuery uses STRUCT<field_name type> syntax
+                nested_fields.append(f"{nested_name} {nested_sql}")
+            else:
+                # Athena/Trino use ROW syntax
+                nested_fields.append(f"{nested_name} {nested_sql}")
+
+        if dialect == "bigquery":
+            return f"STRUCT<{', '.join(nested_fields)}>"
+        else:
+            return f"ROW({', '.join(nested_fields)})"
 
     # For other complex types, default to VARCHAR
     return type_mapping.get(str, "VARCHAR")
@@ -509,6 +518,33 @@ def _format_struct_value(value: Any, struct_type: Type, dialect: str) -> str:
             field_values.append(formatted_value)
 
         return f"CAST(ROW({', '.join(field_values)}) AS {row_type})"
+
+    # For BigQuery
+    elif dialect == "bigquery":
+        # Handle NULL struct values
+        if value is None:
+            return "NULL"
+
+        # Get type hints for the struct
+        type_hints = get_type_hints(struct_type)
+
+        # Format non-NULL struct values as named structs
+        field_pairs = []
+        for field_name, field_type in type_hints.items():
+            # Get the field value
+            if is_dataclass(value):
+                field_value = getattr(value, field_name, None)
+            elif is_pydantic_model_class(type(value)):
+                field_value = getattr(value, field_name, None)
+            else:
+                # If it's a dict
+                field_value = value.get(field_name) if isinstance(value, dict) else None
+
+            # Format the field value recursively
+            formatted_value = format_sql_value(field_value, field_type, dialect)
+            field_pairs.append(f"{formatted_value} AS {field_name}")
+
+        return f"STRUCT({', '.join(field_pairs)})"
 
     # For other databases, struct support would need to be implemented
     else:

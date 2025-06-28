@@ -3,7 +3,7 @@
 import logging
 from datetime import date, datetime
 from decimal import Decimal
-from typing import TYPE_CHECKING, Any, List, Optional, Tuple, Type, Union, get_args
+from typing import TYPE_CHECKING, Any, List, Optional, Tuple, Type, Union, get_args, get_type_hints
 
 
 if TYPE_CHECKING:
@@ -28,8 +28,27 @@ except ImportError:
 class BigQueryTypeConverter(BaseTypeConverter):
     """BigQuery-specific type converter."""
 
+    def _create_struct_instance(self, struct_type: Type, field_values: dict) -> Any:
+        """Create a struct instance from field values."""
+        from dataclasses import is_dataclass
+
+        from .._types import is_pydantic_model_class
+
+        if is_dataclass(struct_type):
+            return struct_type(**field_values)
+        elif is_pydantic_model_class(struct_type):
+            return struct_type(**field_values)
+        else:
+            # Fallback: try to construct with values or empty
+            try:
+                return struct_type(**field_values)
+            except Exception:
+                return struct_type()
+
     def convert(self, value: Any, target_type: Type) -> Any:
         """Convert BigQuery result value to target type."""
+        from .._types import is_struct_type
+
         # Handle None/NULL values first
         if value is None:
             return None
@@ -39,6 +58,23 @@ class BigQueryTypeConverter(BaseTypeConverter):
             if value is None:
                 return None
             target_type = self.get_optional_inner_type(target_type)
+
+        # Handle struct types
+        if is_struct_type(target_type):
+            if isinstance(value, dict):
+                # BigQuery returns structs as dict-like objects
+                type_hints = get_type_hints(target_type)
+                field_values = {}
+                for field_name, field_type in type_hints.items():
+                    if field_name in value:
+                        # Recursively convert nested values
+                        field_values[field_name] = self.convert(value[field_name], field_type)
+                    else:
+                        field_values[field_name] = None
+                # Create struct instance
+                return self._create_struct_instance(target_type, field_values)
+            else:
+                return value
 
         # Handle dict/map types from BigQuery STRING columns containing JSON
         if hasattr(target_type, "__origin__") and target_type.__origin__ is dict:
@@ -184,6 +220,8 @@ class BigQueryAdapter(DatabaseAdapter):
 
     def _get_bigquery_schema(self, mock_table: BaseMockTable) -> List[Any]:
         """Convert mock table schema to BigQuery schema."""
+        from .._types import is_struct_type
+
         column_types = mock_table.get_column_types()
 
         # Type mapping from Python types to BigQuery types
@@ -211,15 +249,38 @@ class BigQueryAdapter(DatabaseAdapter):
                 # Get the element type from List[T]
                 element_type = get_args(col_type)[0] if get_args(col_type) else str
 
-                # Map element type to BigQuery type
-                element_bq_type = type_mapping.get(element_type, bigquery.enums.SqlTypeNames.STRING)
-
-                # Create field with mode=REPEATED for arrays
-                schema.append(bigquery.SchemaField(col_name, element_bq_type, mode="REPEATED"))
+                # Check if it's a list of structs
+                if is_struct_type(element_type):
+                    # Create nested struct schema
+                    nested_fields = self._get_struct_fields(element_type)
+                    schema.append(
+                        bigquery.SchemaField(
+                            col_name,
+                            bigquery.enums.SqlTypeNames.STRUCT,
+                            mode="REPEATED",
+                            fields=nested_fields,
+                        )
+                    )
+                else:
+                    # Map element type to BigQuery type
+                    element_bq_type = type_mapping.get(
+                        element_type, bigquery.enums.SqlTypeNames.STRING
+                    )
+                    # Create field with mode=REPEATED for arrays
+                    schema.append(bigquery.SchemaField(col_name, element_bq_type, mode="REPEATED"))
             # Handle Dict/Map types
             elif hasattr(col_type, "__origin__") and col_type.__origin__ is dict:
                 # BigQuery stores JSON data as STRING type
                 schema.append(bigquery.SchemaField(col_name, bigquery.enums.SqlTypeNames.STRING))
+            # Handle Struct types
+            elif is_struct_type(col_type):
+                # Create nested struct schema
+                nested_fields = self._get_struct_fields(col_type)
+                schema.append(
+                    bigquery.SchemaField(
+                        col_name, bigquery.enums.SqlTypeNames.STRUCT, fields=nested_fields
+                    )
+                )
             else:
                 # Handle scalar types
                 bq_type = type_mapping.get(col_type, bigquery.enums.SqlTypeNames.STRING)
@@ -227,15 +288,83 @@ class BigQueryAdapter(DatabaseAdapter):
 
         return schema
 
+    def _get_struct_fields(self, struct_type: Type) -> List[Any]:
+        """Convert struct type fields to BigQuery schema fields."""
+        from .._types import is_struct_type
+
+        # Type mapping from Python types to BigQuery types
+        type_mapping = {
+            str: bigquery.enums.SqlTypeNames.STRING,
+            int: bigquery.enums.SqlTypeNames.INT64,
+            float: bigquery.enums.SqlTypeNames.FLOAT64,
+            bool: bigquery.enums.SqlTypeNames.BOOL,
+            date: bigquery.enums.SqlTypeNames.DATE,
+            datetime: bigquery.enums.SqlTypeNames.DATETIME,
+            Decimal: bigquery.enums.SqlTypeNames.NUMERIC,
+        }
+
+        fields = []
+        type_hints = get_type_hints(struct_type)
+
+        for field_name, field_type in type_hints.items():
+            # Handle Optional types
+            if hasattr(field_type, "__origin__") and field_type.__origin__ is Union:
+                # Extract the non-None type from Optional[T]
+                non_none_types = [arg for arg in get_args(field_type) if arg is not type(None)]
+                if non_none_types:
+                    field_type = non_none_types[0]
+
+            # Handle nested structs
+            if is_struct_type(field_type):
+                nested_fields = self._get_struct_fields(field_type)
+                fields.append(
+                    bigquery.SchemaField(
+                        field_name, bigquery.enums.SqlTypeNames.STRUCT, fields=nested_fields
+                    )
+                )
+            # Handle List types in structs
+            elif hasattr(field_type, "__origin__") and field_type.__origin__ is list:
+                element_type = get_args(field_type)[0] if get_args(field_type) else str
+                if is_struct_type(element_type):
+                    # List of structs
+                    nested_fields = self._get_struct_fields(element_type)
+                    fields.append(
+                        bigquery.SchemaField(
+                            field_name,
+                            bigquery.enums.SqlTypeNames.STRUCT,
+                            mode="REPEATED",
+                            fields=nested_fields,
+                        )
+                    )
+                else:
+                    # List of scalars
+                    element_bq_type = type_mapping.get(
+                        element_type, bigquery.enums.SqlTypeNames.STRING
+                    )
+                    fields.append(
+                        bigquery.SchemaField(field_name, element_bq_type, mode="REPEATED")
+                    )
+            else:
+                # Handle scalar types
+                bq_type = type_mapping.get(field_type, bigquery.enums.SqlTypeNames.STRING)
+                fields.append(bigquery.SchemaField(field_name, bq_type))
+
+        return fields
+
     def _prepare_dataframe_for_bigquery(
         self, df: "pd.DataFrame", mock_table: BaseMockTable
     ) -> "pd.DataFrame":
-        """Prepare DataFrame for BigQuery by converting dict columns to JSON strings."""
+        """Prepare DataFrame for BigQuery.
+
+        Converts dict columns to JSON strings and struct columns to dicts.
+        """
         import json
+        from dataclasses import is_dataclass
 
         import pandas as pd
 
         from .._sql_utils import DecimalEncoder
+        from .._types import is_pydantic_model_class, is_struct_type
 
         # Create a copy to avoid modifying the original
         df_copy = df.copy()
@@ -249,8 +378,58 @@ class BigQueryAdapter(DatabaseAdapter):
                 if non_none_types:
                     col_type = non_none_types[0]
 
+            # Check if this is a struct type
+            if is_struct_type(col_type):
+                # Convert struct objects to dictionaries for BigQuery
+                def convert_struct_to_dict(val):
+                    if pd.isna(val) or val is None:
+                        return None
+                    elif is_dataclass(val):
+                        # Convert dataclass to dict recursively
+                        return self._dataclass_to_dict(val)
+                    elif is_pydantic_model_class(type(val)):
+                        # Convert Pydantic model to dict
+                        return val.model_dump() if hasattr(val, "model_dump") else val.dict()
+                    else:
+                        return val
+
+                df_copy[col_name] = df_copy[col_name].apply(convert_struct_to_dict)
+
+            # Check if this is a list of structs
+            elif hasattr(col_type, "__origin__") and col_type.__origin__ is list:
+                element_type = get_args(col_type)[0] if get_args(col_type) else str
+                if is_struct_type(element_type):
+                    # Convert list of structs to list of dicts
+                    def convert_struct_list(val_list):
+                        if val_list is None:
+                            return None
+                        # Check for empty list
+                        if isinstance(val_list, list) and len(val_list) == 0:
+                            return []
+                        # Handle pandas NaN
+                        try:
+                            if pd.isna(val_list):
+                                return None
+                        except (ValueError, TypeError):
+                            # pd.isna() may fail on lists, continue processing
+                            pass
+
+                        result = []
+                        for val in val_list:
+                            if is_dataclass(val):
+                                result.append(self._dataclass_to_dict(val))
+                            elif is_pydantic_model_class(type(val)):
+                                result.append(
+                                    val.model_dump() if hasattr(val, "model_dump") else val.dict()
+                                )
+                            else:
+                                result.append(val)
+                        return result
+
+                    df_copy[col_name] = df_copy[col_name].apply(convert_struct_list)
+
             # Check if this is a dict type
-            if hasattr(col_type, "__origin__") and col_type.__origin__ is dict:
+            elif hasattr(col_type, "__origin__") and col_type.__origin__ is dict:
                 # Convert dict values to JSON strings
                 def convert_dict_to_json(val):
                     if pd.isna(val) or val is None:
@@ -264,3 +443,28 @@ class BigQueryAdapter(DatabaseAdapter):
                 df_copy[col_name] = df_copy[col_name].apply(convert_dict_to_json)
 
         return df_copy
+
+    def _dataclass_to_dict(self, obj: Any) -> Any:
+        """Recursively convert dataclass to dict, handling nested structs."""
+        from dataclasses import is_dataclass
+
+        if is_dataclass(obj):
+            # Get the dict representation
+            result = {}
+            for field in obj.__dataclass_fields__:
+                value = getattr(obj, field)
+                if is_dataclass(value):
+                    # Recursively convert nested dataclass
+                    result[field] = self._dataclass_to_dict(value)
+                elif isinstance(value, list):
+                    # Handle lists (might contain dataclasses)
+                    result[field] = [
+                        self._dataclass_to_dict(item) if is_dataclass(item) else item
+                        for item in value
+                    ]
+                else:
+                    # Keep other values as-is (including Decimal)
+                    result[field] = value
+            return result
+        else:
+            return obj

@@ -412,9 +412,9 @@ def test_sales_ranking():
 
 ## Database-Specific Examples
 
-### Working with Structs (Athena/Trino)
+### Working with Structs (Athena/Trino/BigQuery)
 
-Struct types are supported for Athena and Trino adapters using dataclasses or Pydantic models:
+Struct types are supported for Athena, Trino, and BigQuery adapters using dataclasses or Pydantic models:
 
 ```python
 from dataclasses import dataclass
@@ -490,7 +490,7 @@ mock_data = [
 ]
 
 @sql_test(
-    adapter_type="athena",  # or "trino"
+    adapter_type="athena",  # or "trino" or "bigquery"
     mock_tables=[EmployeesMockTable(mock_data)],
     result_class=EmployeeLocationResult
 )
@@ -597,7 +597,7 @@ orders_data = [
 
 # Query using list of structs
 @sql_test(
-    adapter_type="athena",  # or "trino"
+    adapter_type="athena",  # or "trino" or "bigquery"
     mock_tables=[OrdersMockTable(orders_data)],
     result_class=dict
 )
@@ -628,7 +628,59 @@ def test_order_items_analysis():
 
 ### BigQuery-Specific Features
 
-Using BigQuery SQL features in your queries (note: the library creates CTEs using UNION ALL, not STRUCT):
+BigQuery now supports struct types with dataclasses and Pydantic models:
+
+```python
+# BigQuery struct support (NEW!)
+@sql_test(
+    adapter_type="bigquery",
+    mock_tables=[EmployeesMockTable(mock_data)],  # Same mock data as above
+    result_class=EmployeeLocationResult
+)
+def test_bigquery_struct_access():
+    return TestCase(
+        query="""
+            SELECT
+                name,
+                address.city as city,
+                address.state as state,
+                salary
+            FROM employees
+            WHERE is_active = true
+                AND address.state IN ('NY', 'CA')
+            ORDER BY name
+        """,
+        default_namespace="my-project.my_dataset"
+    )
+
+# BigQuery with list of structs and array operations
+@sql_test(
+    adapter_type="bigquery",
+    mock_tables=[OrdersMockTable(orders_data)],  # Same list of structs data
+    result_class=dict
+)
+def test_bigquery_struct_arrays():
+    return TestCase(
+        query="""
+            SELECT
+                order_id,
+                customer_id,
+                ARRAY_LENGTH(items) as num_items,
+                -- Access first item details (0-based indexing in BigQuery)
+                items[OFFSET(0)].product_id as first_product_id,
+                items[OFFSET(0)].quantity as first_product_qty,
+                -- Calculate total using array aggregation
+                (SELECT SUM(item.quantity * item.unit_price)
+                 FROM UNNEST(items) as item) as order_total
+            FROM orders
+            WHERE ARRAY_LENGTH(items) > 0
+            ORDER BY order_id
+        """,
+        default_namespace="my-project.my_dataset"
+    )
+```
+
+Using BigQuery SQL features in your queries:
 
 ```python
 # BigQuery adapter test

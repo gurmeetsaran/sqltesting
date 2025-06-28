@@ -349,8 +349,8 @@ adapter = redshift  # Default for all tests
 | String Map | `Dict[str, str]` | ✅ JSON | ✅ MAP | ✅ SUPER | ✅ MAP | ✅ VARIANT |
 | Int Map | `Dict[str, int]` | ✅ JSON | ✅ MAP | ✅ SUPER | ✅ MAP | ✅ VARIANT |
 | Mixed Map | `Dict[K, V]` | ✅ JSON | ✅ MAP | ✅ SUPER | ✅ MAP | ✅ VARIANT |
-| Struct | `dataclass` | ❌ | ✅ ROW | ❌ | ✅ ROW | ❌ |
-| Struct | `Pydantic model` | ❌ | ✅ ROW | ❌ | ✅ ROW | ❌ |
+| Struct | `dataclass` | ✅ STRUCT | ✅ ROW | ❌ | ✅ ROW | ❌ |
+| Struct | `Pydantic model` | ✅ STRUCT | ✅ ROW | ❌ | ✅ ROW | ❌ |
 
 ## Adapter-Specific SQL
 
