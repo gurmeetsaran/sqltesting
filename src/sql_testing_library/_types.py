@@ -113,6 +113,8 @@ def _parse_string_value(value_str: str) -> Any:
         return None
 
     # Try to parse as number
+    # TODO: Add option to preserve strings that look like numbers (e.g., "02101" zip codes)
+    # Currently, numeric-looking strings are converted to int/float, losing leading zeros
     try:
         if "." in value_str:
             return float(value_str)
@@ -350,6 +352,9 @@ class BaseTypeConverter:
 
                 # Check if it's a simple comma-separated format (like Athena returns)
                 # e.g., "{John Doe, 30, 75000.5, {123 Main St, New York, 10001}, true}"
+                # TODO: Improve parser to handle mixed format with lists:
+                # {key=value, list=[item1, item2]}
+                # Currently fails when structs contain both key=value pairs and array notation
                 if "=" not in inner_value or inner_value.count(",") > inner_value.count("="):
                     # This looks like positional values, not key=value pairs
                     field_names = _get_struct_field_names(target_type)

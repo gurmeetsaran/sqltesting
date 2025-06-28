@@ -80,8 +80,10 @@ The library supports different data types across database engines. All checkmark
 | **Decimal Array** | `List[Decimal]` | ✅ | ✅ | ✅ | ✅ | ✅ |
 | **Optional Array** | `Optional[List[T]]` | ✅ | ✅ | ✅ | ✅ | ✅ |
 | **Map/Dict** | `Dict[K, V]` | ✅ | ✅ | ✅ | ✅ | ✅ |
-| **Struct/Record** | `dataclass` | ✅ | ✅ | ❌ | ✅ | ❌ |
+| **Struct/Record** | `dataclass` | ✅ | ✅* | ❌ | ✅* | ❌ |
 | **Nested Arrays** | `List[List[T]]` | ❌ | ❌ | ❌ | ❌ | ❌ |
+
+\* See [Known Limitations](#known-limitations-and-todos) for Athena/Trino struct parsing issues
 
 ### Database-Specific Notes
 
@@ -1187,10 +1189,19 @@ For detailed usage and configuration options, see the example files included.
 
 The library has a few known limitations that are planned to be addressed in future updates:
 
+### Struct Type Support
+- **Redshift**: Struct types are not supported due to lack of native struct/record types (uses SUPER type for JSON)
+- **Snowflake**: Struct types are not supported due to lack of native struct/record types (uses VARIANT type for JSON)
+
+### Athena/Trino Struct Parsing Issues
+- **Numeric String Fields**: When returning struct fields from Athena/Trino, numeric-looking strings (e.g., zip codes like "02101") lose their leading zeros and are parsed as integers. This is due to the string-based struct format returned by these engines. (See TODO in `_types.py:_parse_string_value`)
+- **Structs with List Fields**: Athena/Trino have issues parsing structs that contain list fields when returned in mixed format like `{key=value, list=[item1, item2]}`. Tests for this scenario are currently skipped for these adapters. (See TODO in `_types.py:_convert_struct`)
+
 ### General Improvements
 - Add support for more SQL dialects
 - Improve error handling for malformed SQL
 - Enhance documentation with more examples
+- Add option to preserve string types for numeric-looking values in struct parsing
 
 ## Requirements
 

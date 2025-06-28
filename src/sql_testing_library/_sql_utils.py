@@ -143,6 +143,8 @@ def get_sql_type_string(py_type: Type, dialect: str) -> str:
     Returns:
         SQL type string
     """
+    from typing import get_args
+
     # Import here to avoid circular imports
     from ._types import is_struct_type
 
@@ -152,6 +154,15 @@ def get_sql_type_string(py_type: Type, dialect: str) -> str:
     # Check if it's a basic type
     if py_type in type_mapping:
         return type_mapping[py_type]
+
+    # Handle List types
+    if hasattr(py_type, "__origin__") and py_type.__origin__ is list:
+        element_type = get_args(py_type)[0] if get_args(py_type) else str
+        element_sql_type = get_sql_type_string(element_type, dialect)
+        if dialect == "bigquery":
+            return f"ARRAY<{element_sql_type}>"
+        else:
+            return f"ARRAY({element_sql_type})"
 
     # Check if it's a struct type
     if is_struct_type(py_type):
@@ -338,6 +349,13 @@ def format_sql_value(value: Any, column_type: Type, dialect: str = "standard") -
             for element in value:
                 formatted_element = format_sql_value(element, element_type, dialect)
                 formatted_elements.append(formatted_element)
+
+            # Handle empty arrays with explicit type casting
+            if not formatted_elements:
+                # Get the SQL type for the element
+                sql_element_type = get_sql_type_string(element_type, dialect)
+                return f"CAST([] AS ARRAY<{sql_element_type}>)"
+
             return f"[{', '.join(formatted_elements)}]"
         elif dialect in ("athena", "trino"):
             # Format each element in the array for Athena/Trino
@@ -467,7 +485,11 @@ def format_sql_value(value: Any, column_type: Type, dialect: str = "standard") -
 
     # Handle decimal types
     elif column_type == Decimal:
-        return str(value)
+        if dialect == "bigquery":
+            # BigQuery needs explicit NUMERIC casting for decimals
+            return f"NUMERIC '{value}'"
+        else:
+            return str(value)
 
     # Default: convert to string
     else:
