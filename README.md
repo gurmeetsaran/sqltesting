@@ -80,12 +80,12 @@ The library supports different data types across database engines. All checkmark
 | **Decimal Array** | `List[Decimal]` | ✅ | ✅ | ✅ | ✅ | ✅ |
 | **Optional Array** | `Optional[List[T]]` | ✅ | ✅ | ✅ | ✅ | ✅ |
 | **Map/Dict** | `Dict[K, V]` | ✅ | ✅ | ✅ | ✅ | ✅ |
-| **Struct/Record** | `dataclass` | ❌ | ✅ | ❌ | ✅ | ❌ |
+| **Struct/Record** | `dataclass` | ✅ | ✅ | ❌ | ✅ | ❌ |
 | **Nested Arrays** | `List[List[T]]` | ❌ | ❌ | ❌ | ❌ | ❌ |
 
 ### Database-Specific Notes
 
-- **BigQuery**: NULL arrays become empty arrays `[]`; uses scientific notation for large decimals; dict/map types stored as JSON strings; struct types not yet supported
+- **BigQuery**: NULL arrays become empty arrays `[]`; uses scientific notation for large decimals; dict/map types stored as JSON strings; struct types supported using `STRUCT` syntax with named fields (dataclasses and Pydantic models)
 - **Athena**: 256KB query size limit; supports arrays and maps using `ARRAY[]` and `MAP(ARRAY[], ARRAY[])` syntax; supports struct types using `ROW` with named fields (dataclasses and Pydantic models)
 - **Redshift**: Arrays and maps implemented via SUPER type (JSON parsing); 16MB query size limit; struct types not yet supported
 - **Trino**: Memory catalog for testing; excellent decimal precision; supports arrays, maps, and struct types using `ROW` with named fields (dataclasses and Pydantic models)
@@ -555,9 +555,9 @@ def test_pattern_3():
     )
 ```
 
-### Working with Struct Types (Athena and Trino)
+### Working with Struct Types (Athena, Trino, and BigQuery)
 
-The library supports struct/record types using Python dataclasses or Pydantic models for Athena and Trino:
+The library supports struct/record types using Python dataclasses or Pydantic models for Athena, Trino, and BigQuery:
 
 ```python
 from dataclasses import dataclass
@@ -604,7 +604,7 @@ class EmployeesMockTable(BaseMockTable):
 
 # Test with struct types
 @sql_test(
-    adapter_type="athena",  # or "trino"
+    adapter_type="athena",  # or "trino" or "bigquery"
     mock_tables=[
         EmployeesMockTable([
             Employee(
@@ -650,7 +650,7 @@ def test_struct_with_dot_notation():
 
 # You can also query entire structs
 @sql_test(
-    adapter_type="trino",
+    adapter_type="trino",  # or "athena" or "bigquery"
     mock_tables=[EmployeesMockTable([...])],
     result_class=dict  # Returns full struct as dict
 )

@@ -81,12 +81,12 @@ class StructTypesMockTable(BaseMockTable):
 
 
 @pytest.mark.integration
-@pytest.mark.parametrize("adapter_type", ["athena", "trino"])
+@pytest.mark.parametrize("adapter_type", ["athena", "trino", "bigquery"])
 @pytest.mark.parametrize(
     "use_physical_tables", [False, True], ids=["cte_mode", "physical_tables_mode"]
 )
 class TestStructTypesIntegration:
-    """Integration tests for struct types in Athena and Trino."""
+    """Integration tests for struct types in Athena, Trino, and BigQuery."""
 
     @pytest.fixture(autouse=True)
     def setup_test_data(self, adapter_type):
@@ -145,6 +145,8 @@ class TestStructTypesIntegration:
             self.database_name = "test_db"
         elif adapter_type == "trino":
             self.database_name = "memory"
+        elif adapter_type == "bigquery":
+            self.database_name = "test-project.test_dataset"
 
     def test_struct_types_basic_query(self, adapter_type, use_physical_tables):
         """Test basic struct type queries."""
@@ -358,6 +360,8 @@ class TestStructTypesIntegration:
             def get_database_name(self) -> str:
                 if adapter_type == "athena":
                     return "test_db"
+                elif adapter_type == "bigquery":
+                    return "test-project.test_dataset"
                 return "memory"
 
             def get_table_name(self) -> str:
@@ -391,8 +395,23 @@ class TestStructTypesIntegration:
             result_class=ListOfStructsResult,
         )
         def query_list_of_structs():
-            return TestCase(
-                query="""
+            # BigQuery uses different syntax for array operations
+            if adapter_type == "bigquery":
+                query = """
+                    SELECT
+                        id,
+                        ARRAY_LENGTH(addresses) AS num_addresses,
+                        CASE
+                            WHEN ARRAY_LENGTH(addresses) > 0
+                            THEN addresses[OFFSET(0)].city
+                            ELSE NULL
+                        END AS first_city
+                    FROM list_structs
+                    ORDER BY id
+                """
+            else:
+                # Athena and Trino use CARDINALITY and 1-based indexing
+                query = """
                     SELECT
                         id,
                         CARDINALITY(addresses) AS num_addresses,
@@ -403,7 +422,10 @@ class TestStructTypesIntegration:
                         END AS first_city
                     FROM list_structs
                     ORDER BY id
-                """,
+                """
+
+            return TestCase(
+                query=query,
                 default_namespace=self.database_name,
                 use_physical_tables=use_physical_tables,
             )
