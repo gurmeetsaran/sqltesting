@@ -244,12 +244,52 @@ def test_physical_tables():
         query="SELECT * FROM table",
         use_physical_tables=True  # Force physical tables
     )
+
+# Physical Tables with Custom Parallel Settings
+@sql_test(
+    mock_tables=[...],
+    result_class=ResultClass,
+    use_physical_tables=True,
+    max_workers=4  # Customize parallel execution
+)
+def test_with_custom_parallelism():
+    return TestCase(query="SELECT * FROM table")
 ```
 
 **Notes:**
 - **CTE Mode**: Default mode, works with all database engines, suitable for most use cases
 - **Physical Tables**: Used automatically when CTE queries exceed database size limits or when explicitly requested
+- **Parallel Table Creation**: When using physical tables with multiple mock tables, they are created in parallel by default for better performance
 - **Snowflake**: Full support for both CTE and physical table modes
+
+### Performance Optimization: Parallel Table Creation
+
+When using `use_physical_tables=True` with multiple mock tables, the library can create tables in parallel for better performance.
+
+**Default Behavior:**
+- Parallel creation is **enabled by default** when using physical tables
+- Smart worker allocation based on table count:
+  - 1-2 tables: Same number of workers as tables
+  - 3-5 tables: 3 workers
+  - 6-10 tables: 5 workers
+  - 11+ tables: 8 workers (capped)
+
+**Customization:**
+```python
+# Disable parallel creation
+@sql_test(use_physical_tables=True, parallel_table_creation=False)
+
+# Custom worker count
+@sql_test(use_physical_tables=True, max_workers=2)
+
+# In SQLTestCase directly
+TestCase(
+    query="...",
+    use_physical_tables=True,
+    parallel_table_creation=True,  # Default
+    max_workers=4  # Custom worker limit
+)
+```
 
 ## Installation
 

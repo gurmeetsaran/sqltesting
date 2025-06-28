@@ -1,6 +1,5 @@
 """Base Presto-compatible adapter implementation for Athena and Trino."""
 
-import time
 from datetime import date, datetime
 from decimal import Decimal
 from typing import Any, List, Tuple, Type, Union, get_args
@@ -36,8 +35,7 @@ class PrestoBaseAdapter(DatabaseAdapter):
 
     def create_temp_table(self, mock_table: BaseMockTable) -> str:
         """Create a temporary table using CTAS."""
-        timestamp = int(time.time() * 1000)
-        temp_table_name = f"temp_{mock_table.get_table_name()}_{timestamp}"
+        temp_table_name = self.get_temp_table_name(mock_table)
         qualified_table_name = self._get_qualified_table_name(temp_table_name)
 
         # Generate CTAS statement (CREATE TABLE AS SELECT)
@@ -50,8 +48,7 @@ class PrestoBaseAdapter(DatabaseAdapter):
 
     def create_temp_table_with_sql(self, mock_table: BaseMockTable) -> Tuple[str, str]:
         """Create a temporary table and return both table name and SQL."""
-        timestamp = int(time.time() * 1000)
-        temp_table_name = f"temp_{mock_table.get_table_name()}_{timestamp}"
+        temp_table_name = self.get_temp_table_name(mock_table)
         qualified_table_name = self._get_qualified_table_name(temp_table_name)
 
         # Generate CTAS statement (CREATE TABLE AS SELECT)

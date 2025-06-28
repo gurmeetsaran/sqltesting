@@ -34,6 +34,8 @@ class SQLTestCase(Generic[T]):
     description: Optional[str] = None
     adapter_type: Optional[AdapterType] = None
     log_sql: Optional[bool] = None
+    parallel_table_creation: bool = True
+    max_workers: Optional[int] = None
     execution_database: Optional[str] = None  # Deprecated
 ```
 
@@ -49,6 +51,8 @@ class SQLTestCase(Generic[T]):
 | `description` | `Optional[str]` | Optional test description |
 | `adapter_type` | `Optional[AdapterType]` | Override default database adapter |
 | `log_sql` | `Optional[bool]` | Enable/disable SQL logging for this test |
+| `parallel_table_creation` | `bool` | Enable parallel table creation when using physical tables (default: True) |
+| `max_workers` | `Optional[int]` | Max parallel workers for table creation (default: smart allocation based on table count) |
 
 #### Example
 
@@ -173,7 +177,9 @@ from sql_testing_library import sql_test
     result_class: Optional[Type[T]] = None,
     use_physical_tables: Optional[bool] = None,
     adapter_type: Optional[AdapterType] = None,
-    log_sql: Optional[bool] = None
+    log_sql: Optional[bool] = None,
+    parallel_table_creation: Optional[bool] = None,
+    max_workers: Optional[int] = None
 )
 ```
 
@@ -201,6 +207,8 @@ pytest -m "sql_test and not slow"
 | `use_physical_tables` | `Optional[bool]` | Override physical tables flag |
 | `adapter_type` | `Optional[AdapterType]` | Override adapter type |
 | `log_sql` | `Optional[bool]` | Enable/disable SQL logging |
+| `parallel_table_creation` | `Optional[bool]` | Override parallel table creation (default: True when using physical tables) |
+| `max_workers` | `Optional[int]` | Override max workers for parallel creation |
 
 #### Usage Patterns
 
@@ -230,6 +238,18 @@ def test_users():
 @sql_test(adapter_type="bigquery")
 def test_bigquery_specific():
     return TestCase(...)
+
+# Pattern 4: Physical tables with parallel creation
+@sql_test(
+    use_physical_tables=True,
+    max_workers=4  # Custom parallel workers
+)
+def test_with_parallel_tables():
+    return TestCase(
+        query="SELECT * FROM large_table JOIN other_table",
+        mock_tables=[large_mock, other_mock],
+        default_namespace="test_db"
+    )
 ```
 
 ## Database Adapters

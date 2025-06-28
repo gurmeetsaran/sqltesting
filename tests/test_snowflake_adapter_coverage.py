@@ -280,7 +280,7 @@ class TestSnowflakeAdapterCoverageBoost(unittest.TestCase):
         ctas_sql = adapter._generate_ctas_sql("temp_empty_users_123", empty_mock_table)
 
         # Should create table with empty schema
-        self.assertIn("CREATE TEMPORARY TABLE", ctas_sql)
+        self.assertIn("CREATE TABLE", ctas_sql)
         self.assertIn("temp_empty_users_123", ctas_sql)
 
         # Should not contain data values for empty table
@@ -334,8 +334,8 @@ class TestSnowflakeAdapterCoverageBoost(unittest.TestCase):
 
         ctas_sql = adapter._generate_ctas_sql("temp_users_123", mock_table)
 
-        # Should create temporary table with data using AS SELECT
-        self.assertIn("CREATE TEMPORARY TABLE", ctas_sql)
+        # Should create table with data using AS SELECT
+        self.assertIn("CREATE TABLE", ctas_sql)
         self.assertIn("temp_users_123", ctas_sql)
         self.assertIn("AS", ctas_sql)
         self.assertIn("SELECT", ctas_sql)
