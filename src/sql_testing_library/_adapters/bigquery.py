@@ -93,9 +93,7 @@ class BigQueryAdapter(DatabaseAdapter):
 
     def create_temp_table(self, mock_table: BaseMockTable) -> str:
         """Create temporary table in BigQuery."""
-        import time
-
-        temp_table_name = f"temp_{mock_table.get_table_name()}_{int(time.time() * 1000)}"
+        temp_table_name = self.get_temp_table_name(mock_table)
         table_id = f"{self.project_id}.{self.dataset_id}.{temp_table_name}"
 
         # Create table schema from mock table
@@ -119,9 +117,7 @@ class BigQueryAdapter(DatabaseAdapter):
 
     def create_temp_table_with_sql(self, mock_table: BaseMockTable) -> Tuple[str, str]:
         """Create temporary table and return both table name and SQL."""
-        import time
-
-        temp_table_name = f"temp_{mock_table.get_table_name()}_{int(time.time() * 1000)}"
+        temp_table_name = self.get_temp_table_name(mock_table)
         table_id = f"{self.project_id}.{self.dataset_id}.{temp_table_name}"
 
         # Generate CREATE TABLE SQL

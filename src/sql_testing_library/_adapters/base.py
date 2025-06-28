@@ -1,5 +1,7 @@
 """Base database adapter interface."""
 
+import time
+import uuid
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Any, List, Optional, Tuple
 
@@ -56,3 +58,17 @@ class DatabaseAdapter(ABC):
     def get_query_size_limit(self) -> Optional[int]:
         """Return query size limit in bytes, or None if no limit."""
         return None
+
+    def get_temp_table_name(self, mock_table: BaseMockTable, prefix: str = "temp") -> str:
+        """Generate a unique temporary table name.
+
+        Args:
+            mock_table: The mock table to generate a name for
+            prefix: The prefix to use (default "temp", Snowflake uses "TEMP")
+
+        Returns:
+            A unique table name with timestamp and UUID
+        """
+        timestamp = int(time.time() * 1000)
+        unique_id = str(uuid.uuid4()).replace("-", "")[:8]
+        return f"{prefix}_{mock_table.get_table_name()}_{timestamp}_{unique_id}"

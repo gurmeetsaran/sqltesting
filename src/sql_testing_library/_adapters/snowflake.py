@@ -2,7 +2,7 @@
 
 import logging
 import os
-import time
+import threading
 from datetime import date, datetime
 from decimal import Decimal
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Type, Union, get_args
@@ -93,7 +93,8 @@ class SnowflakeAdapter(DatabaseAdapter):
         self.role = role
         self.private_key_path = private_key_path
         self.private_key_passphrase = private_key_passphrase
-        self.conn: Optional[Any] = None
+        # Use thread-local storage for connections to ensure thread safety
+        self._thread_local = threading.local()
         self._private_key: Optional[bytes] = None
 
     def _load_private_key(self) -> bytes:
@@ -164,11 +165,11 @@ class SnowflakeAdapter(DatabaseAdapter):
         return private_key
 
     def _get_connection(self) -> Any:
-        """Get or create a connection to Snowflake."""
+        """Get or create a thread-local connection to Snowflake."""
         import snowflake.connector
 
-        # Create a new connection if needed
-        if self.conn is None:
+        # Check if this thread already has a connection
+        if not hasattr(self._thread_local, "conn") or self._thread_local.conn is None:
             conn_params: Dict[str, Any] = {
                 "account": self.account,
                 "user": self.user,
@@ -200,9 +201,9 @@ class SnowflakeAdapter(DatabaseAdapter):
             if self.role:
                 conn_params["role"] = self.role
 
-            self.conn = snowflake.connector.connect(**conn_params)
+            self._thread_local.conn = snowflake.connector.connect(**conn_params)
 
-        return self.conn
+        return self._thread_local.conn
 
     def get_sqlglot_dialect(self) -> str:
         """Return Snowflake dialect for sqlglot."""
@@ -213,51 +214,45 @@ class SnowflakeAdapter(DatabaseAdapter):
         import pandas as pd
 
         conn = self._get_connection()
+        cursor = None
 
-        # Execute query
-        cursor = conn.cursor()
+        try:
+            # Execute query
+            cursor = conn.cursor()
+            cursor.execute(query)
 
-        # Ensure we have an active warehouse if one is specified
-        if self.warehouse:
-            try:
-                cursor.execute(f"USE WAREHOUSE {self.warehouse}")
-            except Exception as e:
-                raise RuntimeError(
-                    f"Failed to use warehouse '{self.warehouse}'. "
-                    f"Please check that the warehouse exists and you have USAGE permission. "
-                    f"Original error: {e}"
-                ) from e
+            # If this is a SELECT query, return results
+            if cursor.description:
+                # Get column names from cursor description and normalize to lowercase
+                # Snowflake returns uppercase column names by default
+                columns = [col[0].lower() for col in cursor.description]
 
-        cursor.execute(query)
+                # Fetch all rows
+                rows = cursor.fetchall()
 
-        # If this is a SELECT query, return results
-        if cursor.description:
-            # Get column names from cursor description and normalize to lowercase
-            # Snowflake returns uppercase column names by default
-            columns = [col[0].lower() for col in cursor.description]
+                # Create DataFrame from rows
+                df = pd.DataFrame(rows)
+                df.columns = columns
+                return df
 
-            # Fetch all rows
-            rows = cursor.fetchall()
-
-            # Create DataFrame from rows
-            df = pd.DataFrame(rows)
-            df.columns = columns
-            return df
-
-        # For non-SELECT queries
-        return pd.DataFrame()
+            # For non-SELECT queries
+            return pd.DataFrame()
+        finally:
+            # Always close the cursor to free resources
+            if cursor:
+                cursor.close()
 
     def create_temp_table(self, mock_table: BaseMockTable) -> str:
         """Create a temporary table in Snowflake."""
-        timestamp = int(time.time() * 1000)
-        temp_table_name = f"TEMP_{mock_table.get_table_name()}_{timestamp}"
+        # Use base class method with uppercase TEMP prefix for Snowflake
+        temp_table_name = self.get_temp_table_name(mock_table, prefix="TEMP")
 
         # Use the adapter's configured database and schema for temporary tables
         # This avoids permission issues with creating schemas in other databases
         target_schema = self.schema
 
         # For temporary tables, Snowflake doesn't support full database qualification
-        # Return schema.table format for temporary tables
+        # Return schema.table format for temporary tables (unquoted for proper handling in core)
         qualified_table_name = f"{target_schema}.{temp_table_name}"
 
         # Generate CTAS statement (CREATE TABLE AS SELECT)
@@ -270,15 +265,15 @@ class SnowflakeAdapter(DatabaseAdapter):
 
     def create_temp_table_with_sql(self, mock_table: BaseMockTable) -> Tuple[str, str]:
         """Create a temporary table and return both table name and SQL."""
-        timestamp = int(time.time() * 1000)
-        temp_table_name = f"TEMP_{mock_table.get_table_name()}_{timestamp}"
+        # Use base class method with uppercase TEMP prefix for Snowflake
+        temp_table_name = self.get_temp_table_name(mock_table, prefix="TEMP")
 
         # Use the adapter's configured database and schema for temporary tables
         # This avoids permission issues with creating schemas in other databases
         target_schema = self.schema
 
         # For temporary tables, Snowflake doesn't support full database qualification
-        # Return schema.table format for temporary tables
+        # Return schema.table format for temporary tables (unquoted for proper handling in core)
         qualified_table_name = f"{target_schema}.{temp_table_name}"
 
         # Generate CTAS statement (CREATE TABLE AS SELECT)
@@ -339,7 +334,9 @@ class SnowflakeAdapter(DatabaseAdapter):
         # For temporary tables in Snowflake, only use schema.table, not database.schema.table
         # Temporary tables are session-specific and don't support full qualification
         target_schema = schema if schema is not None else self.schema
-        qualified_table = f'"{target_schema}"."{table_name}"'
+        # Use unquoted identifiers so Snowflake converts them to uppercase
+        # This matches how we reference them later
+        qualified_table = f"{target_schema}.{table_name}"
 
         if df.empty:
             # For empty tables, create an empty table with correct schema
@@ -373,9 +370,9 @@ class SnowflakeAdapter(DatabaseAdapter):
 
             columns_sql = ",\n  ".join(column_defs)
 
-            # Create an empty temporary table with the correct schema
+            # Create an empty table (not TEMPORARY to allow cross-session access)
             return f"""
-            CREATE TEMPORARY TABLE {qualified_table} (
+            CREATE TABLE {qualified_table} (
               {columns_sql}
             )
             """
@@ -407,8 +404,8 @@ class SnowflakeAdapter(DatabaseAdapter):
 
                 select_sql += f"\nUNION ALL SELECT {', '.join(row_values)}"
 
-            # Create the CTAS statement using temporary table
+            # Create the CTAS statement (not TEMPORARY to allow cross-session access)
             return f"""
-            CREATE TEMPORARY TABLE {qualified_table} AS
+            CREATE TABLE {qualified_table} AS
             {select_sql}
             """

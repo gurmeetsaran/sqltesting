@@ -127,11 +127,11 @@ class TestRedshiftPhysicalTables(unittest.TestCase):
             self.assertEqual(results[0].price, 19.99)
             self.assertEqual(results[0].category, "Electronics")
 
-            # Verify temp table was created with CTAS
+            # Verify regular table was created with CTAS
             ctas_calls = [
                 call
                 for call in self.mock_cursor.execute.call_args_list
-                if "CREATE TEMPORARY TABLE" in call[0][0] and " AS " in call[0][0]
+                if "CREATE TABLE" in call[0][0] and " AS " in call[0][0]
             ]
             self.assertGreaterEqual(len(ctas_calls), 1)
 
@@ -151,14 +151,13 @@ class TestRedshiftPhysicalTables(unittest.TestCase):
             ]
             self.assertGreaterEqual(len(query_calls), 1)
 
-            # No DROP TABLE calls should be made since Redshift temporary tables
-            # are automatically dropped at the end of the session
+            # DROP TABLE calls should be made to clean up regular tables
             drop_calls = [
                 call
                 for call in self.mock_cursor.execute.call_args_list
                 if "DROP TABLE IF EXISTS" in call[0][0]
             ]
-            self.assertEqual(len(drop_calls), 0)
+            self.assertGreaterEqual(len(drop_calls), 1)
 
         finally:
             # Restore original decorator
@@ -206,11 +205,11 @@ class TestRedshiftPhysicalTables(unittest.TestCase):
             self.assertEqual(results[0].id, 1)
             self.assertEqual(results[0].name, "Product A")
 
-            # Verify temp table was created
+            # Verify regular table was created
             create_calls = [
                 call
                 for call in self.mock_cursor.execute.call_args_list
-                if "CREATE TEMPORARY TABLE" in call[0][0]
+                if "CREATE TABLE" in call[0][0]
             ]
             self.assertGreaterEqual(len(create_calls), 1)
 

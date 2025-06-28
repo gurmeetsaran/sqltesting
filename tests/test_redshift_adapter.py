@@ -246,10 +246,18 @@ class TestRedshiftAdapter(unittest.TestCase):
 
         # Test create_temp_table
         with mock.patch("time.time", return_value=1234567890.123):
-            table_name = adapter.create_temp_table(mock_table)
+            with mock.patch("uuid.uuid4") as mock_uuid:
+                # Create a mock UUID object with proper string representation
+                mock_uuid_obj = mock.Mock()
+                mock_uuid_obj.__str__ = mock.Mock(
+                    return_value="12345678-1234-5678-1234-567812345678"
+                )
+                mock_uuid.return_value = mock_uuid_obj
+                table_name = adapter.create_temp_table(mock_table)
 
         # Check table name format (just table name for temp tables)
-        self.assertEqual(table_name, "temp_users_1234567890123")
+        # The UUID is truncated to 8 chars: "12345678"
+        self.assertEqual(table_name, "temp_users_1234567890123_12345678")
 
         # Check execute_query calls - only one call for CTAS
         self.assertEqual(mock_cursor.execute.call_count, 1)
@@ -257,7 +265,7 @@ class TestRedshiftAdapter(unittest.TestCase):
         # The call should be a CTAS (CREATE TABLE AS SELECT)
         ctas_call = mock_cursor.execute.call_args_list[0]
         ctas_sql = ctas_call[0][0]
-        self.assertIn('CREATE TEMPORARY TABLE "temp_users_1234567890123" AS', ctas_sql)
+        self.assertIn('CREATE TABLE "temp_users_1234567890123_12345678" AS', ctas_sql)
 
         # Check that data values are present in the CTAS SQL
         self.assertIn("'Alice'", ctas_sql)
@@ -285,13 +293,14 @@ class TestRedshiftAdapter(unittest.TestCase):
             password=self.password,
         )
 
-        # Test cleanup_temp_tables - should do nothing since Redshift
-        # temporary tables are automatically dropped at the end of the session
+        # Test cleanup_temp_tables - should execute DROP TABLE statements
         table_names = ["public.temp_table1", "public.temp_table2"]
         adapter.cleanup_temp_tables(table_names)
 
-        # Verify no queries were executed (no DROP statements)
-        mock_cursor.execute.assert_not_called()
+        # Verify DROP statements were executed
+        self.assertEqual(mock_cursor.execute.call_count, 2)
+        mock_cursor.execute.assert_any_call('DROP TABLE IF EXISTS "public.temp_table1"')
+        mock_cursor.execute.assert_any_call('DROP TABLE IF EXISTS "public.temp_table2"')
 
 
 class TestRedshiftTypeConverter(unittest.TestCase):

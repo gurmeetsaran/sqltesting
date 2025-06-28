@@ -1,6 +1,5 @@
 """Amazon Redshift adapter implementation."""
 
-import time
 from datetime import date, datetime
 from decimal import Decimal
 from typing import TYPE_CHECKING, Any, List, Optional, Tuple, Type, Union, get_args
@@ -129,15 +128,8 @@ class RedshiftAdapter(DatabaseAdapter):
             return pd.DataFrame()
 
     def create_temp_table(self, mock_table: BaseMockTable) -> str:
-        """Create a temporary table in Redshift using CTAS."""
-        timestamp = int(time.time() * 1000)
-        temp_table_name = f"temp_{mock_table.get_table_name()}_{timestamp}"
-
-        # In Redshift, temporary tables are automatically created in a session-specific
-        # temporary schema, NOT in the public schema. They are automatically dropped
-        # at session end, so we don't need to explicitly clean them up.
-        # We return just the table name without schema qualification since temp tables
-        # are accessible without schema prefix.
+        """Create a table in Redshift using CTAS."""
+        temp_table_name = self.get_temp_table_name(mock_table)
 
         # Generate CTAS statement (CREATE TABLE AS SELECT)
         ctas_sql = self._generate_ctas_sql(temp_table_name, mock_table)
@@ -145,13 +137,12 @@ class RedshiftAdapter(DatabaseAdapter):
         # Execute CTAS query
         self.execute_query(ctas_sql)
 
-        # Return just the table name, no schema prefix needed for temp tables
+        # Return just the table name
         return temp_table_name
 
     def create_temp_table_with_sql(self, mock_table: BaseMockTable) -> Tuple[str, str]:
-        """Create a temporary table and return both table name and SQL."""
-        timestamp = int(time.time() * 1000)
-        temp_table_name = f"temp_{mock_table.get_table_name()}_{timestamp}"
+        """Create a table and return both table name and SQL."""
+        temp_table_name = self.get_temp_table_name(mock_table)
 
         # Generate CTAS statement (CREATE TABLE AS SELECT)
         ctas_sql = self._generate_ctas_sql(temp_table_name, mock_table)
@@ -164,10 +155,15 @@ class RedshiftAdapter(DatabaseAdapter):
 
     def cleanup_temp_tables(self, table_names: List[str]) -> None:
         """Clean up temporary tables."""
-        # Redshift temporary tables are automatically dropped at the end of the session
-        # This method is included for compatibility with the adapter interface
-        # but doesn't need to do anything
-        pass
+        for table_name in table_names:
+            try:
+                drop_query = f'DROP TABLE IF EXISTS "{table_name}"'
+                self.execute_query(drop_query)
+            except Exception as e:
+                # Log warning but don't fail the test
+                import logging
+
+                logging.warning(f"Failed to drop table {table_name}: {e}")
 
     def format_value_for_cte(self, value: Any, column_type: type) -> str:
         """Format value for Redshift CTE VALUES clause."""
@@ -185,10 +181,7 @@ class RedshiftAdapter(DatabaseAdapter):
         return 16 * 1024 * 1024  # 16MB
 
     def _generate_ctas_sql(self, table_name: str, mock_table: BaseMockTable) -> str:
-        """Generate CREATE TABLE AS SELECT (CTAS) statement for Redshift.
-
-        Redshift temporary tables are automatically dropped at the end of the session.
-        """
+        """Generate CREATE TABLE AS SELECT (CTAS) statement for Redshift."""
         df = mock_table.to_dataframe()
         column_types = mock_table.get_column_types()
         columns = list(df.columns)
@@ -225,9 +218,9 @@ class RedshiftAdapter(DatabaseAdapter):
 
             columns_sql = ",\n  ".join(column_defs)
 
-            # Create an empty temporary table with the correct schema
+            # Create an empty table with the correct schema
             return f"""
-            CREATE TEMPORARY TABLE "{table_name}" (
+            CREATE TABLE "{table_name}" (
               {columns_sql}
             )
             """
@@ -261,6 +254,6 @@ class RedshiftAdapter(DatabaseAdapter):
 
             # Create the CTAS statement
             return f"""
-            CREATE TEMPORARY TABLE "{table_name}" AS
+            CREATE TABLE "{table_name}" AS
             {select_sql}
             """

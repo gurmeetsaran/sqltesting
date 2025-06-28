@@ -573,8 +573,9 @@ class SQLTestFramework:
                     if replacement_name:
                         # Parse the replacement name to handle schema qualification
                         parts = replacement_name.split(".")
-                        # Only quote identifiers for Snowflake physical tables (which contain TEMP_)
-                        should_quote = "TEMP_" in replacement_name and dialect == "snowflake"
+                        # Don't quote Snowflake identifiers - they're created unquoted and
+                        # thus uppercase
+                        should_quote = False
 
                         if len(parts) == 3:
                             # catalog.schema.table format

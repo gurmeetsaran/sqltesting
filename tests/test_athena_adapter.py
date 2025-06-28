@@ -194,9 +194,17 @@ class TestAthenaAdapter(unittest.TestCase):
 
         # Test create_temp_table
         with mock.patch("time.time", return_value=1234567890.123):
-            table_name = adapter.create_temp_table(mock_table)
+            with mock.patch("uuid.uuid4") as mock_uuid:
+                # Create a mock UUID object with proper string representation
+                mock_uuid_obj = mock.Mock()
+                mock_uuid_obj.__str__ = mock.Mock(
+                    return_value="12345678-1234-5678-1234-567812345678"
+                )
+                mock_uuid.return_value = mock_uuid_obj
+                table_name = adapter.create_temp_table(mock_table)
 
-        self.assertEqual(table_name, "test_db.temp_users_1234567890123")
+        # The UUID is truncated to 8 chars: "12345678"
+        self.assertEqual(table_name, "test_db.temp_users_1234567890123_12345678")
 
         # Check that CTAS was called
         self.assertEqual(mock_client.start_query_execution.call_count, 1)

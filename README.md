@@ -264,7 +264,7 @@ def test_with_custom_parallelism():
 
 ### Performance Optimization: Parallel Table Creation
 
-When using `use_physical_tables=True` with multiple mock tables, the library now creates tables in parallel by default, significantly improving test execution time.
+When using `use_physical_tables=True` with multiple mock tables, the library can create tables in parallel for better performance.
 
 **Default Behavior:**
 - Parallel creation is **enabled by default** when using physical tables
