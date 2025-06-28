@@ -114,7 +114,9 @@ class TestBigQueryAdapter(unittest.TestCase):
         # Test numeric formatting
         self.assertEqual(adapter.format_value_for_cte(123, int), "123")
         self.assertEqual(adapter.format_value_for_cte(123.45, float), "123.45")
-        self.assertEqual(adapter.format_value_for_cte(Decimal("123.45"), Decimal), "123.45")
+        self.assertEqual(
+            adapter.format_value_for_cte(Decimal("123.45"), Decimal), "NUMERIC '123.45'"
+        )
 
         # Test boolean formatting
         self.assertEqual(adapter.format_value_for_cte(True, bool), "TRUE")

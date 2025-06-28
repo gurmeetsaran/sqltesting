@@ -221,7 +221,7 @@ class TestFormatSQLValue:
 
         assert format_sql_value(["a", "b"], List[str], "bigquery") == "['a', 'b']"
         assert format_sql_value([1, 2, 3], List[int], "bigquery") == "[1, 2, 3]"
-        assert format_sql_value([], List[str], "bigquery") == "[]"
+        assert format_sql_value([], List[str], "bigquery") == "CAST([] AS ARRAY<STRING>)"
 
         assert format_sql_value(["a", "b"], List[str], "snowflake") == "ARRAY_CONSTRUCT('a', 'b')"
         assert format_sql_value([1, 2, 3], List[int], "snowflake") == "ARRAY_CONSTRUCT(1, 2, 3)"
