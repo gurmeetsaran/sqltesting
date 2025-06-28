@@ -35,6 +35,7 @@ class SQLTestCase(Generic[T]):
     adapter_type: Optional[AdapterType] = None
     log_sql: Optional[bool] = None
     parallel_table_creation: bool = True
+    parallel_table_cleanup: bool = True
     max_workers: Optional[int] = None
     execution_database: Optional[str] = None  # Deprecated
 ```
@@ -52,7 +53,8 @@ class SQLTestCase(Generic[T]):
 | `adapter_type` | `Optional[AdapterType]` | Override default database adapter |
 | `log_sql` | `Optional[bool]` | Enable/disable SQL logging for this test |
 | `parallel_table_creation` | `bool` | Enable parallel table creation when using physical tables (default: True) |
-| `max_workers` | `Optional[int]` | Max parallel workers for table creation (default: smart allocation based on table count) |
+| `parallel_table_cleanup` | `bool` | Enable parallel table cleanup when using physical tables (default: True) |
+| `max_workers` | `Optional[int]` | Max parallel workers for table operations (default: smart allocation based on table count) |
 
 #### Example
 
@@ -179,6 +181,7 @@ from sql_testing_library import sql_test
     adapter_type: Optional[AdapterType] = None,
     log_sql: Optional[bool] = None,
     parallel_table_creation: Optional[bool] = None,
+    parallel_table_cleanup: Optional[bool] = None,
     max_workers: Optional[int] = None
 )
 ```
@@ -208,7 +211,8 @@ pytest -m "sql_test and not slow"
 | `adapter_type` | `Optional[AdapterType]` | Override adapter type |
 | `log_sql` | `Optional[bool]` | Enable/disable SQL logging |
 | `parallel_table_creation` | `Optional[bool]` | Override parallel table creation (default: True when using physical tables) |
-| `max_workers` | `Optional[int]` | Override max workers for parallel creation |
+| `parallel_table_cleanup` | `Optional[bool]` | Override parallel table cleanup (default: True when using physical tables) |
+| `max_workers` | `Optional[int]` | Override max workers for parallel operations |
 
 #### Usage Patterns
 
