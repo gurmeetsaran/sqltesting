@@ -8,7 +8,8 @@ Redshift Serverless resources for testing purposes.
 Usage:
     python scripts/manage-redshift-cluster.py create --namespace test-ns --workgroup test-wg
     python scripts/manage-redshift-cluster.py status --namespace test-ns --workgroup test-wg
-    python scripts/manage-redshift-cluster.py destroy --namespace test-ns --workgroup test-wg  # Always waits for deletion completion
+    python scripts/manage-redshift-cluster.py destroy --namespace test-ns --workgroup test-wg  # Fast mode by default
+    python scripts/manage-redshift-cluster.py destroy --namespace test-ns --workgroup test-wg --wait  # Wait for completion
     python scripts/manage-redshift-cluster.py endpoint --workgroup test-wg
     python scripts/manage-redshift-cluster.py configure-sg --workgroup test-wg
     python scripts/manage-redshift-cluster.py cleanup-sg --workgroup test-wg
@@ -76,7 +77,26 @@ class RedshiftClusterManager:
             error_code = e.response['Error']['Code']
             if error_code == 'ConflictException':
                 print(f"ℹ️  Namespace {namespace_name} already exists")
-                return True
+                # Check if it's in a good state
+                try:
+                    response = self.client.get_namespace(namespaceName=namespace_name)
+                    status = response['namespace']['status']
+                    if status == 'AVAILABLE':
+                        print(f"✅ Existing namespace is available and ready to use")
+                        return True
+                    elif status == 'DELETING':
+                        print(f"⚠️  Namespace is being deleted, waiting for deletion to complete...")
+                        if self.wait_for_namespace_deletion(namespace_name, timeout=300):
+                            # Try to create again after deletion
+                            return self.create_namespace(namespace_name, admin_user, admin_password, database_name)
+                        else:
+                            print(f"❌ Failed to wait for namespace deletion")
+                            return False
+                    else:
+                        print(f"⚠️  Namespace exists but in unexpected state: {status}")
+                        return True
+                except:
+                    return True
             else:
                 print(f"❌ Failed to create namespace: {e}")
                 return False
@@ -143,7 +163,26 @@ class RedshiftClusterManager:
             error_code = e.response['Error']['Code']
             if error_code == 'ConflictException':
                 print(f"ℹ️  Workgroup {workgroup_name} already exists")
-                return True
+                # Check if it's in a good state
+                try:
+                    response = self.client.get_workgroup(workgroupName=workgroup_name)
+                    status = response['workgroup']['status']
+                    if status == 'AVAILABLE':
+                        print(f"✅ Existing workgroup is available and ready to use")
+                        return True
+                    elif status == 'DELETING':
+                        print(f"⚠️  Workgroup is being deleted, waiting for deletion to complete...")
+                        if self.wait_for_workgroup_deletion(workgroup_name, timeout=300):
+                            # Try to create again after deletion
+                            return self.create_workgroup(workgroup_name, namespace_name, base_capacity, publicly_accessible)
+                        else:
+                            print(f"❌ Failed to wait for workgroup deletion")
+                            return False
+                    else:
+                        print(f"⚠️  Workgroup exists but in unexpected state: {status}")
+                        return True
+                except:
+                    return True
             else:
                 print(f"❌ Failed to create workgroup: {e}")
                 return False
@@ -661,7 +700,8 @@ def main():
     destroy_parser.add_argument("--namespace", default="sql-testing-ns", help="Namespace name (default: sql-testing-ns)")
     destroy_parser.add_argument("--workgroup", default="sql-testing-wg", help="Workgroup name (default: sql-testing-wg)")
     destroy_parser.add_argument("--skip-sg-cleanup", action="store_true", help="Skip security group rules cleanup")
-    # Note: destroy command always waits for deletion completion to ensure proper cleanup
+    destroy_parser.add_argument("--wait", action="store_true", help="Wait for deletion to complete (default: fast mode)")
+    # Note: By default, destroy command initiates deletion without waiting (fast mode) for CI/CD speed
 
     args = parser.parse_args()
 
@@ -805,21 +845,44 @@ def main():
         if not manager.delete_workgroup(args.workgroup):
             success = False
 
-        # Always wait for workgroup deletion before deleting namespace
-        # This is required because namespace deletion will fail if workgroup still exists
-        if success:
-            print("⏳ Waiting for workgroup deletion to complete (required before namespace deletion)...")
-            success = manager.wait_for_workgroup_deletion(args.workgroup)
+        # Check if we should wait for deletion
+        if args.wait:
+            # Wait for workgroup deletion before deleting namespace
+            # This is required because namespace deletion will fail if workgroup still exists
+            if success:
+                print("⏳ Waiting for workgroup deletion to complete (required before namespace deletion)...")
+                success = manager.wait_for_workgroup_deletion(args.workgroup)
 
-        # Delete namespace only after workgroup is fully deleted
-        if success:
-            if not manager.delete_namespace(args.namespace):
-                success = False
+            # Delete namespace only after workgroup is fully deleted
+            if success:
+                if not manager.delete_namespace(args.namespace):
+                    success = False
 
-        # Always wait for namespace deletion to complete (just like workgroup deletion)
-        if success:
-            print("⏳ Waiting for namespace deletion to complete...")
-            success = manager.wait_for_namespace_deletion(args.namespace)
+            # Wait for namespace deletion to complete
+            if success:
+                print("⏳ Waiting for namespace deletion to complete...")
+                success = manager.wait_for_namespace_deletion(args.namespace)
+        else:
+            # Fast deletion mode - just initiate deletion without waiting
+            print("🚀 Fast deletion mode - initiating deletion without waiting for completion")
+            print("ℹ️  Resources will be deleted in the background")
+
+            # Still need to wait for workgroup before namespace, but with minimal timeout
+            if success:
+                print("⏳ Quick check for workgroup deletion status...")
+                # Wait max 30 seconds for workgroup to start deleting
+                for i in range(6):
+                    time.sleep(5)
+                    try:
+                        response = manager.client.get_workgroup(workgroupName=args.workgroup)
+                        if response['workgroup']['status'] == 'DELETING':
+                            break
+                    except:
+                        break
+
+                # Attempt namespace deletion
+                manager.delete_namespace(args.namespace)
+                print("✅ Deletion initiated for both workgroup and namespace")
 
     # Exit with appropriate code
     if success:
