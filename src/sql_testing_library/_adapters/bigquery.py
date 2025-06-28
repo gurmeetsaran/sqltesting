@@ -344,6 +344,9 @@ class BigQueryAdapter(DatabaseAdapter):
                     fields.append(
                         bigquery.SchemaField(field_name, element_bq_type, mode="REPEATED")
                     )
+            # Handle Dict types in structs - BigQuery stores them as JSON strings
+            elif hasattr(field_type, "__origin__") and field_type.__origin__ is dict:
+                fields.append(bigquery.SchemaField(field_name, bigquery.enums.SqlTypeNames.STRING))
             else:
                 # Handle scalar types
                 bq_type = type_mapping.get(field_type, bigquery.enums.SqlTypeNames.STRING)
@@ -446,7 +449,10 @@ class BigQueryAdapter(DatabaseAdapter):
 
     def _dataclass_to_dict(self, obj: Any) -> Any:
         """Recursively convert dataclass to dict, handling nested structs."""
+        import json
         from dataclasses import is_dataclass
+
+        from .._sql_utils import DecimalEncoder
 
         if is_dataclass(obj):
             # Get the dict representation
@@ -462,6 +468,9 @@ class BigQueryAdapter(DatabaseAdapter):
                         self._dataclass_to_dict(item) if is_dataclass(item) else item
                         for item in value
                     ]
+                elif isinstance(value, dict):
+                    # Convert dict fields to JSON strings for BigQuery
+                    result[field] = json.dumps(value, cls=DecimalEncoder)
                 else:
                     # Keep other values as-is (including Decimal)
                     result[field] = value

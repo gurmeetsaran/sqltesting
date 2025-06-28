@@ -164,6 +164,30 @@ def get_sql_type_string(py_type: Type, dialect: str) -> str:
         else:
             return f"ARRAY({element_sql_type})"
 
+    # Handle Dict/Map types
+    if hasattr(py_type, "__origin__") and py_type.__origin__ is dict:
+        type_args = get_args(py_type)
+        key_type = type_args[0] if type_args else str
+        value_type = type_args[1] if len(type_args) > 1 else str
+
+        if dialect == "bigquery":
+            # BigQuery stores dicts as JSON strings
+            return "STRING"
+        elif dialect in ("athena", "trino"):
+            # Athena/Trino use native MAP type
+            key_sql_type = get_sql_type_string(key_type, dialect)
+            value_sql_type = get_sql_type_string(value_type, dialect)
+            return f"MAP({key_sql_type}, {value_sql_type})"
+        elif dialect == "redshift":
+            # Redshift uses SUPER type for JSON
+            return "SUPER"
+        elif dialect == "snowflake":
+            # Snowflake uses VARIANT type for JSON
+            return "VARIANT"
+        else:
+            # Default to string for other dialects
+            return "VARCHAR"
+
     # Check if it's a struct type
     if is_struct_type(py_type):
         # Build nested struct type recursively
