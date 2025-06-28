@@ -2164,12 +2164,14 @@ class TestStructTypesIntegration:
 
             id: int
             company: Company
+            parent_companies: List[Company]  # List of complex structs
 
         class DeepNestedResult(BaseModel):
             """Same structure as Pydantic model for results."""
 
             id: int
             company: CompanyModel
+            parent_companies: List[CompanyModel]  # List of complex structs
 
         # Mock table
         class DeepNestedMockTable(BaseMockTable):
@@ -2251,6 +2253,31 @@ class TestStructTypesIntegration:
                         "employee_retention": 0.87,
                     },
                 ),
+                parent_companies=[
+                    Company(
+                        company_name="TechCorp Holdings",
+                        founded_year=1990,
+                        revenue=Decimal("5000000000.00"),
+                        is_public=True,
+                        departments=[
+                            Department(
+                                name="Corporate",
+                                budget=Decimal("1000000.00"),
+                                team_members=["CEO", "CFO"],
+                                projects={"Acquisitions": 1},
+                                contact=ContactInfo(
+                                    email="corp@techcorp-holdings.com",
+                                    phone="+1-555-9000",
+                                    is_primary=True,
+                                    contact_preferences={"email": "always"},
+                                    backup_emails=["board@techcorp-holdings.com"],
+                                ),
+                            ),
+                        ],
+                        headquarters={"city": "New York", "state": "NY", "country": "USA"},
+                        metrics={"portfolio_value": 10000000000.0},
+                    ),
+                ],
             ),
             DeepNestedData(
                 id=2,
@@ -2277,6 +2304,7 @@ class TestStructTypesIntegration:
                     headquarters={"city": "Austin", "state": "TX", "country": "USA"},
                     metrics={"burn_rate": -50000.0, "runway_months": 10.0},
                 ),
+                parent_companies=[],  # Empty list to test edge case
             ),
         ]
 
@@ -2293,7 +2321,8 @@ class TestStructTypesIntegration:
             query = """
                 SELECT
                     id,
-                    company
+                    company,
+                    parent_companies
                 FROM deep_nested_test
                 ORDER BY id
             """
@@ -2383,6 +2412,22 @@ class TestStructTypesIntegration:
         assert startup.company.departments[0].team_members == ["Grace"]
         assert startup.company.departments[0].contact.backup_emails == []
         assert startup.company.metrics["burn_rate"] == -50000.0
+
+        # Verify parent companies list
+        assert len(techcorp.parent_companies) == 1
+        parent = techcorp.parent_companies[0]
+        assert parent.company_name == "TechCorp Holdings"
+        assert parent.founded_year == 1990
+        assert parent.revenue == Decimal("5000000000.00")
+        assert parent.is_public is True
+        assert len(parent.departments) == 1
+        assert parent.departments[0].name == "Corporate"
+        assert parent.departments[0].team_members == ["CEO", "CFO"]
+        assert parent.departments[0].contact.email == "corp@techcorp-holdings.com"
+        assert parent.metrics["portfolio_value"] == 10000000000.0
+
+        # Verify empty parent companies list for startup
+        assert len(startup.parent_companies) == 0
 
 
 if __name__ == "__main__":
