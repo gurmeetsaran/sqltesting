@@ -262,9 +262,11 @@ def test_with_custom_parallelism():
 - **Parallel Table Creation**: When using physical tables with multiple mock tables, they are created in parallel by default for better performance
 - **Snowflake**: Full support for both CTE and physical table modes
 
-### Performance Optimization: Parallel Table Creation
+### Performance Optimization: Parallel Table Operations
 
-When using `use_physical_tables=True` with multiple mock tables, the library can create tables in parallel for better performance.
+When using `use_physical_tables=True` with multiple mock tables, the library can create and cleanup tables in parallel for better performance.
+
+#### Parallel Table Creation
 
 **Default Behavior:**
 - Parallel creation is **enabled by default** when using physical tables
@@ -290,6 +292,36 @@ TestCase(
     max_workers=4  # Custom worker limit
 )
 ```
+
+#### Parallel Table Cleanup
+
+**Default Behavior:**
+- Parallel cleanup is **enabled by default** when using physical tables
+- Uses the same smart worker allocation as table creation
+- Cleanup errors are logged as warnings (best-effort cleanup)
+
+**Customization:**
+```python
+# Disable parallel cleanup
+@sql_test(use_physical_tables=True, parallel_table_cleanup=False)
+
+# Custom worker count for both creation and cleanup
+@sql_test(use_physical_tables=True, max_workers=2)
+
+# In SQLTestCase directly
+TestCase(
+    query="...",
+    use_physical_tables=True,
+    parallel_table_creation=True,  # Default
+    parallel_table_cleanup=True,   # Default
+    max_workers=4  # Custom worker limit for both operations
+)
+```
+
+**Performance Benefits:**
+- Both table creation and cleanup operations are parallelized when multiple tables are involved
+- Significantly reduces test execution time for tests with many mock tables
+- Particularly beneficial for cloud databases where network latency is a factor
 
 ## Installation
 

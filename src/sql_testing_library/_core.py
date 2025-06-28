@@ -57,6 +57,7 @@ class SQLTestCase(Generic[T]):
     log_sql: Optional[bool] = None
     # Parallel execution settings
     parallel_table_creation: bool = True  # Default to True for better performance
+    parallel_table_cleanup: bool = True  # Default to True for better performance
     max_workers: Optional[int] = None
     # Backward compatibility
     execution_database: Optional[str] = None
@@ -316,7 +317,16 @@ class SQLTestFramework:
         finally:
             # Cleanup any temporary tables
             if self.temp_tables:
-                self.adapter.cleanup_temp_tables(self.temp_tables)
+                # Use parallel cleanup if enabled and there are multiple tables
+                if (
+                    test_case.use_physical_tables
+                    and test_case.parallel_table_cleanup
+                    and len(self.temp_tables) > 1
+                ):
+                    self._cleanup_temp_tables_parallel(self.temp_tables, test_case.max_workers)
+                else:
+                    # Use sequential cleanup for single table or when parallel is disabled
+                    self.adapter.cleanup_temp_tables(self.temp_tables)
                 self.temp_tables = []
 
     def _parse_sql_tables(self, query: str) -> List[str]:
@@ -761,6 +771,62 @@ class SQLTestFramework:
 
         # Replace table names and return modified query
         return self._replace_table_names_in_query(query, replacement_mapping)
+
+    def _cleanup_temp_tables_parallel(
+        self, table_names: List[str], max_workers: Optional[int] = None
+    ) -> None:
+        """Clean up temporary tables in parallel."""
+        import threading
+
+        # Thread-safe collection for tracking errors
+        errors = {}
+        lock = threading.Lock()
+
+        def drop_single_table(table_name: str) -> Optional[Exception]:
+            """Drop a single table and return any error."""
+            try:
+                # Use adapter's cleanup method for a single table
+                self.adapter.cleanup_temp_tables([table_name])
+                return None
+            except Exception as e:
+                return e
+
+        # Determine number of workers
+        if max_workers is None:
+            # Smart defaults based on table count
+            table_count = len(table_names)
+            if table_count <= 2:
+                max_workers = table_count  # No benefit from thread overhead for 1-2 tables
+            elif table_count <= 5:
+                max_workers = 3  # Moderate parallelism for small sets
+            elif table_count <= 10:
+                max_workers = 5  # Good parallelism without overwhelming most databases
+            else:
+                max_workers = 8  # Cap at 8 for large table counts
+
+        # Drop tables in parallel
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            # Submit all table drop tasks
+            futures = {
+                executor.submit(drop_single_table, table_name): table_name
+                for table_name in table_names
+            }
+
+            # Collect results as they complete
+            for future in as_completed(futures):
+                table_name = futures[future]
+                error = future.result()
+
+                if error is not None:
+                    with lock:
+                        errors[table_name] = error
+
+        # Log any errors that occurred (don't raise them as cleanup is best-effort)
+        if errors:
+            import logging
+
+            for table_name, error in errors.items():
+                logging.warning(f"Warning: Failed to drop table {table_name}: {error}")
 
     def _deserialize_results(self, result_df: "pd.DataFrame", result_class: Type[T]) -> List[T]:
         """Deserialize query results to typed objects."""
