@@ -115,7 +115,7 @@ twine = ">=4.0.0"
 ruff = ">=0.0.287"
 pre-commit = ">=3.5.0"
 commitizen = ">=3.0.0"
-mocksmith = {version = ">=2.0.1", extras = ["mock", "pydantic"]}
+mocksmith = {version = ">=2.1.0", extras = ["mock", "pydantic"]}
 
 [tool.poetry.plugins.pytest11]
 sql_testing = "sql_testing_library._pytest_plugin"

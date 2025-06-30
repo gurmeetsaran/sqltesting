@@ -420,10 +420,10 @@ class TestMocksmithAdvancedIntegration:
            - Usage: status: MyEnum (not status: Varchar())
            - Note: Returns enum instances, need .value for SQL storage
 
-        2. MONEY TYPE CONSTRAINTS:
-           - Current: Money() can generate negative values
-           - Desired: Money(min_value="0", max_value="10000")
-           - Workaround: Manual abs() or Decimal with checks
+        2. MONEY TYPE CONSTRAINTS: ✅ WORKS! (mocksmith 2.1.0+)
+           - Current: PositiveMoney(), NonNegativeMoney(), ConstrainedMoney()
+           - Usage: ConstrainedMoney(ge=0, le=10000) for custom ranges
+           - Also: ConstrainedInteger, ConstrainedFloat, ConstrainedDecimal available
 
         3. DECIMAL TYPE: ✅ WORKS!
            - Current: Native Decimal type supported
