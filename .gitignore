@@ -197,3 +197,6 @@ _site/
 
 # SQL test logs
 .sql_logs/
+
+# Mocksmith findings document (working document for fixing issues)
+MOCKSMITH_FINDINGS.md
