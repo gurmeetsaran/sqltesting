@@ -460,10 +460,10 @@ class TestMocksmithAdvancedIntegration:
            - Desired: Field dependencies (if status='vip' then discount > 20)
            - Workaround: Post-generation modification
 
-        10. BUILDER IMPROVEMENTS:
-            - Current: MockBuilder.build() vs mock() confusing
-            - Desired: Clear distinction or single method with mode parameter
-            - Note: Both work but unclear when to use which
+        10. BUILDER PATTERN API: ✅ Partially Works!
+            - Current: Two APIs - mock_builder() fluent and MockBuilder() dict-style
+            - Finding: Model.mock_builder().with_field(value).build() works nicely
+            - Note: Documentation could be clearer about the two patterns
         """
 
         # Test example showing workarounds
