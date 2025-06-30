@@ -349,10 +349,8 @@ adapter = redshift  # Default for all tests
 | String Map | `Dict[str, str]` | ✅ JSON | ✅ MAP | ✅ SUPER | ✅ MAP | ✅ VARIANT |
 | Int Map | `Dict[str, int]` | ✅ JSON | ✅ MAP | ✅ SUPER | ✅ MAP | ✅ VARIANT |
 | Mixed Map | `Dict[K, V]` | ✅ JSON | ✅ MAP | ✅ SUPER | ✅ MAP | ✅ VARIANT |
-| Struct | `dataclass` | ✅ STRUCT | ✅* ROW | ❌ | ✅* ROW | ❌ |
-| Struct | `Pydantic model` | ✅ STRUCT | ✅* ROW | ❌ | ✅* ROW | ❌ |
-
-\* See [Known Limitations](https://github.com/gurmeetsaran/sqltesting#known-limitations-and-todos) for Athena/Trino struct parsing issues
+| Struct | `dataclass` | ✅ STRUCT | ✅ ROW | ❌ | ✅ ROW | ❌ |
+| Struct | `Pydantic model` | ✅ STRUCT | ✅ ROW | ❌ | ✅ ROW | ❌ |
 
 ## Adapter-Specific SQL
 

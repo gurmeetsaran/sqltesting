@@ -198,9 +198,7 @@ class TestStructTypesIntegration:
         assert optional1.is_active is False
         assert optional1.address.street == "456 Oak Ave"
         assert optional1.address.city == "Boston"
-        # TODO: Fix Athena/Trino struct parser to preserve leading zeros in numeric-looking strings
-        # Currently, "02101" is parsed as "2101" when returned from Athena/Trino
-        assert optional1.address.zip_code in ["02101", "2101"]
+        assert optional1.address.zip_code == "02101"
 
         # Verify second row (with NULL optional_person)
         row2 = results[1]
@@ -1221,13 +1219,6 @@ class TestStructTypesIntegration:
 
     def test_struct_with_list_fields_full_deserialization(self, adapter_type, use_physical_tables):
         """Test returning and deserializing complete structs with list fields."""
-        # TODO: Fix Athena/Trino struct parser to handle mixed format:
-        # {key=value, list=[item1, item2]}
-        # Currently fails to parse structs containing list fields when returned as strings
-        if adapter_type in ["athena", "trino"]:
-            pytest.skip(
-                "Athena/Trino struct parser has limitations with list fields in key=value format"
-            )
 
         from typing import List
 
@@ -1564,13 +1555,6 @@ class TestStructTypesIntegration:
 
     def test_simple_struct_with_list_return(self, adapter_type, use_physical_tables):
         """Test returning simple struct with list fields to debug parsing."""
-        # TODO: Fix Athena/Trino struct parser to handle mixed format:
-        # {key=value, list=[item1, item2]}
-        # Currently fails to parse structs containing list fields when returned as strings
-        if adapter_type in ["athena", "trino"]:
-            pytest.skip(
-                "Athena/Trino struct parser has limitations with list fields in key=value format"
-            )
 
         from typing import List
 
@@ -1978,14 +1962,6 @@ class TestStructTypesIntegration:
         """Test returning and deserializing complete structs with dict fields."""
         from typing import Dict
 
-        # TODO: Fix Athena/Trino struct parser to handle mixed format:
-        # {key=value, map_field={k1=v1, k2=v2}}
-        # Currently fails to parse structs containing map fields when returned as strings
-        if adapter_type in ["athena", "trino"]:
-            pytest.skip(
-                "Athena/Trino struct parser has limitations with map fields in key=value format"
-            )
-
         # Note: We've fixed physical tables mode for BigQuery to handle structs with dict fields
 
         @dataclass
@@ -2086,13 +2062,6 @@ class TestStructTypesIntegration:
     def test_deeply_nested_struct_identity(self, adapter_type, use_physical_tables):
         """Identity test: deeply nested struct with primitives, lists, and dicts at each level."""
         from typing import Dict, List
-
-        # TODO: Fix Athena/Trino struct parser to handle deeply nested mixed format structs
-        # Currently fails to parse complex nested structs with lists and maps
-        if adapter_type in ["athena", "trino"]:
-            pytest.skip(
-                "Athena/Trino struct parser has limitations with deeply nested mixed structs"
-            )
 
         # Define structs as both dataclass (for input) and Pydantic (for output)
         # This allows us to use the same structure for both
