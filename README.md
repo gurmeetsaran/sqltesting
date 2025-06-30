@@ -1191,8 +1191,6 @@ The library has a few known limitations that are planned to be addressed in futu
 - **Redshift**: Struct types are not supported due to lack of native struct/record types (uses SUPER type for JSON)
 - **Snowflake**: Struct types are not supported due to lack of native struct/record types (uses VARIANT type for JSON)
 
-### Athena/Trino Struct Parsing Issues
-- **Numeric String Fields**: When returning struct fields from Athena/Trino, numeric-looking strings (e.g., zip codes like "02101") lose their leading zeros and are parsed as integers. This is due to the string-based struct format returned by these engines. (See TODO in `_types.py:_parse_string_value`)
 
 ### Database-Specific Limitations
 - **BigQuery**: Does not support nested arrays (arrays of arrays). This is a BigQuery database limitation, not a library limitation. (See TODO in `test_struct_types_integration.py:test_nested_lists`)
@@ -1201,7 +1199,6 @@ The library has a few known limitations that are planned to be addressed in futu
 - Add support for more SQL dialects
 - Improve error handling for malformed SQL
 - Enhance documentation with more examples
-- Add option to preserve string types for numeric-looking values in struct parsing
 
 ## Requirements
 

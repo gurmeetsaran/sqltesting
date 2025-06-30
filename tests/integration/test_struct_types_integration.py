@@ -198,9 +198,7 @@ class TestStructTypesIntegration:
         assert optional1.is_active is False
         assert optional1.address.street == "456 Oak Ave"
         assert optional1.address.city == "Boston"
-        # TODO: Fix Athena/Trino struct parser to preserve leading zeros in numeric-looking strings
-        # Currently, "02101" is parsed as "2101" when returned from Athena/Trino
-        assert optional1.address.zip_code in ["02101", "2101"]
+        assert optional1.address.zip_code == "02101"
 
         # Verify second row (with NULL optional_person)
         row2 = results[1]

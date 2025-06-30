@@ -113,8 +113,8 @@ def _parse_string_value(value_str: str) -> Any:
         return None
 
     # Try to parse as number
-    # TODO: Add option to preserve strings that look like numbers (e.g., "02101" zip codes)
-    # Currently, numeric-looking strings are converted to int/float, losing leading zeros
+    # Note: Callers should check if the target type is str before calling this function
+    # to preserve numeric-looking strings with leading zeros (e.g., "02101" zip codes)
     try:
         if "." in value_str:
             return float(value_str)
@@ -400,9 +400,14 @@ class BaseTypeConverter:
                             # This is a map/struct, convert it directly
                             result[key] = self.convert(value_str, field_type)
                         else:
-                            # Parse and convert the value normally
-                            parsed_value = _parse_string_value(value_str)
-                            result[key] = self.convert(parsed_value, field_type)
+                            # If the target type is string, preserve the value as-is
+                            # to maintain leading zeros in numeric-looking strings
+                            if field_type is str:
+                                result[key] = value_str
+                            else:
+                                # Parse and convert the value normally
+                                parsed_value = _parse_string_value(value_str)
+                                result[key] = self.convert(parsed_value, field_type)
 
                 return _create_struct_instance(target_type, result)
 
