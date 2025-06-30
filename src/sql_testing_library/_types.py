@@ -352,10 +352,9 @@ class BaseTypeConverter:
 
                 # Check if it's a simple comma-separated format (like Athena returns)
                 # e.g., "{John Doe, 30, 75000.5, {123 Main St, New York, 10001}, true}"
-                # TODO: Improve parser to handle mixed format with lists:
-                # {key=value, list=[item1, item2]}
-                # Currently fails when structs contain both key=value pairs and array notation
-                if "=" not in inner_value or inner_value.count(",") > inner_value.count("="):
+                # We've now fixed the parser to handle mixed format with lists and maps:
+                # {key=value, list=[item1, item2], map={k1=v1, k2=v2}}
+                if "=" not in inner_value:
                     # This looks like positional values, not key=value pairs
                     field_names = _get_struct_field_names(target_type)
                     values = _parse_bracketed_string(value)
@@ -391,9 +390,19 @@ class BaseTypeConverter:
                         value_str = value_str.strip()
                         # Get the field type for this key
                         field_type = type_hints.get(key, str)
-                        # Parse and convert the value
-                        parsed_value = _parse_string_value(value_str)
-                        result[key] = self.convert(parsed_value, field_type)
+
+                        # Check if value_str is an array notation [item1, item2, ...]
+                        if value_str.startswith("[") and value_str.endswith("]"):
+                            # This is an array, convert it directly using the converter
+                            result[key] = self.convert(value_str, field_type)
+                        # Check if value_str is a map notation {k1=v1, k2=v2}
+                        elif value_str.startswith("{") and value_str.endswith("}"):
+                            # This is a map/struct, convert it directly
+                            result[key] = self.convert(value_str, field_type)
+                        else:
+                            # Parse and convert the value normally
+                            parsed_value = _parse_string_value(value_str)
+                            result[key] = self.convert(parsed_value, field_type)
 
                 return _create_struct_instance(target_type, result)
 
