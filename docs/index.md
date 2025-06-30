@@ -143,6 +143,14 @@ def test_user_query():
       </div>
     </a>
   </div>
+  <div class="col-4 col-md-4 col-lg-4">
+    <a href="mocksmith_integration" class="card">
+      <div class="card-body">
+        <h3>Mocksmith Integration</h3>
+        <p>Generate realistic test data automatically</p>
+      </div>
+    </a>
+  </div>
 </div>
 
 ## 🚀 Getting Started

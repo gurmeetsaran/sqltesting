@@ -1183,6 +1183,41 @@ The library automatically:
 
 For detailed usage and configuration options, see the example files included.
 
+## Integration with Mocksmith
+
+SQL Testing Library works seamlessly with [Mocksmith](https://github.com/gurmeetsaran/mocksmith) for automatic test data generation. Mocksmith can reduce your test setup code by ~70% while providing more realistic test data.
+
+Install mocksmith with: `pip install mocksmith[mock,pydantic]`
+
+### Quick Example
+
+```python
+# Without Mocksmith - Manual data creation
+customers = []
+for i in range(100):
+    customers.append(Customer(
+        id=i + 1,
+        name=f"Customer {i + 1}",
+        email=f"customer{i + 1}@test.com",
+        balance=Decimal(str(random.uniform(0, 10000)))
+    ))
+
+# With Mocksmith - Automatic realistic data
+from mocksmith import mockable, Varchar, Integer, Money
+
+@mockable
+@dataclass
+class Customer:
+    id: Integer()
+    name: Varchar(100)
+    email: Varchar(255)
+    balance: Money()
+
+customers = [Customer.mock() for _ in range(100)]
+```
+
+See the [Mocksmith Integration Guide](docs/mocksmith_integration.md) and [examples](examples/mocksmith_integration_example.py) for detailed usage patterns.
+
 ## Known Limitations and TODOs
 
 The library has a few known limitations that are planned to be addressed in future updates:
