@@ -62,6 +62,31 @@ class Customer:
 customers = [Customer.mock() for _ in range(100)]
 ```
 
+### Varchar Constraints (Mocksmith 3.0.1+)
+
+Mocksmith now supports `startswith` and `endswith` constraints for Varchar fields:
+
+```python
+from mocksmith import mockable, Varchar, Integer
+
+@mockable
+@dataclass
+class User:
+    user_id: Varchar(50, startswith="user_")  # e.g., "user_12345"
+    email: Varchar(100, endswith="@company.com")  # e.g., "john.doe@company.com"
+
+@mockable
+@dataclass
+class Product:
+    sku: Varchar(20, startswith="PROD-", endswith="-US")  # e.g., "PROD-ABC123-US"
+    barcode: Varchar(13, startswith="978")  # e.g., "9781234567890"
+    serial_number: Varchar(20, startswith="SN-")  # e.g., "SN-2024-ABC-123"
+
+# Generate data with constraints
+users = [User.mock() for _ in range(10)]
+products = [Product.mock() for _ in range(50)]
+```
+
 ## Real-World Testing Example
 
 Here's a complete example testing a customer segmentation query:
