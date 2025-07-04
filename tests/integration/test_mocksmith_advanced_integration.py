@@ -11,7 +11,16 @@ from enum import Enum
 from typing import Optional
 
 import pytest
-from mocksmith import Boolean, Date, Integer, MockBuilder, Money, Varchar, mockable
+from mocksmith import (
+    Boolean,
+    ConstrainedMoney,
+    Date,
+    Integer,
+    MockBuilder,
+    Money,
+    Varchar,
+    mockable,
+)
 from pydantic import BaseModel
 
 from sql_testing_library import BaseMockTable, TestCase, sql_test
@@ -297,10 +306,9 @@ class TestMocksmithAdvancedIntegration:
             product_id: Integer()
             name: Varchar(100)
             category: Varchar(50)
-            # ISSUE: Would be nice to have Decimal type with constraints
-            # price: Decimal(min_value="0.01", max_value="9999.99", decimal_places=2)
-            price: Money()
-            cost: Money()
+            # Use ConstrainedMoney to avoid decimal overflow in Trino
+            price: ConstrainedMoney(ge=Decimal("0.01"), le=Decimal("9999.99"))
+            cost: ConstrainedMoney(ge=Decimal("0.01"), le=Decimal("9999.99"))
             stock_quantity: Integer(min_value=0, max_value=1000)
             is_featured: Boolean()
             # ISSUE: No built-in URL type
