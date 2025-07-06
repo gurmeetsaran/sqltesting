@@ -134,7 +134,8 @@ class TestPytestPluginConfig(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp_dir:
             pytest_ini_path = os.path.join(temp_dir, "pytest.ini")
             with open(pytest_ini_path, "w") as f:
-                f.write("""
+                f.write(
+                    """
 [sql_testing]
 adapter = bigquery
 
@@ -142,7 +143,8 @@ adapter = bigquery
 project_id = test-project
 dataset_id = test_dataset
 credentials_path = /path/to/credentials.json
-                """)
+                """
+                )
 
             # Create SQLTestDecorator instance
             decorator = SQLTestDecorator()
@@ -156,10 +158,12 @@ credentials_path = /path/to/credentials.json
 
                 # Change the file (this shouldn't affect the cached parser)
                 with open(pytest_ini_path, "w") as f:
-                    f.write("""
+                    f.write(
+                        """
 [sql_testing]
 adapter = athena
-                    """)
+                    """
+                    )
 
                 # Second call should return the cached parser
                 config_parser2 = decorator._get_config_parser()
@@ -418,7 +422,11 @@ class TestSQLTestDecorator(unittest.TestCase):
         with mock.patch("sql_testing_library._adapters.trino.TrinoAdapter") as mock_adapter:
             self.decorator._create_framework_from_config("trino")
 
-            expected_auth = {"type": "basic", "user": "test-user", "password": "test-password"}
+            expected_auth = {
+                "type": "basic",
+                "user": "test-user",
+                "password": "test-password",
+            }
             mock_adapter.assert_called_once_with(
                 host="localhost",
                 port=8080,
@@ -876,7 +884,9 @@ class TestSQLTestDecoratorAdditionalCoverage(unittest.TestCase):
             self.decorator._create_framework_from_config("bigquery")
 
             mock_adapter.assert_called_once_with(
-                project_id="test-project", dataset_id="test-dataset", credentials_path=None
+                project_id="test-project",
+                dataset_id="test-dataset",
+                credentials_path=None,
             )
 
     def test_get_config_parser_with_project_root_change(self):
@@ -885,10 +895,12 @@ class TestSQLTestDecoratorAdditionalCoverage(unittest.TestCase):
             # Create pytest.ini file
             pytest_ini_path = os.path.join(temp_dir, "pytest.ini")
             with open(pytest_ini_path, "w") as f:
-                f.write("""
+                f.write(
+                    """
 [sql_testing]
 adapter = bigquery
-                """)
+                """
+                )
 
             original_cwd = os.getcwd()
             try:

@@ -108,9 +108,24 @@ class TestSQLTestFramework(unittest.TestCase):
         ]
 
         self.test_orders = [
-            {"id": 1, "user_id": 1, "amount": Decimal("100.00"), "order_date": date(2023, 6, 1)},
-            {"id": 2, "user_id": 1, "amount": Decimal("150.00"), "order_date": date(2023, 6, 2)},
-            {"id": 3, "user_id": 2, "amount": Decimal("200.00"), "order_date": date(2023, 6, 3)},
+            {
+                "id": 1,
+                "user_id": 1,
+                "amount": Decimal("100.00"),
+                "order_date": date(2023, 6, 1),
+            },
+            {
+                "id": 2,
+                "user_id": 1,
+                "amount": Decimal("150.00"),
+                "order_date": date(2023, 6, 2),
+            },
+            {
+                "id": 3,
+                "user_id": 2,
+                "amount": Decimal("200.00"),
+                "order_date": date(2023, 6, 3),
+            },
         ]
 
     def test_parse_sql_tables_simple_query(self):
@@ -440,7 +455,12 @@ class TestSQLTestFramework(unittest.TestCase):
 
         df = pd.DataFrame(
             [
-                {"user_id": 1, "user_name": "John", "total_orders": 5, "total_amount": np.nan},
+                {
+                    "user_id": 1,
+                    "user_name": "John",
+                    "total_orders": 5,
+                    "total_amount": np.nan,
+                },
                 {
                     "user_id": 2,
                     "user_name": "Jane",

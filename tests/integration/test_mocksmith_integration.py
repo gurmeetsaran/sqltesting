@@ -382,7 +382,7 @@ class TestMocksmithIntegration:
                             if random.random() > 0.3
                             else None
                         ),
-                        notes=None if random.random() > 0.5 else f"Order note {order_id}",
+                        notes=(None if random.random() > 0.5 else f"Order note {order_id}"),
                     )
                 )
                 order_id += 1

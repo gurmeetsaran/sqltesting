@@ -218,7 +218,13 @@ class TestBigQueryIntegration:
                             True,
                         ),
                         User(2, "Bob Smith", "bob@example.com", date(2023, 2, 20), False),
-                        User(3, "Charlie Brown", "charlie@example.com", date(2023, 1, 3), False),
+                        User(
+                            3,
+                            "Charlie Brown",
+                            "charlie@example.com",
+                            date(2023, 1, 3),
+                            False,
+                        ),
                     ]
                 ),
                 OrdersMockTable(

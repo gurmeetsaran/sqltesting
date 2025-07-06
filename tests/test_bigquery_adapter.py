@@ -9,7 +9,10 @@ from unittest import mock
 
 import pandas as pd
 
-from sql_testing_library._adapters.bigquery import BigQueryAdapter, BigQueryTypeConverter
+from sql_testing_library._adapters.bigquery import (
+    BigQueryAdapter,
+    BigQueryTypeConverter,
+)
 from sql_testing_library._mock_table import BaseMockTable
 
 

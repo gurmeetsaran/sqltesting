@@ -3,7 +3,17 @@
 import logging
 from datetime import date, datetime
 from decimal import Decimal
-from typing import TYPE_CHECKING, Any, List, Optional, Tuple, Type, Union, get_args, get_type_hints
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    List,
+    Optional,
+    Tuple,
+    Type,
+    Union,
+    get_args,
+    get_type_hints,
+)
 
 
 if TYPE_CHECKING:
@@ -278,7 +288,9 @@ class BigQueryAdapter(DatabaseAdapter):
                 nested_fields = self._get_struct_fields(col_type)
                 schema.append(
                     bigquery.SchemaField(
-                        col_name, bigquery.enums.SqlTypeNames.STRUCT, fields=nested_fields
+                        col_name,
+                        bigquery.enums.SqlTypeNames.STRUCT,
+                        fields=nested_fields,
                     )
                 )
             else:
@@ -319,7 +331,9 @@ class BigQueryAdapter(DatabaseAdapter):
                 nested_fields = self._get_struct_fields(field_type)
                 fields.append(
                     bigquery.SchemaField(
-                        field_name, bigquery.enums.SqlTypeNames.STRUCT, fields=nested_fields
+                        field_name,
+                        bigquery.enums.SqlTypeNames.STRUCT,
+                        fields=nested_fields,
                     )
                 )
             # Handle List types in structs

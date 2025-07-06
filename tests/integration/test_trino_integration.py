@@ -117,13 +117,28 @@ class TestTrinoIntegration:
         """Set up test data for integration tests."""
         self.customers_data = [
             Customer(
-                1, "Alice Johnson", "alice@example.com", date(2023, 1, 15), True, Decimal("1500.00")
+                1,
+                "Alice Johnson",
+                "alice@example.com",
+                date(2023, 1, 15),
+                True,
+                Decimal("1500.00"),
             ),
             Customer(
-                2, "Bob Smith", "bob@example.com", date(2023, 2, 20), False, Decimal("750.00")
+                2,
+                "Bob Smith",
+                "bob@example.com",
+                date(2023, 2, 20),
+                False,
+                Decimal("750.00"),
             ),
             Customer(
-                3, "Carol Davis", "carol@example.com", date(2023, 3, 10), True, Decimal("2250.00")
+                3,
+                "Carol Davis",
+                "carol@example.com",
+                date(2023, 3, 10),
+                True,
+                Decimal("2250.00"),
             ),
         ]
 
@@ -308,7 +323,14 @@ class TestTrinoIntegration:
                             True,
                             Decimal("1500.00"),
                         ),
-                        Customer(2, "Bob Smith", "bob@example.com", date(2023, 2, 20), False, None),
+                        Customer(
+                            2,
+                            "Bob Smith",
+                            "bob@example.com",
+                            date(2023, 2, 20),
+                            False,
+                            None,
+                        ),
                     ]
                 )
             ],
@@ -562,7 +584,14 @@ class TestTrinoIntegration:
         """
 
         test_customers = [
-            Customer(1, "Alice", "alice@example.com", date(2023, 1, 1), True, Decimal("1000.00")),
+            Customer(
+                1,
+                "Alice",
+                "alice@example.com",
+                date(2023, 1, 1),
+                True,
+                Decimal("1000.00"),
+            ),
             Customer(2, "Bob", "bob@example.com", date(2023, 1, 2), False, Decimal("500.00")),
         ]
 
@@ -573,7 +602,10 @@ class TestTrinoIntegration:
 
         @sql_test(
             adapter_type="trino",
-            mock_tables=[CustomersMockTable(test_customers), OrdersMockTable(test_orders)],
+            mock_tables=[
+                CustomersMockTable(test_customers),
+                OrdersMockTable(test_orders),
+            ],
             result_class=OrderSummaryResult,
         )
         def query_unqualified_tables():
