@@ -28,6 +28,7 @@ The SQL Testing Library supports multiple database engines through adapters. Eac
 | Redshift | `RedshiftAdapter` | `psycopg2-binary` | PostgreSQL-based |
 | Trino | `TrinoAdapter` | `trino` | Trino SQL |
 | Snowflake | `SnowflakeAdapter` | `snowflake-connector-python` | Snowflake SQL |
+| DuckDB | `DuckDBAdapter` | `duckdb` | DuckDB SQL |
 
 ## BigQuery Adapter
 
@@ -284,6 +285,120 @@ class MyMockTable(BaseMockTable):
 - Physical table mode has visibility issues in tests
 - Case sensitivity requires careful handling
 
+## DuckDB Adapter
+
+### Installation
+
+```bash
+pip install sql-testing-library[duckdb]
+```
+
+### Configuration
+
+```ini
+[sql_testing.duckdb]
+database = :memory:  # Use in-memory database (default)
+# Or use a file-based database:
+# database = /path/to/database.db
+```
+
+### Features
+
+- **In-Memory Database**: Default configuration uses in-memory database (`:memory:`)
+- **File-Based Database**: Can use persistent file-based databases
+- **Native Complex Types**: Full support for:
+  - Arrays: `LIST` type for `List[T]`
+  - Maps: `MAP` type for `Dict[K, V]`
+  - Structs: `STRUCT` type for dataclasses and Pydantic models
+- **JSON Support**: Automatic handling of nested JSON data
+- **High Performance**: Optimized for analytical queries
+- **No Query Limits**: No inherent query size restrictions
+- **SQL Compatibility**: PostgreSQL-compatible SQL with extensions
+
+### Database Context
+
+DuckDB uses simple table names (no schema required by default):
+
+```python
+class MyMockTable(BaseMockTable):
+    def get_database_name(self) -> str:
+        return ""  # No database/schema prefix needed
+```
+
+### Example
+
+```python
+from decimal import Decimal
+from datetime import date
+from dataclasses import dataclass
+from typing import List, Dict
+
+@dataclass
+class Address:
+    street: str
+    city: str
+    zip_code: str
+
+@dataclass
+class User:
+    id: int
+    name: str
+    address: Address
+    scores: List[int]
+    metadata: Dict[str, str]
+
+# DuckDB handles structs, arrays, and maps natively
+users = UsersMockTable([
+    User(1, "Alice", Address("123 Main St", "NYC", "10001"),
+         [85, 92, 78], {"role": "admin", "status": "active"}),
+    User(2, "Bob", Address("456 Oak Ave", "LA", "90210"),
+         [75, 88, 91], {"role": "user", "status": "pending"})
+])
+```
+
+### SQL Examples
+
+```sql
+-- Struct field access
+SELECT
+    u.name,
+    u.address.city,
+    u.address.zip_code
+FROM users u
+WHERE u.address.city = 'NYC'
+
+-- Array operations
+SELECT
+    u.name,
+    list_avg(u.scores) as avg_score,
+    len(u.scores) as num_scores
+FROM users u
+WHERE list_contains(u.scores, 85)
+
+-- Map operations
+SELECT
+    u.name,
+    u.metadata['role'] as user_role,
+    u.metadata['status'] as user_status
+FROM users u
+WHERE u.metadata['role'] = 'admin'
+
+-- Complex aggregations
+SELECT
+    u.address.city,
+    count(*) as user_count,
+    list_avg(list_avg(u.scores)) as city_avg_score
+FROM users u
+GROUP BY u.address.city
+```
+
+### Performance Tips
+
+- Use in-memory database (`:memory:`) for testing (default)
+- DuckDB is optimized for analytical workloads
+- No need for indexing in test scenarios
+- Automatic query optimization and vectorized execution
+
 ## Choosing an Adapter
 
 ### Default Adapter Configuration
@@ -329,28 +444,28 @@ adapter = redshift  # Default for all tests
 
 ### Primitive Types
 
-| Type | BigQuery | Athena | Redshift | Trino | Snowflake |
-|------|----------|---------|----------|-------|-----------|
-| String | ✅ STRING | ✅ VARCHAR | ✅ VARCHAR | ✅ VARCHAR | ✅ VARCHAR |
-| Integer | ✅ INT64 | ✅ BIGINT | ✅ INTEGER | ✅ BIGINT | ✅ NUMBER |
-| Float | ✅ FLOAT64 | ✅ DOUBLE | ✅ REAL | ✅ DOUBLE | ✅ FLOAT |
-| Boolean | ✅ BOOL | ✅ BOOLEAN | ✅ BOOLEAN | ✅ BOOLEAN | ✅ BOOLEAN |
-| Date | ✅ DATE | ✅ DATE | ✅ DATE | ✅ DATE | ✅ DATE |
-| Datetime | ✅ DATETIME | ✅ TIMESTAMP | ✅ TIMESTAMP | ✅ TIMESTAMP | ✅ TIMESTAMP |
-| Decimal | ✅ NUMERIC | ✅ DECIMAL | ✅ DECIMAL | ✅ DECIMAL | ✅ NUMBER |
+| Type | BigQuery | Athena | Redshift | Trino | Snowflake | DuckDB |
+|------|----------|---------|----------|-------|-----------|---------|
+| String | ✅ STRING | ✅ VARCHAR | ✅ VARCHAR | ✅ VARCHAR | ✅ VARCHAR | ✅ VARCHAR |
+| Integer | ✅ INT64 | ✅ BIGINT | ✅ INTEGER | ✅ BIGINT | ✅ NUMBER | ✅ BIGINT |
+| Float | ✅ FLOAT64 | ✅ DOUBLE | ✅ REAL | ✅ DOUBLE | ✅ FLOAT | ✅ DOUBLE |
+| Boolean | ✅ BOOL | ✅ BOOLEAN | ✅ BOOLEAN | ✅ BOOLEAN | ✅ BOOLEAN | ✅ BOOLEAN |
+| Date | ✅ DATE | ✅ DATE | ✅ DATE | ✅ DATE | ✅ DATE | ✅ DATE |
+| Datetime | ✅ DATETIME | ✅ TIMESTAMP | ✅ TIMESTAMP | ✅ TIMESTAMP | ✅ TIMESTAMP | ✅ TIMESTAMP |
+| Decimal | ✅ NUMERIC | ✅ DECIMAL | ✅ DECIMAL | ✅ DECIMAL | ✅ NUMBER | ✅ DECIMAL |
 
 ### Complex Types
 
-| Type | Python Type | BigQuery | Athena | Redshift | Trino | Snowflake |
-|------|-------------|----------|---------|----------|-------|-----------|
-| String Array | `List[str]` | ✅ ARRAY | ✅ ARRAY | ✅ JSON | ✅ ARRAY | ✅ ARRAY |
-| Int Array | `List[int]` | ✅ ARRAY | ✅ ARRAY | ✅ JSON | ✅ ARRAY | ✅ ARRAY |
-| Decimal Array | `List[Decimal]` | ✅ ARRAY | ✅ ARRAY | ✅ JSON | ✅ ARRAY | ✅ ARRAY |
-| String Map | `Dict[str, str]` | ✅ JSON | ✅ MAP | ✅ SUPER | ✅ MAP | ✅ VARIANT |
-| Int Map | `Dict[str, int]` | ✅ JSON | ✅ MAP | ✅ SUPER | ✅ MAP | ✅ VARIANT |
-| Mixed Map | `Dict[K, V]` | ✅ JSON | ✅ MAP | ✅ SUPER | ✅ MAP | ✅ VARIANT |
-| Struct | `dataclass` | ✅ STRUCT | ✅ ROW | ❌ | ✅ ROW | ❌ |
-| Struct | `Pydantic model` | ✅ STRUCT | ✅ ROW | ❌ | ✅ ROW | ❌ |
+| Type | Python Type | BigQuery | Athena | Redshift | Trino | Snowflake | DuckDB |
+|------|-------------|----------|---------|----------|-------|-----------|---------|
+| String Array | `List[str]` | ✅ ARRAY | ✅ ARRAY | ✅ JSON | ✅ ARRAY | ✅ ARRAY | ✅ LIST |
+| Int Array | `List[int]` | ✅ ARRAY | ✅ ARRAY | ✅ JSON | ✅ ARRAY | ✅ ARRAY | ✅ LIST |
+| Decimal Array | `List[Decimal]` | ✅ ARRAY | ✅ ARRAY | ✅ JSON | ✅ ARRAY | ✅ ARRAY | ✅ LIST |
+| String Map | `Dict[str, str]` | ✅ JSON | ✅ MAP | ✅ SUPER | ✅ MAP | ✅ VARIANT | ✅ MAP |
+| Int Map | `Dict[str, int]` | ✅ JSON | ✅ MAP | ✅ SUPER | ✅ MAP | ✅ VARIANT | ✅ MAP |
+| Mixed Map | `Dict[K, V]` | ✅ JSON | ✅ MAP | ✅ SUPER | ✅ MAP | ✅ VARIANT | ✅ MAP |
+| Struct | `dataclass` | ✅ STRUCT | ✅ ROW | ❌ | ✅ ROW | ❌ | ✅ STRUCT |
+| Struct | `Pydantic model` | ✅ STRUCT | ✅ ROW | ❌ | ✅ ROW | ❌ | ✅ STRUCT |
 
 ## Adapter-Specific SQL
 
@@ -472,6 +587,73 @@ FROM user_settings
 SELECT * FROM users AT(TIMESTAMP => '2024-01-01'::TIMESTAMP)
 ```
 
+### DuckDB
+
+```sql
+-- Arrays/Lists
+SELECT [1, 2, 3] as numbers, ['a', 'b', 'c'] as strings
+
+-- List operations
+SELECT
+    list_contains(my_list, 'target') as contains_target,
+    list_avg(scores) as avg_score,
+    len(my_list) as list_length
+FROM my_table
+
+-- Maps
+SELECT MAP {'key1': 'value1', 'key2': 'value2'} as my_map
+
+-- Map operations
+SELECT
+    my_map['key1'] as value1,
+    map_keys(my_map) as all_keys,
+    map_values(my_map) as all_values
+FROM my_table
+
+-- Structs
+SELECT {'name': 'Alice', 'age': 30, 'city': 'NYC'} as person
+
+-- Struct field access
+SELECT
+    person.name,
+    person.age,
+    person.address.city
+FROM people
+WHERE person.age > 25
+
+-- Complex nested operations
+SELECT
+    u.name,
+    u.address.city,
+    list_avg(u.scores) as avg_score,
+    u.metadata['role'] as user_role
+FROM users u
+WHERE u.address.city = 'NYC'
+    AND list_contains(u.scores, 85)
+    AND u.metadata['status'] = 'active'
+
+-- Array aggregations
+SELECT
+    city,
+    count(*) as user_count,
+    list_avg(list_avg(scores)) as city_avg_score
+FROM (
+    SELECT
+        u.address.city as city,
+        u.scores as scores
+    FROM users u
+)
+GROUP BY city
+
+-- Window functions with complex types
+SELECT
+    u.name,
+    u.address.city,
+    list_avg(u.scores) as avg_score,
+    row_number() OVER (PARTITION BY u.address.city ORDER BY list_avg(u.scores) DESC) as city_rank
+FROM users u
+```
+
 ## Troubleshooting
 
 ### Connection Issues
@@ -481,6 +663,7 @@ SELECT * FROM users AT(TIMESTAMP => '2024-01-01'::TIMESTAMP)
 3. **Redshift**: Check security groups and network access
 4. **Trino**: Ensure correct authentication method
 5. **Snowflake**: Verify account identifier format
+6. **DuckDB**: Check file permissions for file-based databases
 
 ### Query Failures
 

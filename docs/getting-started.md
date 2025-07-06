@@ -36,6 +36,9 @@ pip install sql-testing-library[trino]
 
 # For Snowflake
 pip install sql-testing-library[snowflake]
+
+# For DuckDB
+pip install sql-testing-library[duckdb]
 ```
 
 ### Install with all database adapters
@@ -65,7 +68,7 @@ The library uses pytest configuration files to manage database connections. Crea
 
 ```ini
 [sql_testing]
-adapter = bigquery  # Choose: bigquery, athena, redshift, trino, or snowflake
+adapter = bigquery  # Choose: bigquery, athena, redshift, trino, snowflake, or duckdb
 ```
 
 ### Database-specific configuration
@@ -141,6 +144,28 @@ private_key_path = /path/to/private_key.pem
 # Option 2: Password authentication (for accounts without MFA)
 password = snowflake_password
 ```
+
+#### DuckDB
+
+DuckDB is perfect for local testing and development with excellent performance:
+
+```ini
+[sql_testing.duckdb]
+database = :memory:  # Use in-memory database (default, fastest for testing)
+# Or use a file-based database:
+# database = /path/to/test_database.db
+```
+
+**DuckDB Configuration Options:**
+
+- **`:memory:`** (default): In-memory database, fastest for testing, data doesn't persist
+- **File path**: Persistent database file, useful for debugging or data inspection
+
+**Advantages of DuckDB:**
+- No external dependencies or cloud setup required
+- Excellent performance for analytical queries
+- Full support for complex types (arrays, structs, maps)
+- Perfect for local development and CI/CD testing
 
 ## Writing Your First Test
 
