@@ -270,7 +270,9 @@ class TestMocksmithAdvancedIntegration:
         all_orders = high_value_orders + cancelled_orders + regular_orders
 
         @sql_test(
-            adapter_type=adapter_type, mock_tables=[OrdersMockTable(all_orders)], result_class=dict
+            adapter_type=adapter_type,
+            mock_tables=[OrdersMockTable(all_orders)],
+            result_class=dict,
         )
         def analyze_payment_methods():
             return TestCase(
@@ -354,7 +356,9 @@ class TestMocksmithAdvancedIntegration:
             # Regular products
             for _ in range(7):
                 product = Product.mock(
-                    product_id=len(products) + 1, category=category.value, is_featured=False
+                    product_id=len(products) + 1,
+                    category=category.value,
+                    is_featured=False,
                 )
                 # Fix negative values
                 product.price = abs(product.price) if product.price < 0 else product.price
@@ -518,7 +522,9 @@ class TestMocksmithAdvancedIntegration:
 
         # Verify workarounds work with SQL
         @sql_test(
-            adapter_type=adapter_type, mock_tables=[CustomersMockTable(examples)], result_class=dict
+            adapter_type=adapter_type,
+            mock_tables=[CustomersMockTable(examples)],
+            result_class=dict,
         )
         def test_workarounds():
             return TestCase(

@@ -8,7 +8,10 @@ from unittest import mock
 
 import pandas as pd
 
-from sql_testing_library._adapters.redshift import RedshiftAdapter, RedshiftTypeConverter
+from sql_testing_library._adapters.redshift import (
+    RedshiftAdapter,
+    RedshiftTypeConverter,
+)
 from sql_testing_library._mock_table import BaseMockTable
 
 

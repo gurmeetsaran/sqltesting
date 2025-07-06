@@ -165,7 +165,10 @@ class SQLTestFramework:
                 else:
                     # Use sequential execution for single table or when parallel is disabled
                     final_query = self._execute_with_physical_tables(
-                        test_case.query, table_mapping, test_case.mock_tables, temp_table_queries
+                        test_case.query,
+                        table_mapping,
+                        test_case.mock_tables,
+                        temp_table_queries,
                     )
             else:
                 # Generate query with CTEs
@@ -254,7 +257,11 @@ class SQLTestFramework:
                 )
 
                 # Print log location if environment variable is set
-                if os.environ.get("SQL_TEST_LOG_ALL", "").lower() in ("true", "1", "yes"):
+                if os.environ.get("SQL_TEST_LOG_ALL", "").lower() in (
+                    "true",
+                    "1",
+                    "yes",
+                ):
                     import sys
 
                     print(f"\nSQL logged to: file://{log_path}", file=sys.stderr)  # noqa: T201
@@ -289,7 +296,7 @@ class SQLTestFramework:
                     else:
                         # If we haven't stored data yet (error happened early), store it now
                         sql_test_execution_data[test_id] = {
-                            "sql": final_query if "final_query" in locals() else test_case.query,
+                            "sql": (final_query if "final_query" in locals() else test_case.query),
                             "test_name": test_context.get("test_name", "unknown_test"),
                             "test_class": test_context.get("test_class"),
                             "test_file": test_context.get("test_file"),

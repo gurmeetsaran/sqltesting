@@ -124,13 +124,28 @@ class TestRedshiftIntegration:
         """Set up test data for all integration tests."""
         self.customers_data = [
             Customer(
-                1, "Alice Johnson", "alice@example.com", date(2023, 1, 15), True, Decimal("1500.00")
+                1,
+                "Alice Johnson",
+                "alice@example.com",
+                date(2023, 1, 15),
+                True,
+                Decimal("1500.00"),
             ),
             Customer(
-                2, "Bob Smith", "bob@example.com", date(2023, 2, 20), False, Decimal("750.00")
+                2,
+                "Bob Smith",
+                "bob@example.com",
+                date(2023, 2, 20),
+                False,
+                Decimal("750.00"),
             ),
             Customer(
-                3, "Carol Davis", "carol@example.com", date(2023, 3, 10), True, Decimal("2200.00")
+                3,
+                "Carol Davis",
+                "carol@example.com",
+                date(2023, 3, 10),
+                True,
+                Decimal("2200.00"),
             ),
             Customer(4, "David Wilson", "david@example.com", date(2023, 1, 5), False, None),
         ]
@@ -276,16 +291,32 @@ class TestRedshiftIntegration:
                 OrdersMockTable(
                     [
                         Order(
-                            101, 1, datetime(2023, 4, 1, 10, 30, 0), Decimal("299.99"), "completed"
+                            101,
+                            1,
+                            datetime(2023, 4, 1, 10, 30, 0),
+                            Decimal("299.99"),
+                            "completed",
                         ),
                         Order(
-                            102, 1, datetime(2023, 4, 15, 14, 20, 0), Decimal("149.50"), "completed"
+                            102,
+                            1,
+                            datetime(2023, 4, 15, 14, 20, 0),
+                            Decimal("149.50"),
+                            "completed",
                         ),
                         Order(
-                            103, 2, datetime(2023, 4, 5, 9, 15, 0), Decimal("89.99"), "completed"
+                            103,
+                            2,
+                            datetime(2023, 4, 5, 9, 15, 0),
+                            Decimal("89.99"),
+                            "completed",
                         ),
                         Order(
-                            104, 3, datetime(2023, 4, 10, 16, 45, 0), Decimal("199.99"), "completed"
+                            104,
+                            3,
+                            datetime(2023, 4, 10, 16, 45, 0),
+                            Decimal("199.99"),
+                            "completed",
                         ),
                     ]
                 ),
@@ -406,7 +437,14 @@ class TestRedshiftIntegration:
                             True,
                             Decimal("1500.00"),
                         ),
-                        Customer(2, "Bob Smith", "bob@example.com", date(2023, 2, 20), False, None),
+                        Customer(
+                            2,
+                            "Bob Smith",
+                            "bob@example.com",
+                            date(2023, 2, 20),
+                            False,
+                            None,
+                        ),
                     ]
                 )
             ],
@@ -649,13 +687,25 @@ class TestRedshiftIntegration:
                 OrdersMockTable(
                     [
                         Order(
-                            101, 1, datetime(2023, 4, 1, 10, 30, 0), Decimal("299.99"), "completed"
+                            101,
+                            1,
+                            datetime(2023, 4, 1, 10, 30, 0),
+                            Decimal("299.99"),
+                            "completed",
                         ),
                         Order(
-                            102, 1, datetime(2023, 4, 15, 14, 20, 0), Decimal("149.50"), "completed"
+                            102,
+                            1,
+                            datetime(2023, 4, 15, 14, 20, 0),
+                            Decimal("149.50"),
+                            "completed",
                         ),
                         Order(
-                            103, 2, datetime(2023, 3, 5, 9, 15, 0), Decimal("89.99"), "completed"
+                            103,
+                            2,
+                            datetime(2023, 3, 5, 9, 15, 0),
+                            Decimal("89.99"),
+                            "completed",
                         ),
                     ]
                 )
@@ -695,7 +745,14 @@ class TestRedshiftIntegration:
         """
 
         test_customers = [
-            Customer(1, "Alice", "alice@example.com", date(2023, 1, 1), True, Decimal("1000.00")),
+            Customer(
+                1,
+                "Alice",
+                "alice@example.com",
+                date(2023, 1, 1),
+                True,
+                Decimal("1000.00"),
+            ),
             Customer(2, "Bob", "bob@example.com", date(2023, 1, 2), False, Decimal("500.00")),
         ]
 
@@ -706,7 +763,10 @@ class TestRedshiftIntegration:
 
         @sql_test(
             adapter_type="redshift",
-            mock_tables=[CustomersMockTable(test_customers), OrdersMockTable(test_orders)],
+            mock_tables=[
+                CustomersMockTable(test_customers),
+                OrdersMockTable(test_orders),
+            ],
             result_class=OrderSummaryResult,
         )
         def query_unqualified_tables():

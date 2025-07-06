@@ -1693,9 +1693,17 @@ class TestStructTypesIntegration:
                 person=PersonWithPreferences(
                     name="Alice Johnson",
                     age=28,
-                    preferences={"theme": "dark", "language": "en", "notifications": "enabled"},
+                    preferences={
+                        "theme": "dark",
+                        "language": "en",
+                        "notifications": "enabled",
+                    },
                     scores={"math": 95, "english": 88, "science": 92},
-                    metadata={"department": "engineering", "level": "senior", "location": "NYC"},
+                    metadata={
+                        "department": "engineering",
+                        "level": "senior",
+                        "location": "NYC",
+                    },
                 ),
             ),
             StructWithDictData(
@@ -2243,7 +2251,11 @@ class TestStructTypesIntegration:
                                 ),
                             ),
                         ],
-                        headquarters={"city": "New York", "state": "NY", "country": "USA"},
+                        headquarters={
+                            "city": "New York",
+                            "state": "NY",
+                            "country": "USA",
+                        },
                         metrics={"portfolio_value": 10000000000.0},
                     ),
                 ],

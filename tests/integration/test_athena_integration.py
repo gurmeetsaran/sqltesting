@@ -533,7 +533,10 @@ class TestAthenaIntegration:
 
         @sql_test(
             adapter_type="athena",
-            mock_tables=[CustomerMockTable(test_customers), OrderMockTable(test_orders)],
+            mock_tables=[
+                CustomerMockTable(test_customers),
+                OrderMockTable(test_orders),
+            ],
             result_class=OrderSummaryResult,
         )
         def query_unqualified_tables():

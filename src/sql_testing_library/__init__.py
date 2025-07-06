@@ -19,7 +19,9 @@ TestCase = SQLTestCase
 
 # Import adapters if their dependencies are available
 try:
-    from ._adapters.bigquery import BigQueryAdapter  # pyright: ignore[reportUnusedImport]
+    from ._adapters.bigquery import (
+        BigQueryAdapter,  # noqa: F401  # pyright: ignore[reportUnusedImport]
+    )
 
     __all__ = ["BigQueryAdapter"]
 except ImportError:

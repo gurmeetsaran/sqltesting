@@ -75,7 +75,11 @@ class TestMapTypesIntegration:
         self.test_data = [
             MapTypes(
                 id=1,
-                string_map={"key1": adapter_type.title(), "key2": "maps", "key3": "test"},
+                string_map={
+                    "key1": adapter_type.title(),
+                    "key2": "maps",
+                    "key3": "test",
+                },
                 int_map={"count": 42, "total": 100, "items": 3},
                 decimal_map={
                     "price": Decimal("19.99"),

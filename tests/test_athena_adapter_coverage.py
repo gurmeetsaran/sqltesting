@@ -333,7 +333,13 @@ class TestAthenaAdapterCoverageBoost(unittest.TestCase):
         mock_table = UserMockTable(
             [
                 User(
-                    1, "Alice", "alice@example.com", True, date(2023, 1, 1), 95.5, Decimal("100.50")
+                    1,
+                    "Alice",
+                    "alice@example.com",
+                    True,
+                    date(2023, 1, 1),
+                    95.5,
+                    Decimal("100.50"),
                 ),
                 User(2, "Bob", None, False, date(2023, 1, 2), 87.2, Decimal("50.25")),
             ]
@@ -388,7 +394,8 @@ class TestAthenaTypeConverterCoverage(unittest.TestCase):
         self.assertEqual(converter.convert("123.45", float), 123.45)
         self.assertEqual(converter.convert("2023-01-15", date), date(2023, 1, 15))
         self.assertEqual(
-            converter.convert("2023-01-15T10:30:45", datetime), datetime(2023, 1, 15, 10, 30, 45)
+            converter.convert("2023-01-15T10:30:45", datetime),
+            datetime(2023, 1, 15, 10, 30, 45),
         )
         self.assertEqual(converter.convert("123.45", Decimal), Decimal("123.45"))
 
