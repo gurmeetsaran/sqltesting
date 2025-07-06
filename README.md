@@ -1,6 +1,6 @@
 # SQL Testing Library
 
-A powerful Python framework for unit testing SQL queries with mock data injection across BigQuery, Snowflake, Redshift, Athena, and Trino.
+A powerful Python framework for unit testing SQL queries with mock data injection across BigQuery, Snowflake, Redshift, Athena, Trino, and DuckDB.
 
 [![Unit Tests](https://github.com/gurmeetsaran/sqltesting/actions/workflows/tests.yaml/badge.svg)](https://github.com/gurmeetsaran/sqltesting/actions/workflows/tests.yaml)
 [![Athena Integration](https://github.com/gurmeetsaran/sqltesting/actions/workflows/athena-integration.yml/badge.svg)](https://github.com/gurmeetsaran/sqltesting/actions/workflows/athena-integration.yml)
@@ -47,7 +47,7 @@ For more details on our journey and the engineering challenges we solved, read t
 
 ## Features
 
-- **Multi-Database Support**: Test SQL across BigQuery, Athena, Redshift, Trino, and Snowflake
+- **Multi-Database Support**: Test SQL across BigQuery, Athena, Redshift, Trino, Snowflake, and DuckDB
 - **Mock Data Injection**: Use Python dataclasses for type-safe test data
 - **CTE or Physical Tables**: Automatic fallback for query size limits
 - **Type-Safe Results**: Deserialize results to Pydantic models
@@ -60,28 +60,28 @@ The library supports different data types across database engines. All checkmark
 
 ### Primitive Types
 
-| Data Type | Python Type | BigQuery | Athena | Redshift | Trino | Snowflake |
-|-----------|-------------|----------|--------|----------|-------|-----------|
-| **String** | `str` | ✅ | ✅ | ✅ | ✅ | ✅ |
-| **Integer** | `int` | ✅ | ✅ | ✅ | ✅ | ✅ |
-| **Float** | `float` | ✅ | ✅ | ✅ | ✅ | ✅ |
-| **Boolean** | `bool` | ✅ | ✅ | ✅ | ✅ | ✅ |
-| **Date** | `date` | ✅ | ✅ | ✅ | ✅ | ✅ |
-| **Datetime** | `datetime` | ✅ | ✅ | ✅ | ✅ | ✅ |
-| **Decimal** | `Decimal` | ✅ | ✅ | ✅ | ✅ | ✅ |
-| **Optional** | `Optional[T]` | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Data Type | Python Type | BigQuery | Athena | Redshift | Trino | Snowflake | DuckDB |
+|-----------|-------------|----------|--------|----------|-------|-----------|--------|
+| **String** | `str` | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| **Integer** | `int` | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| **Float** | `float` | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| **Boolean** | `bool` | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| **Date** | `date` | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| **Datetime** | `datetime` | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| **Decimal** | `Decimal` | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| **Optional** | `Optional[T]` | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 
 ### Complex Types
 
-| Data Type | Python Type | BigQuery | Athena | Redshift | Trino | Snowflake |
-|-----------|-------------|----------|--------|----------|-------|-----------|
-| **String Array** | `List[str]` | ✅ | ✅ | ✅ | ✅ | ✅ |
-| **Integer Array** | `List[int]` | ✅ | ✅ | ✅ | ✅ | ✅ |
-| **Decimal Array** | `List[Decimal]` | ✅ | ✅ | ✅ | ✅ | ✅ |
-| **Optional Array** | `Optional[List[T]]` | ✅ | ✅ | ✅ | ✅ | ✅ |
-| **Map/Dict** | `Dict[K, V]` | ✅ | ✅ | ✅ | ✅ | ✅ |
-| **Struct/Record** | `dataclass` | ✅ | ✅ | ❌ | ✅ | ❌ |
-| **Nested Arrays** | `List[List[T]]` | ❌ | ❌ | ❌ | ❌ | ❌ |
+| Data Type | Python Type | BigQuery | Athena | Redshift | Trino | Snowflake | DuckDB |
+|-----------|-------------|----------|--------|----------|-------|-----------|--------|
+| **String Array** | `List[str]` | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| **Integer Array** | `List[int]` | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| **Decimal Array** | `List[Decimal]` | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| **Optional Array** | `Optional[List[T]]` | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| **Map/Dict** | `Dict[K, V]` | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| **Struct/Record** | `dataclass` | ✅ | ✅ | ❌ | ✅ | ❌ | ✅ |
+| **Nested Arrays** | `List[List[T]]` | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
 
 ### Database-Specific Notes
 
@@ -90,15 +90,16 @@ The library supports different data types across database engines. All checkmark
 - **Redshift**: Arrays and maps implemented via SUPER type (JSON parsing); 16MB query size limit; struct types not yet supported
 - **Trino**: Memory catalog for testing; excellent decimal precision; supports arrays, maps, and struct types using `ROW` with named fields (dataclasses and Pydantic models)
 - **Snowflake**: Column names normalized to lowercase; 1MB query size limit; dict/map types implemented via VARIANT type (JSON parsing); struct types not yet supported
+- **DuckDB**: Fast embedded analytics database; excellent SQL standards compliance; supports arrays, maps, and struct types using `STRUCT` syntax with named fields (dataclasses and Pydantic models)
 
 ## Execution Modes Support
 
 The library supports two execution modes for mock data injection. **CTE Mode is the default** and is automatically used unless Physical Tables mode is explicitly requested or required due to query size limits.
 
-| Execution Mode | Description | BigQuery | Athena | Redshift | Trino | Snowflake |
-|----------------|-------------|----------|--------|----------|-------|-----------|
-| **CTE Mode** | Mock data injected as Common Table Expressions | ✅ | ✅ | ✅ | ✅ | ✅ |
-| **Physical Tables** | Mock data created as temporary tables | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Execution Mode | Description | BigQuery | Athena | Redshift | Trino | Snowflake | DuckDB |
+|----------------|-------------|----------|--------|----------|-------|-----------|--------|
+| **CTE Mode** | Mock data injected as Common Table Expressions | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| **Physical Tables** | Mock data created as temporary tables | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 
 ### Execution Mode Details
 
@@ -122,14 +123,16 @@ The library supports two execution modes for mock data injection. **CTE Mode is 
 | **Redshift** | Temporary tables | Session-specific temp schema | Database automatic | Session end |
 | **Trino** | Memory tables | `memory.default` schema | Library executes `DROP TABLE` | After each test |
 | **Snowflake** | Temporary tables | Session-specific temp schema | Database automatic | Session end |
+| **DuckDB** | Temporary tables | Database-specific temp schema | Library executes `DROP TABLE` | After each test |
 
 #### **Cleanup Behavior Explained**
 
-**Library-Managed Cleanup (BigQuery, Athena, Trino):**
+**Library-Managed Cleanup (BigQuery, Athena, Trino, DuckDB):**
 - The SQL Testing Library explicitly calls cleanup methods after each test
 - **BigQuery**: Creates standard tables in your dataset, then deletes them via `client.delete_table()`
 - **Athena**: Creates external tables backed by S3 data, then drops table metadata via `DROP TABLE IF EXISTS` (⚠️ **S3 data files remain and require separate cleanup**)
 - **Trino**: Creates tables in memory catalog, then drops them via `DROP TABLE IF EXISTS`
+- **DuckDB**: Creates temporary tables in the database, then drops them via `DROP TABLE IF EXISTS`
 
 **Database-Managed Cleanup (Redshift, Snowflake):**
 - These databases have built-in temporary table mechanisms
@@ -154,7 +157,7 @@ A: Trino's memory catalog doesn't automatically clean up tables when sessions en
 A: BigQuery tables created by the library are **standard tables without TTL** - they persist until explicitly deleted. The library immediately calls `client.delete_table()` after each test. If you want to set TTL as a safety net, you can configure it at the dataset level (e.g., 24 hours) to auto-delete any orphaned tables.
 
 **Q: Which databases leave artifacts if tests crash?**
-- **BigQuery, Athena, Trino**: May leave tables if library crashes before cleanup
+- **BigQuery, Athena, Trino, DuckDB**: May leave tables if library crashes before cleanup
 - **Redshift, Snowflake**: No artifacts - temporary tables auto-cleanup on session end
 
 **Q: How to manually clean up orphaned tables?**
@@ -170,6 +173,10 @@ DROP TABLE temp_table_name;
 -- Trino: List and drop tables with temp prefix
 SHOW TABLES FROM memory.default LIKE 'temp_%';
 DROP TABLE memory.default.temp_table_name;
+
+-- DuckDB: List and drop tables with temp prefix
+SHOW TABLES;
+DROP TABLE temp_table_name;
 ```
 
 **Q: How to handle S3 cleanup for Athena tables?**
@@ -220,6 +227,7 @@ aws s3api list-objects-v2 --bucket your-athena-results-bucket --prefix "temp_" \
 | **Redshift** | 16MB | Automatically switches at 16MB |
 | **Trino** | 16MB (estimated) | Large dataset or complex CTEs |
 | **Snowflake** | 1MB | Automatically switches at 1MB |
+| **DuckDB** | 32MB (estimated) | Large dataset or complex CTEs |
 
 ### How to Control Execution Mode
 
@@ -342,6 +350,9 @@ pip install sql-testing-library[trino]
 # Install with Snowflake support
 pip install sql-testing-library[snowflake]
 
+# Install with DuckDB support
+pip install sql-testing-library[duckdb]
+
 # Or install with all database adapters
 pip install sql-testing-library[all]
 ```
@@ -357,9 +368,10 @@ poetry install --with athena
 poetry install --with redshift
 poetry install --with trino
 poetry install --with snowflake
+poetry install --with duckdb
 
 # Install with all database adapters and dev tools
-poetry install --with bigquery,athena,redshift,trino,snowflake,dev
+poetry install --with bigquery,athena,redshift,trino,snowflake,duckdb,dev
 ```
 
 ## Quick Start
@@ -368,7 +380,7 @@ poetry install --with bigquery,athena,redshift,trino,snowflake,dev
 
 ```ini
 [sql_testing]
-adapter = bigquery  # Use 'bigquery', 'athena', 'redshift', 'trino', or 'snowflake'
+adapter = bigquery  # Use 'bigquery', 'athena', 'redshift', 'trino', 'snowflake', or 'duckdb'
 
 # BigQuery configuration
 [sql_testing.bigquery]
@@ -426,6 +438,10 @@ credentials_path = <path to credentials json>
 #
 # # Option 2: Password authentication (for accounts without MFA)
 # password = <snowflake_password>
+
+# DuckDB configuration
+# [sql_testing.duckdb]
+# database = <path/to/database.duckdb>  # Optional: defaults to in-memory database
 ```
 
 ### Database Context Understanding
@@ -439,6 +455,7 @@ Each database adapter uses a different concept for organizing tables and queries
 | **Redshift** | `{database}` | database only | `"test_db"` | `SELECT * FROM test_db.orders` |
 | **Snowflake** | `{database}.{schema}` | database + schema | `"test_db.public"` | `SELECT * FROM test_db.public.products` |
 | **Trino** | `{catalog}.{schema}` | catalog + schema | `"memory.default"` | `SELECT * FROM memory.default.inventory` |
+| **DuckDB** | `{database}` | database only | `"test_db"` | `SELECT * FROM test_db.analytics` |
 
 #### Key Points:
 
@@ -511,6 +528,14 @@ class ProductsMockTable(BaseMockTable):
 
     def get_table_name(self) -> str:
         return "products"
+
+# DuckDB Mock Table
+class AnalyticsMockTable(BaseMockTable):
+    def get_database_name(self) -> str:
+        return "test_db"  # database only
+
+    def get_table_name(self) -> str:
+        return "analytics"
 ```
 
 2. **Write a test** using one of the flexible patterns:
@@ -636,7 +661,7 @@ class EmployeesMockTable(BaseMockTable):
 
 # Test with struct types
 @sql_test(
-    adapter_type="athena",  # or "trino" or "bigquery"
+    adapter_type="athena",  # or "trino", "bigquery", or "duckdb"
     mock_tables=[
         EmployeesMockTable([
             Employee(
@@ -682,7 +707,7 @@ def test_struct_with_dot_notation():
 
 # You can also query entire structs
 @sql_test(
-    adapter_type="trino",  # or "athena" or "bigquery"
+    adapter_type="trino",  # or "athena", "bigquery", or "duckdb"
     mock_tables=[EmployeesMockTable([...])],
     result_class=dict  # Returns full struct as dict
 )
@@ -930,9 +955,21 @@ def test_snowflake_query():
         query="SELECT user_id, name FROM users WHERE user_id = 1",
         default_namespace="test_db"
     )
+
+# Use DuckDB adapter for this test
+@sql_test(
+    adapter_type="duckdb",
+    mock_tables=[...],
+    result_class=UserResult
+)
+def test_duckdb_query():
+    return TestCase(
+        query="SELECT user_id, name FROM users WHERE user_id = 1",
+        default_namespace="test_db"
+    )
 ```
 
-The adapter_type parameter will use the configuration from the corresponding section in pytest.ini, such as `[sql_testing.bigquery]`, `[sql_testing.athena]`, `[sql_testing.redshift]`, `[sql_testing.trino]`, or `[sql_testing.snowflake]`.
+The adapter_type parameter will use the configuration from the corresponding section in pytest.ini, such as `[sql_testing.bigquery]`, `[sql_testing.athena]`, `[sql_testing.redshift]`, `[sql_testing.trino]`, `[sql_testing.snowflake]`, or `[sql_testing.duckdb]`.
 
 **Default Adapter Behavior:**
 - If `adapter_type` is not specified in the test, the library uses the adapter from `[sql_testing]` section's `adapter` setting
@@ -974,6 +1011,14 @@ The adapter_type parameter will use the configuration from the corresponding sec
 - Handles large datasets and complex queries with Snowflake's SQL dialect
 - Supports authentication via username and password
 - Optional support for warehouse, role, and schema specification
+
+#### DuckDB Adapter
+- Supports DuckDB embedded analytical database
+- Uses CTAS (CREATE TABLE AS SELECT) for efficient temporary table creation
+- Fast local database with excellent SQL standards compliance
+- Supports both file-based and in-memory databases
+- No authentication required - perfect for local development and testing
+- Excellent performance for analytical workloads
 
 **Default Behavior:**
 - If adapter_type is not specified in the TestCase or decorator, the library will use the adapter specified in the `[sql_testing]` section's `adapter` setting.
@@ -1246,3 +1291,4 @@ The library has a few known limitations that are planned to be addressed in futu
   - psycopg2-binary for Redshift
   - trino for Trino
   - snowflake-connector-python for Snowflake
+  - duckdb for DuckDB

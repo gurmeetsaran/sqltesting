@@ -795,6 +795,147 @@ def test_redshift_json():
     )
 ```
 
+### DuckDB-Specific Features
+
+DuckDB provides excellent support for complex data types and high-performance analytics:
+
+```python
+from dataclasses import dataclass
+from typing import List, Dict
+from decimal import Decimal
+
+@dataclass
+class UserActivity:
+    user_id: int
+    name: str
+    scores: List[int]
+    metadata: Dict[str, str]
+    tags: List[str]
+
+@dataclass
+class Address:
+    street: str
+    city: str
+    zip_code: str
+
+@dataclass
+class UserProfile:
+    user_id: int
+    name: str
+    address: Address
+    activity_scores: List[int]
+    preferences: Dict[str, str]
+
+class UserActivityMockTable(BaseMockTable):
+    def get_database_name(self) -> str:
+        return "analytics_db"
+
+    def get_table_name(self) -> str:
+        return "user_activity"
+
+class UserProfileMockTable(BaseMockTable):
+    def get_database_name(self) -> str:
+        return "analytics_db"
+
+    def get_table_name(self) -> str:
+        return "user_profiles"
+
+class DuckDBAnalyticsResult(BaseModel):
+    user_id: int
+    name: str
+    avg_score: float
+    city: str
+    high_scorer: bool
+    tag_count: int
+
+# DuckDB Array Operations
+@sql_test(
+    adapter_type="duckdb",
+    mock_tables=[
+        UserActivityMockTable([
+            UserActivity(1, "Alice", [85, 90, 78], {"role": "admin"}, ["premium", "active"]),
+            UserActivity(2, "Bob", [75, 88, 91], {"role": "user"}, ["active"]),
+            UserActivity(3, "Charlie", [92, 89, 95], {"role": "admin"}, ["premium", "vip"])
+        ])
+    ],
+    result_class=DuckDBAnalyticsResult
+)
+def test_duckdb_array_operations():
+    return TestCase(
+        query="""
+            SELECT
+                user_id,
+                name,
+                list_avg(scores) as avg_score,
+                'Unknown' as city,
+                list_avg(scores) > 85 as high_scorer,
+                len(tags) as tag_count
+            FROM user_activity
+            WHERE list_contains(tags, 'active')
+                AND metadata['role'] = 'admin'
+            ORDER BY avg_score DESC
+        """,
+        default_namespace="analytics_db"
+    )
+
+# DuckDB Struct Operations
+@sql_test(
+    adapter_type="duckdb",
+    mock_tables=[
+        UserProfileMockTable([
+            UserProfile(1, "Alice", Address("123 Main St", "NYC", "10001"),
+                       [85, 90, 78], {"theme": "dark", "notifications": "enabled"}),
+            UserProfile(2, "Bob", Address("456 Oak Ave", "SF", "94105"),
+                       [75, 88, 91], {"theme": "light", "notifications": "disabled"})
+        ])
+    ],
+    result_class=dict
+)
+def test_duckdb_struct_operations():
+    return TestCase(
+        query="""
+            SELECT
+                user_id,
+                name,
+                address.city,
+                address.zip_code,
+                list_avg(activity_scores) as avg_score,
+                preferences['theme'] as theme_preference
+            FROM user_profiles
+            WHERE address.city = 'NYC'
+                AND preferences['notifications'] = 'enabled'
+        """,
+        default_namespace="analytics_db"
+    )
+
+# DuckDB Map Operations
+@sql_test(
+    adapter_type="duckdb",
+    mock_tables=[
+        UserActivityMockTable([
+            UserActivity(1, "Alice", [85, 90], {"role": "admin", "team": "data"}, ["premium"]),
+            UserActivity(2, "Bob", [75, 88], {"role": "user", "team": "eng"}, ["basic"])
+        ])
+    ],
+    result_class=dict
+)
+def test_duckdb_map_operations():
+    return TestCase(
+        query="""
+            SELECT
+                user_id,
+                name,
+                metadata['role'] as user_role,
+                metadata['team'] as user_team,
+                map_keys(metadata) as available_keys,
+                len(metadata) as metadata_count
+            FROM user_activity
+            WHERE metadata['role'] IN ('admin', 'user')
+        """,
+        default_namespace="analytics_db"
+    )
+```
+
 ## Testing Patterns
 
 ### Testing CTEs

@@ -9,7 +9,7 @@ permalink: /
 # SQL Testing Library
 {: .fs-9 }
 
-A Python library for testing SQL queries with mock data injection across Athena, BigQuery, Redshift, Trino, and Snowflake.
+A Python library for testing SQL queries with mock data injection across Athena, BigQuery, Redshift, Trino, Snowflake, and DuckDB.
 {: .fs-6 .fw-300 }
 
 [Get started now](getting-started){: .btn .btn-primary .fs-5 .mb-4 .mb-md-0 .mr-2 } [View on GitHub](https://github.com/gurmeetsaran/sqltesting){: .btn .fs-5 .mb-4 .mb-md-0 }
@@ -29,7 +29,7 @@ SQL testing in data engineering can be challenging, especially when working with
 ## ✨ Key Features
 
 ### 🚀 Multi-Database Support
-Test your SQL queries across BigQuery, Athena, Redshift, Trino, and Snowflake with a unified API.
+Test your SQL queries across BigQuery, Athena, Redshift, Trino, Snowflake, and DuckDB with a unified API.
 
 ### 🎯 Type-Safe Testing
 Use Python dataclasses and Pydantic models for type-safe test data and results.
@@ -96,6 +96,7 @@ def test_user_query():
 | **Redshift** | ✅ | ✅ | 16MB |
 | **Trino** | ✅ | ✅ | ~16MB |
 | **Snowflake** | ✅ | ✅ | 1MB |
+| **DuckDB** | ✅ | ✅ | No limit |
 
 ### Data Types Support
 
@@ -164,6 +165,7 @@ pip install sql-testing-library[athena]
 pip install sql-testing-library[redshift]
 pip install sql-testing-library[trino]
 pip install sql-testing-library[snowflake]
+pip install sql-testing-library[duckdb]
 
 # Or install with all database adapters
 pip install sql-testing-library[all]

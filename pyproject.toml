@@ -5,7 +5,7 @@ build-backend = "poetry.core.masonry.api"
 [tool.poetry]
 name = "sql-testing-library"
 version = "0.14.0"
-description = "A powerful Python framework for unit testing SQL queries across BigQuery, Snowflake, Redshift, Athena, and Trino with mock data"
+description = "A powerful Python framework for unit testing SQL queries across BigQuery, Snowflake, Redshift, Athena, Trino, and DuckDB with mock data"
 authors = ["Gurmeet Saran <gurmeetx@gmail.com>", "Kushal Thakkar <kushal.thakkar@gmail.com>"]
 maintainers = ["Gurmeet Saran <gurmeetx@gmail.com>", "Kushal Thakkar <kushal.thakkar@gmail.com>"]
 license = "MIT"
@@ -24,6 +24,7 @@ keywords = [
     "redshift",
     "athena",
     "trino",
+    "duckdb",
     "data-engineering",
     "etl-testing",
     "sql-validation",
@@ -91,13 +92,17 @@ trino = ">=0.322.0"
 [tool.poetry.group.snowflake.dependencies]
 snowflake-connector-python = ">=3.0.0"
 
+[tool.poetry.group.duckdb.dependencies]
+duckdb = ">=0.8.0"
+
 [tool.poetry.extras]
-all = ["google-cloud-bigquery", "boto3", "psycopg2-binary", "trino", "snowflake-connector-python"]
+all = ["google-cloud-bigquery", "boto3", "psycopg2-binary", "trino", "snowflake-connector-python", "duckdb"]
 bigquery = ["google-cloud-bigquery"]
 athena = ["boto3"]
 redshift = ["psycopg2-binary"]
 trino = ["trino"]
 snowflake = ["snowflake-connector-python"]
+duckdb = ["duckdb"]
 
 [tool.poetry.group.dev.dependencies]
 pytest = ">=7.0.0"

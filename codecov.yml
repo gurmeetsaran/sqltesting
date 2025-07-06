@@ -59,6 +59,12 @@ coverage:
         - src/sql_testing_library/core.py
         - src/sql_testing_library/mock_table.py
 
+    duckdb:
+      paths:
+        - src/sql_testing_library/_adapters/duckdb.py
+        - src/sql_testing_library/_core.py
+        - src/sql_testing_library/_mock_table.py
+
 parsers:
   gcov:
     branch_detection:
