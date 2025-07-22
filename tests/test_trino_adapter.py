@@ -253,7 +253,8 @@ class TestTrinoAdapter(unittest.TestCase):
         # Check table name format (catalog.schema.table)
         # The UUID is truncated to 8 chars: "12345678"
         self.assertEqual(
-            table_name, f"{self.catalog}.{self.schema}.temp_users_1234567890123_12345678"
+            table_name,
+            f"{self.catalog}.{self.schema}.temp_users_1234567890123_12345678",
         )
 
         # Check execute_query calls - only one call for CTAS
@@ -327,7 +328,8 @@ class TestTrinoAdapter(unittest.TestCase):
         # Check table name format
         # The UUID is truncated to 8 chars: "12345678"
         self.assertEqual(
-            table_name, f"{self.catalog}.{self.schema}.temp_empty_users_1234567890123_12345678"
+            table_name,
+            f"{self.catalog}.{self.schema}.temp_empty_users_1234567890123_12345678",
         )
 
         # Check execute_query calls
@@ -339,7 +341,8 @@ class TestTrinoAdapter(unittest.TestCase):
 
         # Verify the SQL contains the expected elements for creating an empty table
         self.assertIn(
-            f"CREATE TABLE {self.schema}.temp_empty_users_1234567890123_12345678", create_sql
+            f"CREATE TABLE {self.schema}.temp_empty_users_1234567890123_12345678",
+            create_sql,
         )
         self.assertIn("WITH (format = 'ORC')", create_sql)
         self.assertIn('"id" BIGINT', create_sql)

@@ -110,7 +110,9 @@ class TestStringEscaping:
         # Create test data with problematic strings
         test_data = [
             StringTestData(
-                id=i, test_string=test_string, optional_string=test_string if i % 2 == 0 else None
+                id=i,
+                test_string=test_string,
+                optional_string=test_string if i % 2 == 0 else None,
             )
             for i, test_string in enumerate(self.test_strings)
         ]

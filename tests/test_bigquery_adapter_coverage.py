@@ -7,7 +7,10 @@ from decimal import Decimal
 from typing import List, Optional
 from unittest import mock
 
-from sql_testing_library._adapters.bigquery import BigQueryAdapter, BigQueryTypeConverter
+from sql_testing_library._adapters.bigquery import (
+    BigQueryAdapter,
+    BigQueryTypeConverter,
+)
 from sql_testing_library._mock_table import BaseMockTable
 
 
@@ -242,7 +245,8 @@ class TestBigQueryTypeConverterCoverage(unittest.TestCase):
         self.assertEqual(converter.convert("false", bool), False)
         self.assertEqual(converter.convert("2023-01-15", date), date(2023, 1, 15))
         self.assertEqual(
-            converter.convert("2023-01-15T10:30:45", datetime), datetime(2023, 1, 15, 10, 30, 45)
+            converter.convert("2023-01-15T10:30:45", datetime),
+            datetime(2023, 1, 15, 10, 30, 45),
         )
         self.assertEqual(converter.convert("123.45", Decimal), Decimal("123.45"))
 

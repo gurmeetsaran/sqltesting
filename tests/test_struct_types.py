@@ -6,7 +6,11 @@ import pytest
 from pydantic import BaseModel
 
 from sql_testing_library._sql_utils import format_sql_value
-from sql_testing_library._types import BaseTypeConverter, is_pydantic_model_class, is_struct_type
+from sql_testing_library._types import (
+    BaseTypeConverter,
+    is_pydantic_model_class,
+    is_struct_type,
+)
 
 
 @dataclass
@@ -138,7 +142,9 @@ class TestStructFormatting:
     def test_format_struct_unsupported_dialect(self):
         """Test that struct formatting raises error for unsupported dialects."""
         person = Person(
-            name="Test", age=20, address=Address(street="St", city="City", zip_code="12345")
+            name="Test",
+            age=20,
+            address=Address(street="St", city="City", zip_code="12345"),
         )
 
         with pytest.raises(NotImplementedError) as exc_info:
