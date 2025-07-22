@@ -44,7 +44,7 @@ def check_basic_functionality() -> bool:
             return False
 
         # Test complex types
-        conn.execute("CREATE TABLE test_complex (id INT, data MAP(VARCHAR, INT), scores LIST(INT))")
+        conn.execute("CREATE TABLE test_complex (id INT, data MAP(VARCHAR, INT), scores INT[])")
         conn.execute("INSERT INTO test_complex VALUES (1, MAP{'key1': 10, 'key2': 20}, [85, 90, 78])")
         result = conn.execute("SELECT * FROM test_complex").fetchdf()
 
@@ -69,9 +69,11 @@ def check_file_database() -> bool:
     try:
         import duckdb
 
-        # Create temporary file for testing
-        with tempfile.NamedTemporaryFile(suffix='.db', delete=False) as tmp_file:
-            db_path = tmp_file.name
+        # Create temporary file path for testing (don't create the file yet)
+        tmp_file = tempfile.NamedTemporaryFile(suffix='.db', delete=False)
+        db_path = tmp_file.name
+        tmp_file.close()
+        os.unlink(db_path)  # Remove the empty file so DuckDB can create it properly
 
         try:
             # Test file database
