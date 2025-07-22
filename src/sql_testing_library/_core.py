@@ -33,7 +33,7 @@ from ._sql_logger import SQLLogger
 
 
 # Type for adapter types
-AdapterType = Literal["bigquery", "athena", "redshift", "trino", "snowflake"]
+AdapterType = Literal["bigquery", "athena", "redshift", "trino", "snowflake", "duckdb"]
 
 T = TypeVar("T")
 
