@@ -216,6 +216,12 @@ class SQLTestDecorator:
                 private_key_path=private_key_path,
                 private_key_passphrase=private_key_passphrase,
             )
+        elif adapter_type == "duckdb":
+            from ._adapters.duckdb import DuckDBAdapter
+
+            database = adapter_config.get("database", ":memory:")
+
+            database_adapter = DuckDBAdapter(database=database)
         else:
             raise ValueError(f"Unsupported adapter type: {adapter_type}")
 
