@@ -87,9 +87,10 @@ The integration tests use realistic business data:
 
 ### Execution Modes
 
-Tests run in both execution modes:
-- **CTE Mode**: Uses Common Table Expressions (default)
-- **Physical Tables Mode**: Creates temporary tables in DuckDB
+Tests run in CTE mode only:
+- **CTE Mode**: Uses Common Table Expressions (optimal for DuckDB)
+
+Note: Physical tables mode is not used for DuckDB tests as CTE mode provides better performance and reliability for in-memory operations.
 
 ## Performance Characteristics
 

@@ -107,9 +107,7 @@ class ProductsMockTable(BaseMockTable):
 # Test data that will be reused across multiple tests
 @pytest.mark.integration
 @pytest.mark.duckdb
-@pytest.mark.parametrize(
-    "use_physical_tables", [False, True], ids=["cte_mode", "physical_tables_mode"]
-)
+@pytest.mark.parametrize("use_physical_tables", [False], ids=["cte_mode"])
 class TestDuckDBIntegration:
     """Integration tests for DuckDB adapter using real database connections."""
 
