@@ -112,7 +112,7 @@ jobs:
           try:
               conn = duckdb.connect('test.db')
               conn.execute('CREATE TABLE test_table (id INTEGER, name VARCHAR)')
-              conn.execute('INSERT INTO test_table VALUES (1, \"test\")')
+              conn.execute('INSERT INTO test_table VALUES (1, \\'test\\')')
               result = conn.execute('SELECT * FROM test_table').fetchall()
               print(f'✅ File database test successful: {result}')
               conn.close()
