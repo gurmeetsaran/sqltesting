@@ -107,7 +107,9 @@ class ProductsMockTable(BaseMockTable):
 # Test data that will be reused across multiple tests
 @pytest.mark.integration
 @pytest.mark.duckdb
-@pytest.mark.parametrize("use_physical_tables", [False], ids=["cte_mode"])
+@pytest.mark.parametrize(
+    "use_physical_tables", [False, True], ids=["cte_mode", "physical_table_mode"]
+)
 class TestDuckDBIntegration:
     """Integration tests for DuckDB adapter using real database connections."""
 
@@ -217,6 +219,7 @@ class TestDuckDBIntegration:
                 OrdersMockTable(self.orders_data),
             ],
             result_class=OrderSummaryResult,
+            parallel_table_creation=False,  # DuckDB connections are not thread-safe
         )
         def query_customer_orders():
             return TestCase(
@@ -460,6 +463,7 @@ class TestDuckDBIntegration:
                 OrdersMockTable(self.orders_data),
             ],
             result_class=OrderSummaryResult,
+            parallel_table_creation=False,  # DuckDB connections are not thread-safe
         )
         def query_customer_ranking():
             return TestCase(
@@ -543,6 +547,7 @@ class TestDuckDBIntegration:
                 OrdersMockTable(self.orders_data),
             ],
             result_class=CustomerResult,
+            parallel_table_creation=False,  # DuckDB connections are not thread-safe
         )
         def query_customers_with_orders():
             return TestCase(
@@ -605,6 +610,7 @@ class TestDuckDBIntegration:
                 OrdersMockTable(test_orders),
             ],
             result_class=OrderSummaryResult,
+            parallel_table_creation=False,  # DuckDB connections are not thread-safe
         )
         def query_unqualified_tables():
             return TestCase(
