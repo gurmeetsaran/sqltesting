@@ -45,9 +45,14 @@ jobs:
     uses: ./.github/workflows/snowflake-integration.yml
     secrets: inherit
 
+  duckdb-integration:
+    name: DuckDB Integration Tests
+    uses: ./.github/workflows/duckdb-integration.yml
+    secrets: inherit
+
   release:
     name: Create release
-    needs: [unit-tests, athena-integration, bigquery-integration, redshift-integration, trino-integration, snowflake-integration]
+    needs: [unit-tests, athena-integration, bigquery-integration, redshift-integration, trino-integration, snowflake-integration, duckdb-integration]
     runs-on: ubuntu-latest
 
     steps:
