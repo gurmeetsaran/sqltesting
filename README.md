@@ -8,6 +8,7 @@ A powerful Python framework for unit testing SQL queries with mock data injectio
 [![Redshift Integration](https://github.com/gurmeetsaran/sqltesting/actions/workflows/redshift-integration.yml/badge.svg)](https://github.com/gurmeetsaran/sqltesting/actions/workflows/redshift-integration.yml)
 [![Trino Integration](https://github.com/gurmeetsaran/sqltesting/actions/workflows/trino-integration.yml/badge.svg)](https://github.com/gurmeetsaran/sqltesting/actions/workflows/trino-integration.yml)
 [![Snowflake Integration](https://github.com/gurmeetsaran/sqltesting/actions/workflows/snowflake-integration.yml/badge.svg)](https://github.com/gurmeetsaran/sqltesting/actions/workflows/snowflake-integration.yml)
+[![DuckDB Integration](https://github.com/gurmeetsaran/sqltesting/actions/workflows/duckdb-integration.yml/badge.svg)](https://github.com/gurmeetsaran/sqltesting/actions/workflows/duckdb-integration.yml)
 [![GitHub license](https://img.shields.io/github/license/gurmeetsaran/sqltesting)](https://github.com/gurmeetsaran/sqltesting/blob/master/LICENSE)
 [![Pepy Total Downloads](https://img.shields.io/pepy/dt/sql-testing-library?label=PyPI%20Downloads)](https://pepy.tech/projects/sql-testing-library)
 [![codecov](https://codecov.io/gh/gurmeetsaran/sqltesting/branch/master/graph/badge.svg?token=CN3G5X5ZA5)](https://codecov.io/gh/gurmeetsaran/sqltesting)
