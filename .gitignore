@@ -200,3 +200,6 @@ _site/
 
 # Mocksmith findings document (working document for fixing issues)
 MOCKSMITH_FINDINGS.md
+
+# Mocksmith types TODO document (not for checkin)
+MOCKSMITH_TYPES_TODO.md
