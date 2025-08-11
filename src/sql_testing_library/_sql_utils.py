@@ -1,5 +1,6 @@
 """SQL utility functions for escaping and formatting values."""
 
+import inspect
 import json
 from dataclasses import is_dataclass
 from datetime import date, datetime
@@ -469,13 +470,15 @@ def format_sql_value(value: Any, column_type: Type, dialect: str = "standard") -
         else:
             return escape_sql_string(str(value))
 
-    # Handle numeric types
-    elif column_type in (int, float):
-        return str(value)
-
-    # Handle boolean types
+    # Handle boolean types (must come before numeric since bool is subclass of int)
     elif column_type is bool:
         return "TRUE" if value else "FALSE"
+
+    # Handle numeric types
+    elif column_type in (int, float) or (
+        inspect.isclass(column_type) and issubclass(column_type, (int, float))
+    ):
+        return str(value)
 
     # Handle date types
     elif column_type is date:
@@ -508,7 +511,9 @@ def format_sql_value(value: Any, column_type: Type, dialect: str = "standard") -
                 return f"TIMESTAMP '{value}'"
 
     # Handle decimal types
-    elif column_type == Decimal:
+    elif column_type == Decimal or (
+        inspect.isclass(column_type) and issubclass(column_type, Decimal)
+    ):
         if dialect == "bigquery":
             # BigQuery needs explicit NUMERIC casting for decimals
             return f"NUMERIC '{value}'"
