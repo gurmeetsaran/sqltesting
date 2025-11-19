@@ -760,6 +760,7 @@ class TestSQLTestDecoratorAdditionalCoverage(unittest.TestCase):
                 database="test_db",
                 s3_output_location="s3://test-bucket/",
                 region="us-west-2",
+                workgroup=None,
                 aws_access_key_id="test_key",
                 aws_secret_access_key="test_secret",
             )

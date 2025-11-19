@@ -116,6 +116,58 @@ class TestAthenaAdapter(unittest.TestCase):
         expected_df = pd.DataFrame([["1", "Test User"]], columns=["id", "name"])
         pd.testing.assert_frame_equal(result_df, expected_df)
 
+    def test_execute_query_with_workgroup(self, mock_boto3_client):
+        """Test query execution."""
+        # Mock client responses
+        mock_client = mock.MagicMock()
+        mock_boto3_client.return_value = mock_client
+
+        # Set up mock response for start_query_execution
+        mock_client.start_query_execution.return_value = {"QueryExecutionId": "test_query_id"}
+
+        # Set up mock response for get_query_execution
+        mock_client.get_query_execution.return_value = {
+            "QueryExecution": {"Status": {"State": "SUCCEEDED"}}
+        }
+
+        # Set up mock response for get_query_results
+        mock_client.get_query_results.return_value = {
+            "ResultSet": {
+                "Rows": [
+                    {"Data": [{"VarCharValue": "id"}, {"VarCharValue": "name"}]},
+                    {
+                        "Data": [
+                            {"VarCharValue": "1"},
+                            {"VarCharValue": "Test User"},
+                        ]
+                    },
+                ]
+            }
+        }
+
+        adapter = AthenaAdapter(
+            database=self.database,
+            s3_output_location=self.s3_output_location,
+            workgroup="test_workgroup",
+        )
+
+        query = "SELECT * FROM test_table"
+        result_df = adapter.execute_query(query)
+
+        # Check client calls
+        mock_client.start_query_execution.assert_called_once_with(
+            QueryString=query,
+            QueryExecutionContext={"Database": self.database},
+            ResultConfiguration={"OutputLocation": self.s3_output_location},
+            WorkGroup="test_workgroup",
+        )
+        mock_client.get_query_execution.assert_called_with(QueryExecutionId="test_query_id")
+        mock_client.get_query_results.assert_called_once_with(QueryExecutionId="test_query_id")
+
+        # Check DataFrame result
+        expected_df = pd.DataFrame([["1", "Test User"]], columns=["id", "name"])
+        pd.testing.assert_frame_equal(result_df, expected_df)
+
     def test_format_value_for_cte(self, _):
         """Test value formatting for CTEs."""
         adapter = AthenaAdapter(
