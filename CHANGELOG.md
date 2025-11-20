@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 0.17.0 (2025-11-20)
+
+### Feat
+
+- **athena**: add option to specify workgroup (#127)
+- add CI code quality checks for all PRs (#129)
+
+### Fix
+
+- correct workflow condition to allow push events after merge (#130)
+- skip integration tests for fork PRs due to secret restrictions (#128)
+
 ## 0.16.0 (2025-08-20)
 
 ### Feat
