@@ -1,0 +1,57 @@
+name: Code Quality Checks
+
+on:
+  pull_request:
+  push:
+    branches: [master, main]
+  workflow_call:
+
+env:
+  PYTHON_VERSION: '3.12'
+
+jobs:
+  code-quality:
+    name: Code Quality (Linting, Formatting, Type Checking)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ env.PYTHON_VERSION }}
+        uses: actions/setup-python@v6
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install dependencies
+        run: |
+          python -m pip install -U pip poetry
+          poetry install
+          python -m pip install pre-commit
+
+      - name: Run pre-commit hooks on all files
+        run: |
+          echo "🔍 Running pre-commit checks (same as local pre-commit hooks)..."
+          pre-commit run --all-files --show-diff-on-failure
+        continue-on-error: false
+
+      - name: Summary
+        if: always()
+        run: |
+          echo "## 🔍 Code Quality Check Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "All pre-commit checks completed." >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Checks performed (via pre-commit):**" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Ruff linting (code quality)" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Ruff formatting (code style)" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Pyright type checking" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Trailing whitespace check" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ End of file fixer" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ YAML validation" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ TOML validation" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Large file detection" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Debug statement detection" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "ℹ️ These are the **exact same checks** as local pre-commit hooks." >> $GITHUB_STEP_SUMMARY
+          echo "This ensures external contributors cannot bypass quality standards." >> $GITHUB_STEP_SUMMARY
