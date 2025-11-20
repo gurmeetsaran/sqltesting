@@ -44,6 +44,7 @@ class AthenaAdapter(PrestoBaseAdapter):
         database: str,
         s3_output_location: str,
         region: str = "us-west-2",
+        workgroup: Optional[str] = None,
         aws_access_key_id: Optional[str] = None,
         aws_secret_access_key: Optional[str] = None,
     ) -> None:
@@ -58,6 +59,7 @@ class AthenaAdapter(PrestoBaseAdapter):
         self.database = database
         self.s3_output_location = s3_output_location
         self.region = region
+        self.workgroup = workgroup
 
         # Initialize Athena client
         if aws_access_key_id and aws_secret_access_key:
@@ -79,11 +81,18 @@ class AthenaAdapter(PrestoBaseAdapter):
         """Execute query and return results as DataFrame."""
         import pandas as pd
 
+        query_params: dict[str, Any] = {
+            "QueryExecutionContext": {"Database": self.database},
+            "ResultConfiguration": {"OutputLocation": self.s3_output_location},
+        }
+
+        if self.workgroup is not None:
+            query_params["WorkGroup"] = self.workgroup
+
         # Start query execution
         response = self.client.start_query_execution(
             QueryString=query,
-            QueryExecutionContext={"Database": self.database},
-            ResultConfiguration={"OutputLocation": self.s3_output_location},
+            **query_params,
         )
 
         query_execution_id = response["QueryExecutionId"]

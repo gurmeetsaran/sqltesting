@@ -86,6 +86,7 @@ class SQLTestDecorator:
             database = adapter_config.get("database")
             s3_output_location = adapter_config.get("s3_output_location")
             region = adapter_config.get("region", "us-west-2")
+            workgroup = adapter_config.get("workgroup")
             aws_access_key_id = adapter_config.get("aws_access_key_id")
             aws_secret_access_key = adapter_config.get("aws_secret_access_key")
 
@@ -98,6 +99,7 @@ class SQLTestDecorator:
                 database=database,
                 s3_output_location=s3_output_location,
                 region=region,
+                workgroup=workgroup,
                 aws_access_key_id=aws_access_key_id,
                 aws_secret_access_key=aws_secret_access_key,
             )
