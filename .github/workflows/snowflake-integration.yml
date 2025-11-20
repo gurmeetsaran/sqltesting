@@ -82,10 +82,9 @@ jobs:
     # Skip integration tests for Dependabot and fork PRs due to security restrictions
     # Secrets are not available for PRs from forks for security reasons
     if: |
-      github.actor != 'dependabot[bot]' &&
-      github.event.pull_request.head.repo.full_name == github.repository && (
+      github.actor != 'dependabot[bot]' && (
         (github.event_name == 'push' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main')) ||
-        (github.event_name == 'pull_request') ||
+        (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository) ||
         (github.event_name == 'workflow_dispatch') ||
         (github.event_name == 'workflow_call')
       )
