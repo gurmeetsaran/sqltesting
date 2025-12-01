@@ -1,0 +1,58 @@
+# robots.txt for SQL Testing Library Documentation
+# https://gurmeetsaran.github.io/sqltesting/
+
+User-agent: *
+Allow: /
+
+# Sitemap - Google will discover this automatically
+Sitemap: https://gurmeetsaran.github.io/sqltesting/sitemap.xml
+
+# Disallow specific paths
+Disallow: /assets/
+Disallow: /_site/
+Disallow: /vendor/
+Disallow: /node_modules/
+
+# Allow crawling of documentation pages
+Allow: /getting-started.html
+Allow: /examples.html
+Allow: /adapters.html
+Allow: /api-reference.html
+Allow: /troubleshooting.html
+Allow: /mocksmith_integration.html
+Allow: /sql-logging.html
+
+# Common crawl directives
+Crawl-delay: 1
+
+# Specific bot configurations
+User-agent: Googlebot
+Allow: /
+
+User-agent: Googlebot-Image
+Allow: /assets/images/
+
+User-agent: Bingbot
+Allow: /
+
+User-agent: Slurp
+Allow: /
+
+User-agent: DuckDuckBot
+Allow: /
+
+User-agent: Baiduspider
+Crawl-delay: 2
+
+User-agent: YandexBot
+Crawl-delay: 2
+
+# Block bad bots
+User-agent: MJ12bot
+Disallow: /
+
+User-agent: AhrefsBot
+Disallow: /
+
+User-agent: SemrushBot
+Crawl-delay: 5
