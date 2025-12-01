@@ -23,3 +23,6 @@ Thumbs.db
 
 # Bundler
 Gemfile.lock
+
+# Internal documentation (not for public site)
+SEO_SETUP_GUIDE.md
