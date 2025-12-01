@@ -22,11 +22,13 @@ coverage:
     unit-tests:
       paths:
         - src/sql_testing_library/
+      carryforward: true  # Keep previous coverage if not uploaded
       # Unit tests should cover core functionality
 
     integration:
       paths:
         - src/sql_testing_library/
+      carryforward: true  # Keep previous coverage if not uploaded
       # Integration tests cover adapter-specific code
 
     bigquery:
@@ -34,36 +36,42 @@ coverage:
         - src/sql_testing_library/adapters/bigquery.py
         - src/sql_testing_library/core.py
         - src/sql_testing_library/mock_table.py
+      carryforward: true  # Keep previous coverage if adapter tests don't run
 
     athena:
       paths:
         - src/sql_testing_library/adapters/athena.py
         - src/sql_testing_library/core.py
         - src/sql_testing_library/mock_table.py
+      carryforward: true  # Keep previous coverage if adapter tests don't run
 
     redshift:
       paths:
         - src/sql_testing_library/adapters/redshift.py
         - src/sql_testing_library/core.py
         - src/sql_testing_library/mock_table.py
+      carryforward: true  # Keep previous coverage if adapter tests don't run
 
     snowflake:
       paths:
         - src/sql_testing_library/adapters/snowflake.py
         - src/sql_testing_library/core.py
         - src/sql_testing_library/mock_table.py
+      carryforward: true  # Keep previous coverage if adapter tests don't run
 
     trino:
       paths:
         - src/sql_testing_library/adapters/trino.py
         - src/sql_testing_library/core.py
         - src/sql_testing_library/mock_table.py
+      carryforward: true  # Keep previous coverage if adapter tests don't run
 
     duckdb:
       paths:
         - src/sql_testing_library/_adapters/duckdb.py
         - src/sql_testing_library/_core.py
         - src/sql_testing_library/_mock_table.py
+      carryforward: true  # Keep previous coverage if adapter tests don't run
 
 parsers:
   gcov:
