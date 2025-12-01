@@ -80,9 +80,8 @@ color_scheme: light
 # Custom CSS
 custom_css: assets/css/custom.css
 
-# Google Analytics (if you have it)
-# Uncomment and replace with your tracking ID:
-# ga_tracking: G-XXXXXXXXXX
+# Google Analytics
+ga_tracking: G-CN6TP2ET6Z
 
 # Plugins
 plugins:
