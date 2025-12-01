@@ -182,6 +182,7 @@ jobs:
             --cov-report=xml:coverage-bigquery-integration.xml
 
       - name: Upload BigQuery integration coverage to Codecov
+        if: github.event_name == 'push' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main')
         uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}

@@ -132,6 +132,7 @@ jobs:
         timeout-minutes: 10
 
       - name: Upload DuckDB integration coverage to Codecov
+        if: github.event_name == 'push' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main')
         uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
