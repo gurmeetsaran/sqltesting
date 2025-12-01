@@ -1,0 +1,139 @@
+<!-- SEO Meta Tags -->
+<meta name="description" content="SQL Testing Library - Unit test SQL queries with mock data for BigQuery, Snowflake, Redshift, Athena, Trino, and DuckDB. Simplify data engineering and ETL testing with Python and pytest." />
+<meta name="keywords" content="SQL testing, unit testing SQL, mock data, database testing, BigQuery testing, Snowflake testing, Redshift testing, Athena testing, Trino testing, DuckDB testing, data engineering, ETL testing, SQL validation, pytest SQL, Python SQL testing, data quality testing, analytics testing, cloud database testing, AWS Athena, Google BigQuery, Amazon Redshift" />
+<meta name="author" content="Gurmeet Saran and Kushal Thakkar" />
+<link rel="canonical" href="{{ site.url }}{{ site.baseurl }}{{ page.url }}" />
+
+<!-- Open Graph / Facebook -->
+<meta property="og:type" content="website" />
+<meta property="og:url" content="{{ site.url }}{{ site.baseurl }}{{ page.url }}" />
+<meta property="og:title" content="{% if page.title %}{{ page.title }} | {{ site.title }}{% else %}{{ site.title }}{% endif %}" />
+<meta property="og:description" content="{% if page.description %}{{ page.description }}{% else %}{{ site.description }}{% endif %}" />
+<meta property="og:image" content="{{ site.url }}{{ site.baseurl }}/assets/images/sql-testing-library-og-image.png" />
+<meta property="og:site_name" content="SQL Testing Library" />
+<meta property="og:locale" content="en_US" />
+
+<!-- Twitter -->
+<meta property="twitter:card" content="summary_large_image" />
+<meta property="twitter:url" content="{{ site.url }}{{ site.baseurl }}{{ page.url }}" />
+<meta property="twitter:title" content="{% if page.title %}{{ page.title }} | {{ site.title }}{% else %}{{ site.title }}{% endif %}" />
+<meta property="twitter:description" content="{% if page.description %}{{ page.description }}{% else %}{{ site.description }}{% endif %}" />
+<meta property="twitter:image" content="{{ site.url }}{{ site.baseurl }}/assets/images/sql-testing-library-twitter-card.png" />
+<meta property="twitter:creator" content="@gurmeetsaran" />
+
+<!-- Additional SEO Tags -->
+<meta name="robots" content="index, follow" />
+<meta name="googlebot" content="index, follow" />
+<meta name="google-site-verification" content="Llg2sgd0X8Tywmq6bLph0DPi747gH-ItFkDRylP2Crg" />
+<meta name="msvalidate.01" content="" />
+<meta name="yandex-verification" content="" />
+
+<!-- Structured Data / Schema.org for Google -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "SoftwareApplication",
+      "name": "SQL Testing Library",
+      "applicationCategory": "DeveloperApplication",
+      "operatingSystem": "Linux, macOS, Windows",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD"
+      },
+      "description": "A powerful Python framework for unit testing SQL queries with mock data injection across BigQuery, Snowflake, Redshift, Athena, Trino, and DuckDB.",
+      "url": "{{ site.url }}{{ site.baseurl }}",
+      "downloadUrl": "https://pypi.org/project/sql-testing-library/",
+      "softwareVersion": "0.17.0",
+      "programmingLanguage": {
+        "@type": "ComputerLanguage",
+        "name": "Python",
+        "url": "https://www.python.org/"
+      },
+      "codeRepository": "https://github.com/gurmeetsaran/sqltesting",
+      "license": "https://opensource.org/licenses/MIT",
+      "author": [
+        {
+          "@type": "Person",
+          "name": "Gurmeet Saran",
+          "email": "gurmeetx@gmail.com"
+        },
+        {
+          "@type": "Person",
+          "name": "Kushal Thakkar",
+          "email": "kushal.thakkar@gmail.com"
+        }
+      ],
+      "keywords": "SQL testing, unit testing, mock data, database testing, BigQuery, Snowflake, Redshift, Athena, Trino, DuckDB, data engineering, ETL testing"
+    },
+    {
+      "@type": "WebSite",
+      "name": "SQL Testing Library Documentation",
+      "url": "{{ site.url }}{{ site.baseurl }}",
+      "potentialAction": {
+        "@type": "SearchAction",
+        "target": {
+          "@type": "EntryPoint",
+          "urlTemplate": "{{ site.url }}{{ site.baseurl }}/search?q={search_term_string}"
+        },
+        "query-input": "required name=search_term_string"
+      }
+    },
+    {
+      "@type": "TechArticle",
+      "headline": "{% if page.title %}{{ page.title }}{% else %}SQL Testing Library Documentation{% endif %}",
+      "description": "{% if page.description %}{{ page.description }}{% else %}{{ site.description }}{% endif %}",
+      "url": "{{ site.url }}{{ site.baseurl }}{{ page.url }}",
+      "datePublished": "{% if page.date %}{{ page.date | date_to_xmlschema }}{% else %}2024-01-01T00:00:00+00:00{% endif %}",
+      "dateModified": "{% if page.last_modified_at %}{{ page.last_modified_at | date_to_xmlschema }}{% else %}{{ site.time | date_to_xmlschema }}{% endif %}",
+      "author": [
+        {
+          "@type": "Person",
+          "name": "Gurmeet Saran"
+        },
+        {
+          "@type": "Person",
+          "name": "Kushal Thakkar"
+        }
+      ],
+      "publisher": {
+        "@type": "Organization",
+        "name": "SQL Testing Library",
+        "logo": {
+          "@type": "ImageObject",
+          "url": "{{ site.url }}{{ site.baseurl }}/assets/images/logo.png"
+        }
+      }
+    },
+    {
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        {
+          "@type": "ListItem",
+          "position": 1,
+          "name": "Home",
+          "item": "{{ site.url }}{{ site.baseurl }}/"
+        }{% if page.url != "/" %},
+        {
+          "@type": "ListItem",
+          "position": 2,
+          "name": "{% if page.title %}{{ page.title }}{% else %}Documentation{% endif %}",
+          "item": "{{ site.url }}{{ site.baseurl }}{{ page.url }}"
+        }{% endif %}
+      ]
+    }
+  ]
+}
+</script>
+
+<!-- Performance and Preconnect -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="dns-prefetch" href="https://www.google-analytics.com">
+
+<!-- Favicon -->
+<link rel="icon" type="image/png" sizes="32x32" href="{{ site.baseurl }}/assets/images/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="{{ site.baseurl }}/assets/images/favicon-16x16.png">
+<link rel="apple-touch-icon" sizes="180x180" href="{{ site.baseurl }}/assets/images/apple-touch-icon.png">
