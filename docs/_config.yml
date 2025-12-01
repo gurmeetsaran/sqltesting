@@ -1,8 +1,26 @@
 # Site settings
-title: SQL Testing Library
-description: A Python library for testing SQL queries with mock data injection across multiple database platforms
+title: SQL Testing Library - Unit Test SQL Queries for BigQuery, Snowflake, Redshift, Athena, Trino & DuckDB
+description: >-
+  SQL Testing Library is a powerful Python framework for unit testing SQL queries with mock data injection.
+  Test SQL across BigQuery, Snowflake, Redshift, Athena, Trino, and DuckDB. Simplify data engineering,
+  ETL pipeline testing, and analytics validation with pytest integration and type-safe results.
 url: "https://gurmeetsaran.github.io"
 baseurl: "/sqltesting"
+
+# SEO settings
+lang: en-US
+author:
+  name: "Gurmeet Saran and Kushal Thakkar"
+  email: "gurmeetx@gmail.com"
+  twitter: saran_gurmeet
+twitter:
+  username: saran_gurmeet
+  card: summary_large_image
+social:
+  name: SQL Testing Library
+  links:
+    - https://github.com/gurmeetsaran/sqltesting
+    - https://pypi.org/project/sql-testing-library/
 
 # Repository
 repository: gurmeetsaran/sqltesting
@@ -63,6 +81,7 @@ color_scheme: light
 custom_css: assets/css/custom.css
 
 # Google Analytics (if you have it)
+# Uncomment and replace with your tracking ID:
 # ga_tracking: G-XXXXXXXXXX
 
 # Plugins
