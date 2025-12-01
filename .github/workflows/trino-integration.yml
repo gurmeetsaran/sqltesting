@@ -180,7 +180,7 @@ jobs:
         uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          file: ./coverage-trino-integration.xml
+          files: ./coverage-trino-integration.xml
           flags: integration,trino
           name: trino-integration-coverage
           fail_ci_if_error: false

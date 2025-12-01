@@ -185,7 +185,7 @@ jobs:
         uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          file: ./coverage-bigquery-integration.xml
+          files: ./coverage-bigquery-integration.xml
           flags: integration,bigquery
           name: bigquery-integration-coverage
           fail_ci_if_error: false

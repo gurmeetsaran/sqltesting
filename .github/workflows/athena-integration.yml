@@ -157,7 +157,7 @@ jobs:
         uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          file: ./coverage-athena-integration.xml
+          files: ./coverage-athena-integration.xml
           flags: integration,athena
           name: athena-integration-coverage
           fail_ci_if_error: false

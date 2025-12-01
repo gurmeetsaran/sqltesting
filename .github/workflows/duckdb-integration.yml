@@ -135,7 +135,7 @@ jobs:
         uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          file: ./coverage-duckdb-integration.xml
+          files: ./coverage-duckdb-integration.xml
           flags: integration,duckdb
           name: duckdb-integration-coverage
           fail_ci_if_error: false

@@ -183,7 +183,7 @@ jobs:
         uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          file: ./coverage-redshift-integration.xml
+          files: ./coverage-redshift-integration.xml
           flags: integration,redshift
           name: redshift-integration-coverage
           fail_ci_if_error: false

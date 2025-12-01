@@ -269,7 +269,7 @@ jobs:
         uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          file: ./coverage-snowflake-integration.xml
+          files: ./coverage-snowflake-integration.xml
           flags: integration,snowflake
           name: snowflake-integration-coverage
           fail_ci_if_error: false
