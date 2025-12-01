@@ -159,6 +159,8 @@ class TestQuerySizeLimitExceeded(unittest.TestCase):
         self.assertIn("Query size", error_str)
         self.assertIn(str(query_size), error_str)
         self.assertIn(str(max_size), error_str)
+        self.assertIn("use_physical_tables=True", error_str)  # Check suggestion is included
+        self.assertIn(adapter_name, error_str)
 
     def test_zero_sizes(self):
         """Test with zero sizes."""
@@ -230,6 +232,26 @@ class TestTypeConversionError(unittest.TestCase):
         # The type representation might vary between Python versions
         # Just check that some form of date type is mentioned
         self.assertTrue("date" in error_str.lower() or "typing" in error_str.lower())
+
+    def test_type_without_name_attribute(self):
+        """Test with types that don't have __name__ attribute (like Optional)."""
+        # Optional doesn't have __name__ so it will hit the except AttributeError block
+        error = TypeConversionError("invalid", Optional[str], "field")
+
+        error_str = str(error)
+        self.assertIn("Cannot convert", error_str)
+        self.assertIn("'invalid'", error_str)
+        self.assertIn("field", error_str)
+        # Should contain string representation since __name__ doesn't exist
+
+    def test_empty_column_name_string(self):
+        """Test with empty string column name."""
+        error = TypeConversionError("bad_value", int, "")
+
+        error_str = str(error)
+        # With empty column name, should not include "for column" part
+        self.assertIn("Cannot convert", error_str)
+        self.assertIn("'bad_value'", error_str)
 
     def test_none_value(self):
         """Test with None value."""
