@@ -26,12 +26,29 @@ class TestSQLLoggerReal:
             logger = SQLLogger(log_dir=tmpdir)
 
             # Test with PYTEST_XDIST_WORKER
-            with patch.dict(os.environ, {"PYTEST_XDIST_WORKER": "gw0"}):
+            # Clear both possible env vars first, then set the one we want to test
+            with patch.dict(
+                os.environ,
+                {
+                    "PYTEST_XDIST_WORKER": "gw0",
+                    "PYTEST_CURRENT_TEST_WORKER": "",
+                },
+                clear=False,
+            ):
+                # Remove PYTEST_CURRENT_TEST_WORKER if it exists
+                os.environ.pop("PYTEST_CURRENT_TEST_WORKER", None)
                 worker_id = logger._get_worker_id()
                 assert worker_id == "gw0"
 
             # Test with PYTEST_CURRENT_TEST_WORKER (fallback)
-            with patch.dict(os.environ, {"PYTEST_CURRENT_TEST_WORKER": "worker1"}):
+            # Clear PYTEST_XDIST_WORKER so fallback is used
+            with patch.dict(
+                os.environ,
+                {"PYTEST_CURRENT_TEST_WORKER": "worker1"},
+                clear=False,
+            ):
+                # Remove PYTEST_XDIST_WORKER to test the fallback
+                os.environ.pop("PYTEST_XDIST_WORKER", None)
                 worker_id = logger._get_worker_id()
                 assert worker_id == "worker1"
 
