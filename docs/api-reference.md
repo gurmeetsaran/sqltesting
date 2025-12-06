@@ -1,6 +1,6 @@
 ---
 layout: default
-title: API Reference - Python SQL Testing Library Classes & Methods
+title: API Reference - Classes & Methods
 nav_order: 4
 description: "Complete API reference for SQL Testing Library. Documentation for sql_test decorator, TestCase, BaseMockTable, and database adapters."
 ---

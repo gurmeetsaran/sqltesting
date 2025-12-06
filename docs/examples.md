@@ -1,6 +1,6 @@
 ---
 layout: default
-title: SQL Testing Examples - BigQuery, Snowflake, Athena Unit Tests
+title: Examples - SQL Unit Testing with Python
 nav_order: 6
 description: "Real-world examples of SQL unit testing with Python. Learn how to test BigQuery, Snowflake, Redshift, Athena queries with mock data using pytest."
 ---

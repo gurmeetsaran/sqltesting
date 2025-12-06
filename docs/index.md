@@ -1,6 +1,6 @@
 ---
 layout: default
-title: Python SQL Testing Library - Unit Test BigQuery, Snowflake, Athena & More
+title: Python SQL Unit Testing with Pytest
 nav_order: 1
 description: "Python SQL testing library for unit testing database queries with mock data. Test BigQuery, Snowflake, Redshift, Athena, Trino & DuckDB with pytest. Perfect for data engineering and ETL pipeline testing."
 permalink: /
