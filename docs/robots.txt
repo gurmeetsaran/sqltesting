@@ -1,37 +1,9 @@
 # robots.txt for SQL Testing Library Documentation
 # https://gurmeetsaran.github.io/sqltesting/
 
-# Sitemap location (most important - put at top)
+# Sitemap location
 Sitemap: https://gurmeetsaran.github.io/sqltesting/sitemap.xml
 
-# Google and other major search engines
-User-agent: Googlebot
-User-agent: Googlebot-Image
-User-agent: Bingbot
-User-agent: Slurp
-User-agent: DuckDuckBot
-Allow: /
-
-# Allow all content (CSS/JS needed for proper rendering)
+# Allow all bots to crawl everything
 User-agent: *
 Allow: /
-
-# Block only build directories (not assets - Google needs them for rendering!)
-Disallow: /_site/
-Disallow: /vendor/
-Disallow: /node_modules/
-
-# Slower crawl for resource-intensive bots
-User-agent: Baiduspider
-Crawl-delay: 2
-Allow: /
-
-User-agent: YandexBot
-Crawl-delay: 2
-Allow: /
-
-# Block aggressive/commercial bots
-User-agent: MJ12bot
-User-agent: AhrefsBot
-User-agent: SemrushBot
-Disallow: /
