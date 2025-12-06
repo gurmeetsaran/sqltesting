@@ -1,4 +1,24 @@
+---
+layout: default
+title: Development - Linting Guidelines
+nav_exclude: true
+search_exclude: true
+sitemap: false
+---
+
 # Linting and Formatting Guidelines
+{: .no_toc }
+
+Development guidelines for code quality tools.
+{: .fs-6 .fw-300 }
+
+## Table of contents
+{: .no_toc .text-delta }
+
+1. TOC
+{:toc}
+
+---
 
 This project uses [Ruff](https://github.com/astral-sh/ruff) for linting and formatting Python code, and [Pyright](https://github.com/microsoft/pyright) for static type checking.
 

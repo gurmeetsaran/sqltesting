@@ -12,14 +12,14 @@ User-agent: Slurp
 User-agent: DuckDuckBot
 Allow: /
 
-# Block development/build directories
+# Allow all content (CSS/JS needed for proper rendering)
 User-agent: *
-Disallow: /assets/css/
-Disallow: /assets/js/
+Allow: /
+
+# Block only build directories (not assets - Google needs them for rendering!)
 Disallow: /_site/
 Disallow: /vendor/
 Disallow: /node_modules/
-Allow: /
 
 # Slower crawl for resource-intensive bots
 User-agent: Baiduspider

@@ -1,3 +1,11 @@
+---
+layout: default
+title: Documentation README
+nav_exclude: true
+search_exclude: true
+sitemap: false
+---
+
 # SQL Testing Library Documentation
 
 This directory contains the documentation for the SQL Testing Library, built with Jekyll and hosted on GitHub Pages.
