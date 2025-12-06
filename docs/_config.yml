@@ -1,9 +1,10 @@
 # Site settings
-title: SQL Testing Library
+title: SQL Testing Library - Python Unit Testing for BigQuery, Snowflake, Athena
 description: >-
-  SQL Testing Library is a powerful Python framework for unit testing SQL queries with mock data injection.
-  Test SQL across BigQuery, Snowflake, Redshift, Athena, Trino, and DuckDB. Simplify data engineering,
-  ETL pipeline testing, and analytics validation with pytest integration and type-safe results.
+  Python SQL testing library for unit testing database queries with mock data injection.
+  Test BigQuery, Snowflake, Redshift, Athena, Trino, and DuckDB with pytest integration.
+  Perfect for data engineering teams building ETL pipelines, validating data transformations,
+  and testing analytics queries. Type-safe results with Pydantic models.
 url: "https://gurmeetsaran.github.io"
 baseurl: "/sqltesting"
 

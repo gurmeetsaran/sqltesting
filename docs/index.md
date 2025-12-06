@@ -1,30 +1,34 @@
 ---
 layout: default
-title: SQL Testing Library
+title: Python SQL Testing Library - Unit Test BigQuery, Snowflake, Athena & More
 nav_order: 1
-description: "A Python library for testing SQL queries with mock data injection across multiple database platforms"
+description: "Python SQL testing library for unit testing database queries with mock data. Test BigQuery, Snowflake, Redshift, Athena, Trino & DuckDB with pytest. Perfect for data engineering and ETL pipeline testing."
 permalink: /
 ---
 
-# SQL Testing Library
+# SQL Testing Library for Python
 {: .fs-9 }
 
-A Python library for testing SQL queries with mock data injection across Athena, BigQuery, Redshift, Trino, Snowflake, and DuckDB.
+Unit test SQL queries with mock data injection for BigQuery, Snowflake, Redshift, Athena, Trino, and DuckDB. Pytest integration for data engineering and ETL testing.
 {: .fs-6 .fw-300 }
 
 [Get started now](getting-started){: .btn .btn-primary .fs-5 .mb-4 .mb-md-0 .mr-2 } [View on GitHub](https://github.com/gurmeetsaran/sqltesting){: .btn .fs-5 .mb-4 .mb-md-0 }
 
 ---
 
-## 🎯 Why SQL Testing Library?
+## 🎯 Why Use SQL Testing Library for Python?
 
-SQL testing in data engineering can be challenging, especially when working with large datasets and complex queries across multiple database platforms. This library addresses the pain points of:
+**SQL unit testing** in data engineering can be challenging, especially when working with cloud databases like **BigQuery, Snowflake, Redshift, and Athena**. This **Python SQL testing framework** addresses critical pain points:
 
-- **Fragile Integration Tests**: Traditional tests that depend on live data break when data changes
-- **Slow Feedback Loops**: Running tests against full datasets takes too long for CI/CD
-- **Database Engine Upgrades**: UDF semantics and SQL behavior change between database versions, causing silent production failures
-- **Database Lock-in**: Tests written for one database don't work on another
-- **Complex Setup**: Each database requires different mocking strategies and tooling
+- **Fragile Integration Tests**: Traditional SQL tests that depend on live data break when data changes, causing flaky CI/CD pipelines
+- **Slow Feedback Loops**: Running database tests against full datasets takes too long for continuous integration
+- **Database Engine Upgrades**: UDF semantics and SQL behavior change between versions (e.g., Athena v2 to v3), causing silent production failures
+- **Database Lock-in**: SQL tests written for BigQuery don't work on Snowflake or Redshift without rewrites
+- **Complex Setup**: Each cloud database requires different mocking strategies, credentials, and testing tools
+
+### Perfect for Data Engineering Teams
+
+Whether you're building **ETL pipelines**, validating **data transformations**, or testing **analytics queries**, this library provides a unified pytest-based framework for SQL testing across all major cloud databases.
 
 ## ✨ Key Features
 
@@ -207,6 +211,38 @@ This project is licensed under the MIT License - see the [LICENSE](https://githu
 ## 🙏 Acknowledgments
 
 Built with ❤️ by the data engineering community. Special thanks to all [contributors](https://github.com/gurmeetsaran/sqltesting/graphs/contributors).
+
+---
+
+## 🤔 Frequently Asked Questions
+
+### How do I unit test SQL queries in Python?
+
+Use SQL Testing Library with pytest to write unit tests for SQL queries. The library injects mock data via CTEs or temporary tables, allowing you to test query logic without accessing real databases. Perfect for testing BigQuery, Snowflake, Redshift, Athena, Trino, and DuckDB queries.
+
+### Can I test BigQuery SQL queries without a BigQuery account?
+
+Yes! SQL Testing Library creates temporary mock data within your BigQuery project, so you only need access to a test project. No production data needed. The library works with BigQuery's free tier.
+
+### How do I test Snowflake SQL queries locally?
+
+Configure the Snowflake adapter in `pytest.ini` with your test warehouse credentials. The library creates temporary tables that auto-cleanup after each test. Alternatively, use DuckDB adapter for fully local testing with similar SQL syntax.
+
+### What's the best way to test ETL pipelines?
+
+Use SQL Testing Library to test individual SQL transformations with controlled mock data. This approach is faster and more reliable than end-to-end integration tests. Write pytest tests for each transformation step in your data pipeline.
+
+### Can I use this for data validation testing?
+
+Absolutely! SQL Testing Library is perfect for testing data validation rules, business logic, and quality checks written in SQL. Test assertions, constraints, and transformations with type-safe mock data using Python dataclasses or Pydantic models.
+
+### Does this work with dbt?
+
+Yes! You can test dbt SQL models by extracting the compiled SQL and testing it with SQL Testing Library. This provides unit-level testing for your dbt transformations before running full dbt tests.
+
+### How do I test SQL queries across multiple databases?
+
+Write your test once and use different adapters (BigQuery, Snowflake, Redshift, etc.) by specifying `adapter_type` in the `@sql_test` decorator. Perfect for testing query compatibility when migrating between cloud databases.
 
 ---
 

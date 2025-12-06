@@ -1,11 +1,15 @@
 ---
 layout: default
-title: Database Adapters
+title: Database Adapters - Configure BigQuery, Snowflake, Athena Testing
 nav_order: 3
+description: "Configure SQL Testing Library for BigQuery, Snowflake, Redshift, Athena, Trino, and DuckDB. Database adapter setup and connection configuration guide."
 ---
 
-# Database Adapters
+# Database Adapters Configuration
 {: .no_toc }
+
+Configure database adapters for SQL unit testing with BigQuery, Snowflake, Redshift, Athena, Trino, and DuckDB.
+{: .fs-6 .fw-300 }
 
 ## Table of contents
 {: .no_toc .text-delta }

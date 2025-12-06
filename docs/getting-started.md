@@ -1,11 +1,15 @@
 ---
 layout: default
-title: Getting Started
+title: Getting Started - Install & Configure Python SQL Testing Library
 nav_order: 2
+description: "Install and configure SQL Testing Library for Python. Setup pytest integration for BigQuery, Snowflake, Redshift, Athena, Trino, and DuckDB unit testing."
 ---
 
-# Getting Started
+# Getting Started with SQL Testing Library
 {: .no_toc }
+
+Learn how to install and configure the Python SQL testing library for unit testing your database queries with pytest integration.
+{: .fs-6 .fw-300 }
 
 ## Table of contents
 {: .no_toc .text-delta }
