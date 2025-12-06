@@ -1,7 +1,8 @@
 ---
 layout: default
 title: Troubleshooting
-nav_order: 7
+nav_order: 5
+description: "Common issues and solutions for SQL Testing Library. Troubleshoot configuration, connection, and test execution problems."
 ---
 
 # Troubleshooting

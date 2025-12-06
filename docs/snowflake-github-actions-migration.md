@@ -1,4 +1,23 @@
+---
+layout: default
+title: Snowflake GitHub Actions - Key-Pair Setup
+nav_order: 10
+description: "Migrate Snowflake tests to GitHub Actions with key-pair authentication. Step-by-step guide for CI/CD integration."
+---
+
 # Migrating GitHub Actions from Password to Key-Pair Authentication
+{: .no_toc }
+
+Migrate Snowflake integration tests to GitHub Actions using key-pair authentication.
+{: .fs-6 .fw-300 }
+
+## Table of contents
+{: .no_toc .text-delta }
+
+1. TOC
+{:toc}
+
+---
 
 This guide helps you migrate your GitHub Actions workflows from password-based authentication to key-pair authentication for Snowflake, which is required when MFA is enabled.
 

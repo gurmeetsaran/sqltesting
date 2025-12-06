@@ -1,7 +1,8 @@
 ---
 layout: default
-title: SQL Logging
-nav_order: 5
+title: SQL Logging - Debug & Inspect Queries
+nav_order: 7
+description: "Enable SQL query logging for debugging. View generated queries, temporary tables, and execution details."
 ---
 
 # SQL Logging Feature

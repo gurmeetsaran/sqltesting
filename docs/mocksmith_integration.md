@@ -1,4 +1,23 @@
+---
+layout: default
+title: Mocksmith Integration - Generate Test Data
+nav_order: 6
+description: "Generate realistic mock data automatically with Mocksmith. Reduce test setup code by 70% while creating more realistic test scenarios."
+---
+
 # Using SQL Testing Library with Mocksmith
+{: .no_toc }
+
+Generate realistic mock data automatically using Mocksmith to reduce test setup boilerplate.
+{: .fs-6 .fw-300 }
+
+## Table of contents
+{: .no_toc .text-delta }
+
+1. TOC
+{:toc}
+
+---
 
 [Mocksmith](https://github.com/gurmeetsaran/mocksmith) is a complementary library that provides automatic mock data generation for Python classes. When combined with SQL Testing Library, it dramatically reduces the boilerplate code needed to create test data.
 

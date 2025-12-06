@@ -1,7 +1,7 @@
 ---
 layout: default
 title: API Reference - Classes & Methods
-nav_order: 4
+nav_order: 8
 description: "Complete API reference for SQL Testing Library. Documentation for sql_test decorator, TestCase, BaseMockTable, and database adapters."
 ---
 

@@ -1,4 +1,23 @@
+---
+layout: default
+title: Snowflake MFA & Key-Pair Auth for CI/CD
+nav_order: 9
+description: "Setup Snowflake key-pair authentication for CI/CD when MFA is enabled. Configure GitHub Actions with private key authentication."
+---
+
 # Snowflake MFA Authentication for CI/CD
+{: .no_toc }
+
+Configure key-pair authentication for Snowflake when MFA is enforced in CI/CD environments.
+{: .fs-6 .fw-300 }
+
+## Table of contents
+{: .no_toc .text-delta }
+
+1. TOC
+{:toc}
+
+---
 
 When Snowflake requires Multi-Factor Authentication (MFA), you cannot use password-based authentication in CI/CD environments like GitHub Actions. This guide explains how to set up key-pair authentication as an alternative.
 
