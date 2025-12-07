@@ -144,18 +144,18 @@ class BigQueryMockTable(BaseMockTable):
     """Mock table for BigQuery with three-part naming: project.dataset.table"""
 
     # Class variables that subclasses must set (mandatory)
-    bigquery_project: str
-    bigquery_dataset: str
-    bigquery_table: str
+    project_name: str
+    dataset_name: str
+    table_name: str
 ```
 
 #### Class Variables
 
 | Variable | Type | Description |
 |----------|------|-------------|
-| `bigquery_project` | `str` | BigQuery project ID (required) |
-| `bigquery_dataset` | `str` | BigQuery dataset name (required) |
-| `bigquery_table` | `str` | BigQuery table name (required) |
+| `project_name` | `str` | BigQuery project ID (required) |
+| `dataset_name` | `str` | BigQuery dataset name (required) |
+| `table_name` | `str` | BigQuery table name (required) |
 
 #### Methods
 
@@ -163,9 +163,9 @@ class BigQueryMockTable(BaseMockTable):
 |--------|---------|-------------|
 | `get_project_name()` | `str` | Returns the BigQuery project ID |
 | `get_dataset_name()` | `str` | Returns the BigQuery dataset name |
-| `get_bigquery_project()` | `str` | Alias for `get_project_name()` |
-| `get_bigquery_dataset()` | `str` | Alias for `get_dataset_name()` |
-| `get_bigquery_table()` | `str` | Alias for `get_table_name()` |
+| `get_project_name()` | `str` | Alias for `get_project_name()` |
+| `get_dataset_name()` | `str` | Alias for `get_dataset_name()` |
+| `get_table_name()` | `str` | Alias for `get_table_name()` |
 | `get_fully_qualified_name()` | `str` | Returns `project.dataset.table` |
 | `get_database_name()` | `str` | Returns `project.dataset` (for compatibility) |
 | `get_table_name()` | `str` | Returns table name |
@@ -187,9 +187,9 @@ class Transaction:
     category: str
 
 class TransactionsMockTable(BigQueryMockTable):
-    bigquery_project = "my-company-prod"
-    bigquery_dataset = "financial_data"
-    bigquery_table = "transactions"
+    project_name = "my-company-prod"
+    dataset_name = "financial_data"
+    table_name = "transactions"
 
 # Usage
 transactions = TransactionsMockTable([
@@ -209,24 +209,24 @@ print(transactions.get_fully_qualified_name())   # "my-company-prod.financial_da
 ```python
 # Base class for all production tables
 class ProductionTable(BigQueryMockTable):
-    bigquery_project = "my-company-prod"
+    project_name = "my-company-prod"
 
 # Analytics dataset tables
 class AnalyticsTable(ProductionTable):
-    bigquery_dataset = "analytics"
+    dataset_name = "analytics"
 
 class UsersTable(AnalyticsTable):
-    bigquery_table = "users"
+    table_name = "users"
 
 class EventsTable(AnalyticsTable):
-    bigquery_table = "events"
+    table_name = "events"
 
 # Financial dataset tables
 class FinancialTable(ProductionTable):
-    bigquery_dataset = "financial_data"
+    dataset_name = "financial_data"
 
 class TransactionsTable(FinancialTable):
-    bigquery_table = "transactions"
+    table_name = "transactions"
 ```
 
 ### SQLTestFramework

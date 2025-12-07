@@ -648,14 +648,14 @@ class User:
 
 # Clean three-part naming with class variables
 class UsersMockTable(BigQueryMockTable):
-    bigquery_project = "my-project"
-    bigquery_dataset = "analytics"
-    bigquery_table = "users"
+    project_name = "my-project"
+    dataset_name = "analytics"
+    table_name = "users"
 
 class OrdersMockTable(BigQueryMockTable):
-    bigquery_project = "my-project"
-    bigquery_dataset = "analytics"
-    bigquery_table = "orders"
+    project_name = "my-project"
+    dataset_name = "analytics"
+    table_name = "orders"
 
 # Use in tests
 @sql_test(
@@ -684,15 +684,15 @@ def test_premium_users():
 ```python
 # Base class with shared project
 class MyAnalyticsTable(BigQueryMockTable):
-    bigquery_project = "my-project"
-    bigquery_dataset = "analytics"
+    project_name = "my-project"
+    dataset_name = "analytics"
 
 # Subclasses just set table name
 class UsersTable(MyAnalyticsTable):
-    bigquery_table = "users"
+    table_name = "users"
 
 class OrdersTable(MyAnalyticsTable):
-    bigquery_table = "orders"
+    table_name = "orders"
 ```
 
 #### BigQuery Struct Support

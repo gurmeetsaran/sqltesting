@@ -217,15 +217,15 @@ class BigQueryMockTable(BaseMockTable):
 
     Usage - Class variables for table definition:
         >>> class UsersMockTable(BigQueryMockTable):
-        ...     bigquery_project = "my-project"
-        ...     bigquery_dataset = "analytics"
-        ...     bigquery_table = "users"
+        ...     project_name = "my-project"
+        ...     dataset_name = "analytics"
+        ...     table_name = "users"
     """
 
     # Class variables that subclasses must set (mandatory)
-    bigquery_project: str
-    bigquery_dataset: str
-    bigquery_table: str
+    project_name: str
+    dataset_name: str
+    table_name: str
 
     def get_bigquery_project(self) -> str:
         """Return the BigQuery project name from class variable.
@@ -234,9 +234,9 @@ class BigQueryMockTable(BaseMockTable):
             BigQuery project ID
 
         Raises:
-            AttributeError: If bigquery_project class variable not set
+            AttributeError: If project_name class variable not set
         """
-        return self.bigquery_project
+        return self.project_name
 
     def get_bigquery_dataset(self) -> str:
         """Return the BigQuery dataset name from class variable.
@@ -245,9 +245,9 @@ class BigQueryMockTable(BaseMockTable):
             BigQuery dataset name
 
         Raises:
-            AttributeError: If bigquery_dataset class variable not set
+            AttributeError: If dataset_name class variable not set
         """
-        return self.bigquery_dataset
+        return self.dataset_name
 
     def get_bigquery_table(self) -> str:
         """Return the BigQuery table name from class variable.
@@ -256,9 +256,9 @@ class BigQueryMockTable(BaseMockTable):
             BigQuery table name
 
         Raises:
-            AttributeError: If bigquery_table class variable not set
+            AttributeError: If table_name class variable not set
         """
-        return self.bigquery_table
+        return self.table_name
 
     def get_project_name(self) -> str:
         """Return the BigQuery project name (alias for get_bigquery_project)."""

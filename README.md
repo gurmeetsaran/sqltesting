@@ -514,9 +514,9 @@ TestCase(
 from sql_testing_library import BigQueryMockTable
 
 class UsersMockTable(BigQueryMockTable):
-    bigquery_project = "test-project"
-    bigquery_dataset = "test_dataset"
-    bigquery_table = "users"
+    project_name = "test-project"
+    dataset_name = "test_dataset"
+    table_name = "users"
 
 # BigQuery Mock Table (Alternative: Use BaseMockTable with combined project.dataset)
 class UsersMockTableAlternative(BaseMockTable):
@@ -1060,9 +1060,9 @@ class UsersMockTable(BaseMockTable):
 from sql_testing_library import BigQueryMockTable
 
 class UsersMockTable(BigQueryMockTable):
-    bigquery_project = "test-project"
-    bigquery_dataset = "test_dataset"
-    bigquery_table = "users"
+    project_name = "test-project"
+    dataset_name = "test_dataset"
+    table_name = "users"
 ```
 
 #### Usage Examples
@@ -1072,30 +1072,30 @@ class UsersMockTable(BigQueryMockTable):
 from sql_testing_library import BigQueryMockTable
 
 class UsersMockTable(BigQueryMockTable):
-    bigquery_project = "my-project"
-    bigquery_dataset = "analytics"
-    bigquery_table = "users"
+    project_name = "my-project"
+    dataset_name = "analytics"
+    table_name = "users"
 
 class OrdersMockTable(BigQueryMockTable):
-    bigquery_project = "my-project"
-    bigquery_dataset = "analytics"
-    bigquery_table = "orders"
+    project_name = "my-project"
+    dataset_name = "analytics"
+    table_name = "orders"
 ```
 
 **Avoid Repetition with Inheritance:**
 ```python
 # Base class for all tables in the same project
 class MyProjectTable(BigQueryMockTable):
-    bigquery_project = "my-project"
+    project_name = "my-project"
 
 # Subclasses only specify dataset and table
 class UsersTable(MyProjectTable):
-    bigquery_dataset = "analytics"
-    bigquery_table = "users"
+    dataset_name = "analytics"
+    table_name = "users"
 
 class OrdersTable(MyProjectTable):
-    bigquery_dataset = "analytics"
-    bigquery_table = "orders"
+    dataset_name = "analytics"
+    table_name = "orders"
 ```
 
 **Available Methods:**

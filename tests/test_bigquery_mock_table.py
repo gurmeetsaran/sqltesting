@@ -28,9 +28,9 @@ class TestBigQueryMockTable(unittest.TestCase):
         """Test initialization using class variables."""
 
         class TestTable(BigQueryMockTable):
-            bigquery_project = "test-project"
-            bigquery_dataset = "test_dataset"
-            bigquery_table = "users"
+            project_name = "test-project"
+            dataset_name = "test_dataset"
+            table_name = "users"
 
         data = [{"id": 1, "name": "Alice"}]
         table = TestTable(data)
@@ -53,9 +53,9 @@ class TestBigQueryMockTable(unittest.TestCase):
         """Test that get_database_name returns project.dataset."""
 
         class TestTable(BigQueryMockTable):
-            bigquery_project = "my-project"
-            bigquery_dataset = "analytics"
-            bigquery_table = "users"
+            project_name = "my-project"
+            dataset_name = "analytics"
+            table_name = "users"
 
         data = [{"id": 1, "name": "Alice"}]
         table = TestTable(data)
@@ -66,9 +66,9 @@ class TestBigQueryMockTable(unittest.TestCase):
         """Test that get_qualified_name returns database.table (project.dataset.table)."""
 
         class TestTable(BigQueryMockTable):
-            bigquery_project = "my-project"
-            bigquery_dataset = "analytics"
-            bigquery_table = "users"
+            project_name = "my-project"
+            dataset_name = "analytics"
+            table_name = "users"
 
         data = [{"id": 1, "name": "Alice"}]
         table = TestTable(data)
@@ -82,9 +82,9 @@ class TestBigQueryMockTable(unittest.TestCase):
         """Test that get_fully_qualified_name returns project.dataset.table."""
 
         class TestTable(BigQueryMockTable):
-            bigquery_project = "my-project"
-            bigquery_dataset = "analytics"
-            bigquery_table = "users"
+            project_name = "my-project"
+            dataset_name = "analytics"
+            table_name = "users"
 
         data = [{"id": 1, "name": "Alice"}]
         table = TestTable(data)
@@ -95,9 +95,9 @@ class TestBigQueryMockTable(unittest.TestCase):
         """Test that get_cte_alias properly sanitizes dots and hyphens."""
 
         class TestTable(BigQueryMockTable):
-            bigquery_project = "my-project"
-            bigquery_dataset = "test_dataset"
-            bigquery_table = "user-data"
+            project_name = "my-project"
+            dataset_name = "test_dataset"
+            table_name = "user-data"
 
         data = [{"id": 1, "name": "Alice"}]
         table = TestTable(data)
@@ -114,9 +114,9 @@ class TestBigQueryMockTable(unittest.TestCase):
         """Test that BigQueryMockTable works with dataclass data."""
 
         class TestTable(BigQueryMockTable):
-            bigquery_project = "test-project"
-            bigquery_dataset = "test_dataset"
-            bigquery_table = "users"
+            project_name = "test-project"
+            dataset_name = "test_dataset"
+            table_name = "users"
 
         users = [
             TestUser(1, "Alice", "alice@test.com", True, date(2023, 1, 1)),
@@ -133,9 +133,9 @@ class TestBigQueryMockTable(unittest.TestCase):
         """Test that to_dataframe works correctly."""
 
         class TestTable(BigQueryMockTable):
-            bigquery_project = "test-project"
-            bigquery_dataset = "test_dataset"
-            bigquery_table = "users"
+            project_name = "test-project"
+            dataset_name = "test_dataset"
+            table_name = "users"
 
         users = [
             TestUser(1, "Alice", "alice@test.com", True, date(2023, 1, 1)),
@@ -158,9 +158,9 @@ class TestBigQueryMockTable(unittest.TestCase):
         """Test that get_column_types works correctly."""
 
         class TestTable(BigQueryMockTable):
-            bigquery_project = "test-project"
-            bigquery_dataset = "test_dataset"
-            bigquery_table = "users"
+            project_name = "test-project"
+            dataset_name = "test_dataset"
+            table_name = "users"
 
         users = [TestUser(1, "Alice", "alice@test.com", True, date(2023, 1, 1))]
 
@@ -178,9 +178,9 @@ class TestBigQueryMockTable(unittest.TestCase):
         """Test initialization with empty data."""
 
         class TestTable(BigQueryMockTable):
-            bigquery_project = "test-project"
-            bigquery_dataset = "test_dataset"
-            bigquery_table = "users"
+            project_name = "test-project"
+            dataset_name = "test_dataset"
+            table_name = "users"
 
         table = TestTable(data=[])
 
@@ -193,9 +193,9 @@ class TestBigQueryMockTable(unittest.TestCase):
         """Test with complex project and dataset names containing special chars."""
 
         class TestTable(BigQueryMockTable):
-            bigquery_project = "my-company-prod-123"
-            bigquery_dataset = "analytics_v2"
-            bigquery_table = "user_events"
+            project_name = "my-company-prod-123"
+            dataset_name = "analytics_v2"
+            table_name = "user_events"
 
         data = [{"id": 1, "name": "Alice"}]
         table = TestTable(data=data)
@@ -213,9 +213,9 @@ class TestBigQueryMockTable(unittest.TestCase):
         from sql_testing_library._mock_table import BaseMockTable
 
         class TestTable(BigQueryMockTable):
-            bigquery_project = "test-project"
-            bigquery_dataset = "test_dataset"
-            bigquery_table = "users"
+            project_name = "test-project"
+            dataset_name = "test_dataset"
+            table_name = "users"
 
         data = [{"id": 1, "name": "Alice"}]
         table = TestTable(data=data)
@@ -236,14 +236,14 @@ class TestBigQueryMockTable(unittest.TestCase):
         """Test that class variables work correctly with multiple instances."""
 
         class Table1(BigQueryMockTable):
-            bigquery_project = "shared-project"
-            bigquery_dataset = "dataset1"
-            bigquery_table = "table1"
+            project_name = "shared-project"
+            dataset_name = "dataset1"
+            table_name = "table1"
 
         class Table2(BigQueryMockTable):
-            bigquery_project = "shared-project"
-            bigquery_dataset = "dataset2"
-            bigquery_table = "table2"
+            project_name = "shared-project"
+            dataset_name = "dataset2"
+            table_name = "table2"
 
         data1 = [{"id": 1, "name": "Alice"}]
         table1 = Table1(data=data1)
@@ -263,9 +263,9 @@ class TestBigQueryMockTable(unittest.TestCase):
         """Test the class variable pattern for defining BigQuery mock tables."""
 
         class CustomUsersMockTable(BigQueryMockTable):
-            bigquery_project = "my-project"
-            bigquery_dataset = "my_dataset"
-            bigquery_table = "users"
+            project_name = "my-project"
+            dataset_name = "my_dataset"
+            table_name = "users"
 
         data = [{"id": 1, "name": "Alice"}]
         table = CustomUsersMockTable(data)
@@ -280,9 +280,9 @@ class TestBigQueryMockTable(unittest.TestCase):
         """Test class variable pattern works with dataclass data."""
 
         class OrdersMockTable(BigQueryMockTable):
-            bigquery_project = "test-project"
-            bigquery_dataset = "sales"
-            bigquery_table = "orders"
+            project_name = "test-project"
+            dataset_name = "sales"
+            table_name = "orders"
 
         @dataclass
         class Order:
@@ -299,9 +299,9 @@ class TestBigQueryMockTable(unittest.TestCase):
         """Test using all three class variables together."""
 
         class ProductsMockTable(BigQueryMockTable):
-            bigquery_project = "my-project"
-            bigquery_dataset = "inventory"
-            bigquery_table = "products"
+            project_name = "my-project"
+            dataset_name = "inventory"
+            table_name = "products"
 
         data = [{"id": 1, "name": "Widget"}]
         table = ProductsMockTable(data)

@@ -71,9 +71,9 @@ BigQuery uses a three-part naming scheme: `project_id.dataset_id.table_name`
 from sql_testing_library import BigQueryMockTable
 
 class MyMockTable(BigQueryMockTable):
-    bigquery_project = "my-project"
-    bigquery_dataset = "my_dataset"
-    bigquery_table = "my_table"
+    project_name = "my-project"
+    dataset_name = "my_dataset"
+    table_name = "my_table"
 ```
 
 **Alternative: Use BaseMockTable with combined project.dataset:**
@@ -105,25 +105,25 @@ from sql_testing_library import BigQueryMockTable
 
 # Define tables with explicit three-part naming
 class UsersMockTable(BigQueryMockTable):
-    bigquery_project = "my-project"
-    bigquery_dataset = "analytics"
-    bigquery_table = "users"
+    project_name = "my-project"
+    dataset_name = "analytics"
+    table_name = "users"
 
 class OrdersMockTable(BigQueryMockTable):
-    bigquery_project = "my-project"
-    bigquery_dataset = "analytics"
-    bigquery_table = "orders"
+    project_name = "my-project"
+    dataset_name = "analytics"
+    table_name = "orders"
 
 # Avoid repetition with base classes
 class MyAnalyticsTable(BigQueryMockTable):
-    bigquery_project = "my-project"
-    bigquery_dataset = "analytics"
+    project_name = "my-project"
+    dataset_name = "analytics"
 
 class UsersTable(MyAnalyticsTable):
-    bigquery_table = "users"
+    table_name = "users"
 
 class OrdersTable(MyAnalyticsTable):
-    bigquery_table = "orders"
+    table_name = "orders"
 ```
 
 **Available Methods:**

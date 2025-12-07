@@ -116,17 +116,17 @@ class UserWithOptionalEmail(BaseModel):
 class UsersMockTable(BigQueryMockTable):
     """Mock table for user data using BigQuery three-part naming."""
 
-    bigquery_project = "test-project"
-    bigquery_dataset = "test_dataset"
-    bigquery_table = "users"
+    project_name = "test-project"
+    dataset_name = "test_dataset"
+    table_name = "users"
 
 
 class OrdersMockTable(BigQueryMockTable):
     """Mock table for order data using BigQuery three-part naming."""
 
-    bigquery_project = "test-project"
-    bigquery_dataset = "test_dataset"
-    bigquery_table = "orders"
+    project_name = "test-project"
+    dataset_name = "test_dataset"
+    table_name = "orders"
 
 
 @pytest.mark.integration
