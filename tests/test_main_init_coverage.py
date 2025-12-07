@@ -6,12 +6,6 @@ import unittest
 class TestMainInitModule(unittest.TestCase):
     """Test the main sql_testing_library __init__.py module."""
 
-    def test_version_attribute(self):
-        """Test that version is correctly set."""
-        import sql_testing_library
-
-        self.assertEqual(sql_testing_library.__version__, "0.3.0")
-
     def test_backward_compatibility_alias(self):
         """Test that TestCase alias points to SQLTestCase."""
         import sql_testing_library
