@@ -29,6 +29,35 @@ except ImportError:
     pydantic_available = False
 
 
+def is_union_type(type_hint: Type) -> bool:
+    """Check if a type is a Union type (including Optional).
+
+    This function handles both:
+    - typing.Optional[X] / typing.Union[X, None] (Python 3.9+)
+    - X | None syntax (Python 3.10+)
+
+    Args:
+        type_hint: The type to check
+
+    Returns:
+        True if the type is a union type, False otherwise
+    """
+    origin = get_origin(type_hint)
+    if origin is None:
+        return False
+
+    # Handle typing.Union (used by Optional[X])
+    if origin is Union:
+        return True
+
+    # Handle types.UnionType (used by X | None in Python 3.10+)
+    # We check the name because types.UnionType may not be available in Python 3.9
+    if hasattr(origin, "__name__") and origin.__name__ == "UnionType":
+        return True
+
+    return False
+
+
 def is_pydantic_model_class(cls: Type) -> bool:
     """Check if a class is a Pydantic model class."""
     if not pydantic_available or BaseModel is None:
@@ -42,9 +71,9 @@ def is_pydantic_model_class(cls: Type) -> bool:
 
 def is_struct_type(type_hint: Type) -> bool:
     """Check if a type is a struct type (dataclass or Pydantic model)."""
-    # Handle Optional types
-    if hasattr(type_hint, "__origin__") and type_hint.__origin__ is Union:
-        # Extract the non-None type from Optional[T]
+    # Handle Optional types (both Optional[X] and X | None)
+    if is_union_type(type_hint):
+        # Extract the non-None type from Optional[T] or T | None
         non_none_types = [arg for arg in get_args(type_hint) if arg is not type(None)]
         if non_none_types:
             type_hint = non_none_types[0]
@@ -427,15 +456,17 @@ class BaseTypeConverter:
 
 
 def unwrap_optional_type(col_type: Type[Any]) -> Type[Any]:
-    """Unwrap Optional[T] to T, leave other types unchanged.
+    """Unwrap Optional[T] or T | None to T, leave other types unchanged.
 
     This is a utility function that can be used by adapters and mock tables
-    to handle Optional types consistently.
+    to handle Optional types consistently. Supports both:
+    - typing.Optional[T] / typing.Union[T, None] (Python 3.9+)
+    - T | None syntax (Python 3.10+)
     """
-    # Check if this is a Union type (which Optional[T] is)
-    if get_origin(col_type) is Union:
+    # Check if this is a Union type (which Optional[T] and T | None both are)
+    if is_union_type(col_type):
         args = get_args(col_type)
-        # Optional[T] is Union[T, None], so filter out NoneType
+        # Optional[T] or T | None is Union[T, None], so filter out NoneType
         non_none_types = [arg for arg in args if arg is not type(None)]
         if non_none_types:
             return cast(Type[Any], non_none_types[0])  # Return the first non-None type
