@@ -510,8 +510,16 @@ TestCase(
 #### Example Mock Table Implementations:
 
 ```python
-# BigQuery Mock Table
-class UsersMockTable(BaseMockTable):
+# BigQuery Mock Table (Recommended: Use BigQueryMockTable for clearer three-part naming)
+from sql_testing_library import BigQueryMockTable
+
+class UsersMockTable(BigQueryMockTable):
+    project_name = "test-project"
+    dataset_name = "test_dataset"
+    table_name = "users"
+
+# BigQuery Mock Table (Alternative: Use BaseMockTable with combined project.dataset)
+class UsersMockTableAlternative(BaseMockTable):
     def get_database_name(self) -> str:
         return "test-project.test_dataset"  # project.dataset format
 
@@ -987,6 +995,7 @@ The adapter_type parameter will use the configuration from the corresponding sec
 - Supports Google Cloud BigQuery service
 - Uses UNION ALL pattern for CTE creation with complex data types
 - Handles authentication via service account or application default credentials
+- **Special Feature**: `BigQueryMockTable` class for explicit three-part naming (project.dataset.table)
 
 #### Athena Adapter
 - Supports Amazon Athena service for querying data in S3
@@ -1024,6 +1033,94 @@ The adapter_type parameter will use the configuration from the corresponding sec
 - Supports both file-based and in-memory databases
 - No authentication required - perfect for local development and testing
 - Excellent performance for analytical workloads
+
+### BigQuery-Specific: BigQueryMockTable
+
+BigQuery uses a three-part naming scheme (`project.dataset.table`) which doesn't fit naturally into the two-part `database.table` model used by most databases. The `BigQueryMockTable` class provides explicit support for BigQuery's naming convention.
+
+#### The Problem with BaseMockTable
+
+Using `BaseMockTable` for BigQuery requires awkwardly cramming the project and dataset together:
+
+```python
+# Awkward: Combines project.dataset into database_name
+class UsersMockTable(BaseMockTable):
+    def get_database_name(self) -> str:
+        return "test-project.test_dataset"  # Confusing!
+
+    def get_table_name(self) -> str:
+        return "users"
+```
+
+#### The Solution: BigQueryMockTable
+
+`BigQueryMockTable` makes BigQuery's three-part naming explicit and clear:
+
+```python
+from sql_testing_library import BigQueryMockTable
+
+class UsersMockTable(BigQueryMockTable):
+    project_name = "test-project"
+    dataset_name = "test_dataset"
+    table_name = "users"
+```
+
+#### Usage Examples
+
+**Basic Usage:**
+```python
+from sql_testing_library import BigQueryMockTable
+
+class UsersMockTable(BigQueryMockTable):
+    project_name = "my-project"
+    dataset_name = "analytics"
+    table_name = "users"
+
+class OrdersMockTable(BigQueryMockTable):
+    project_name = "my-project"
+    dataset_name = "analytics"
+    table_name = "orders"
+```
+
+**Avoid Repetition with Inheritance:**
+```python
+# Base class for all tables in the same project
+class MyProjectTable(BigQueryMockTable):
+    project_name = "my-project"
+
+# Subclasses only specify dataset and table
+class UsersTable(MyProjectTable):
+    dataset_name = "analytics"
+    table_name = "users"
+
+class OrdersTable(MyProjectTable):
+    dataset_name = "analytics"
+    table_name = "orders"
+```
+
+**Available Methods:**
+```python
+table = UsersMockTable([...])
+
+# BigQuery-specific methods
+table.get_project_name()           # "my-project"
+table.get_dataset_name()           # "analytics"
+table.get_fully_qualified_name()   # "my-project.analytics.users"
+
+# Backwards compatible methods (from BaseMockTable)
+table.get_database_name()          # "my-project.analytics"
+table.get_table_name()             # "users"
+table.get_qualified_name()         # "my-project.analytics.users"
+table.get_cte_alias()              # "my_project_analytics__users"
+```
+
+**Benefits:**
+- ✅ **Clear Semantics**: Each BigQuery component is explicit
+- ✅ **No Confusion**: No more cramming project.dataset together
+- ✅ **Type Safe**: Full type hints and IDE autocomplete
+- ✅ **Backwards Compatible**: Still implements all `BaseMockTable` methods
+- ✅ **Simple**: Just 3 class variables to set
+- ✅ **Flexible**: Use inheritance to share common properties
 
 **Default Behavior:**
 - If adapter_type is not specified in the TestCase or decorator, the library will use the adapter specified in the `[sql_testing]` section's `adapter` setting.
@@ -1231,7 +1328,7 @@ The library automatically:
 - Injects mock data via CTEs or temp tables
 - Deserializes results to typed Python objects
 
-For detailed usage and configuration options, see the example files included.
+For detailed usage and configuration options, see the [documentation](https://gurmeetsaran.github.io/sqltesting/).
 
 ## Integration with Mocksmith
 
@@ -1266,7 +1363,7 @@ class Customer:
 customers = [Customer.mock() for _ in range(100)]
 ```
 
-See the [Mocksmith Integration Guide](docs/mocksmith_integration.md) and [examples](examples/mocksmith_integration_example.py) for detailed usage patterns.
+See the [Mocksmith Integration Guide](docs/mocksmith_integration.md) for detailed usage patterns.
 
 ## Known Limitations and TODOs
 

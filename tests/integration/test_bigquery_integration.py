@@ -10,7 +10,7 @@ from pydantic import BaseModel
 
 from sql_testing_library import TestCase, sql_test
 from sql_testing_library._exceptions import MockTableNotFoundError
-from sql_testing_library._mock_table import BaseMockTable
+from sql_testing_library._mock_table import BigQueryMockTable
 
 
 @dataclass
@@ -113,24 +113,20 @@ class UserWithOptionalEmail(BaseModel):
     email: Optional[str] = None
 
 
-class UsersMockTable(BaseMockTable):
-    """Mock table for user data."""
+class UsersMockTable(BigQueryMockTable):
+    """Mock table for user data using BigQuery three-part naming."""
 
-    def get_database_name(self) -> str:
-        return "test-project.test_dataset"
-
-    def get_table_name(self) -> str:
-        return "users"
+    project_name = "test-project"
+    dataset_name = "test_dataset"
+    table_name = "users"
 
 
-class OrdersMockTable(BaseMockTable):
-    """Mock table for order data."""
+class OrdersMockTable(BigQueryMockTable):
+    """Mock table for order data using BigQuery three-part naming."""
 
-    def get_database_name(self) -> str:
-        return "test-project.test_dataset"
-
-    def get_table_name(self) -> str:
-        return "orders"
+    project_name = "test-project"
+    dataset_name = "test_dataset"
+    table_name = "orders"
 
 
 @pytest.mark.integration

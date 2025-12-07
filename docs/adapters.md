@@ -63,12 +63,84 @@ credentials_path = /path/to/service-account.json
 
 ### Database Context
 
-BigQuery uses project and dataset: `project_id.dataset_id`
+BigQuery uses a three-part naming scheme: `project_id.dataset_id.table_name`
+
+**Recommended: Use BigQueryMockTable for clear three-part naming:**
+
+```python
+from sql_testing_library import BigQueryMockTable
+
+class MyMockTable(BigQueryMockTable):
+    project_name = "my-project"
+    dataset_name = "my_dataset"
+    table_name = "my_table"
+```
+
+**Alternative: Use BaseMockTable with combined project.dataset:**
 
 ```python
 class MyMockTable(BaseMockTable):
     def get_database_name(self) -> str:
-        return "my-project.my_dataset"
+        return "my-project.my_dataset"  # Combines project and dataset
+
+    def get_table_name(self) -> str:
+        return "my_table"
+```
+
+### BigQueryMockTable Class
+
+The `BigQueryMockTable` class provides explicit support for BigQuery's three-part naming scheme, making your code clearer and more maintainable.
+
+**Benefits:**
+- ✅ Explicit separation of project, dataset, and table names
+- ✅ Simple class variables (no method overriding needed)
+- ✅ Type-safe with full IDE autocomplete support
+- ✅ Use inheritance to share common project/dataset across tables
+- ✅ Backwards compatible with all `BaseMockTable` methods
+
+**Usage Pattern:**
+
+```python
+from sql_testing_library import BigQueryMockTable
+
+# Define tables with explicit three-part naming
+class UsersMockTable(BigQueryMockTable):
+    project_name = "my-project"
+    dataset_name = "analytics"
+    table_name = "users"
+
+class OrdersMockTable(BigQueryMockTable):
+    project_name = "my-project"
+    dataset_name = "analytics"
+    table_name = "orders"
+
+# Avoid repetition with base classes
+class MyAnalyticsTable(BigQueryMockTable):
+    project_name = "my-project"
+    dataset_name = "analytics"
+
+class UsersTable(MyAnalyticsTable):
+    table_name = "users"
+
+class OrdersTable(MyAnalyticsTable):
+    table_name = "orders"
+```
+
+**Available Methods:**
+
+```python
+table = UsersMockTable([...])
+
+# BigQuery-specific methods
+table.get_project_name()           # "my-project"
+table.get_dataset_name()           # "analytics"
+table.get_fully_qualified_name()   # "my-project.analytics.users"
+
+# Inherited from BaseMockTable
+table.get_database_name()          # "my-project.analytics"
+table.get_table_name()             # "users"
+table.get_qualified_name()         # "my-project.analytics.users"
+table.get_cte_alias()              # "my_project_analytics__users"
 ```
 
 ### Example

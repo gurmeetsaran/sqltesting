@@ -204,3 +204,94 @@ class BaseMockTable(ABC):
         db_name = self.get_database_name().replace("-", "_").replace(".", "_")
         table_name = self.get_table_name().replace("-", "_").replace(".", "_")
         return f"{db_name}__{table_name}"
+
+
+class BigQueryMockTable(BaseMockTable):
+    """Mock table specifically for BigQuery with three-part naming support.
+
+    BigQuery uses a three-part naming scheme: project.dataset.table
+    This class makes it explicit and provides better semantics than cramming
+    project and dataset into the generic database_name field.
+
+    Two usage patterns are supported:
+
+    Usage - Class variables for table definition:
+        >>> class UsersMockTable(BigQueryMockTable):
+        ...     project_name = "my-project"
+        ...     dataset_name = "analytics"
+        ...     table_name = "users"
+    """
+
+    # Class variables that subclasses must set (mandatory)
+    project_name: str
+    dataset_name: str
+    table_name: str
+
+    def get_bigquery_project(self) -> str:
+        """Return the BigQuery project name from class variable.
+
+        Returns:
+            BigQuery project ID
+
+        Raises:
+            AttributeError: If project_name class variable not set
+        """
+        return self.project_name
+
+    def get_bigquery_dataset(self) -> str:
+        """Return the BigQuery dataset name from class variable.
+
+        Returns:
+            BigQuery dataset name
+
+        Raises:
+            AttributeError: If dataset_name class variable not set
+        """
+        return self.dataset_name
+
+    def get_bigquery_table(self) -> str:
+        """Return the BigQuery table name from class variable.
+
+        Returns:
+            BigQuery table name
+
+        Raises:
+            AttributeError: If table_name class variable not set
+        """
+        return self.table_name
+
+    def get_project_name(self) -> str:
+        """Return the BigQuery project name (alias for get_bigquery_project)."""
+        return self.get_bigquery_project()
+
+    def get_dataset_name(self) -> str:
+        """Return the BigQuery dataset name (alias for get_bigquery_dataset)."""
+        return self.get_bigquery_dataset()
+
+    def get_database_name(self) -> str:
+        """Return database name (for BigQuery, this is project.dataset).
+
+        This implements the BaseMockTable abstract method by combining
+        project and dataset to maintain backwards compatibility with
+        the two-part naming assumption in the base class.
+        """
+        return f"{self.get_bigquery_project()}.{self.get_bigquery_dataset()}"
+
+    def get_table_name(self) -> str:
+        """Return the table name (alias for get_bigquery_table)."""
+        return self.get_bigquery_table()
+
+    def get_fully_qualified_name(self) -> str:
+        """Return the three-part BigQuery table reference.
+
+        Returns:
+            Fully qualified table name in format: project.dataset.table
+
+        Example:
+            >>> table.get_fully_qualified_name()
+            'my-project.analytics.users'
+        """
+        project = self.get_bigquery_project()
+        dataset = self.get_bigquery_dataset()
+        table = self.get_bigquery_table()
+        return f"{project}.{dataset}.{table}"
