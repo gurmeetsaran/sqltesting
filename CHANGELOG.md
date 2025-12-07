@@ -5,6 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 0.19.0 (2025-12-07)
+
+### Feat
+
+- reorganize documentation navigation for better learning flow
+- comprehensive SEO optimization for better search visibility
+- restrict CodeCov uploads to master branch only
+- enable CodeCov carryforward for all coverage flags
+
+### Fix
+
+- add support for Python 3.10+ pipe-none (X | None) union syntax (#133)
+- sanitize CTE aliases and sync package version (#132)
+- align robots.txt and sitemap with Google's official guidelines
+- shorten page titles for better readability and display
+- optimize robots.txt for better Google Search Console compatibility
+
 ## 0.18.0 (2025-12-01)
 
 ### Feat
