@@ -196,5 +196,11 @@ class BaseMockTable(ABC):
         return df
 
     def get_cte_alias(self) -> str:
-        """Get the CTE alias name (database__tablename)."""
-        return f"{self.get_database_name().replace('-', '_').replace('.', '_')}__{self.get_table_name()}"  # noqa: E501
+        """Get the CTE alias name (database__tablename).
+
+        Replaces '-' and '.' with '_' to ensure valid BigQuery CTE names,
+        as BigQuery CTEs cannot contain hyphens or dots.
+        """
+        db_name = self.get_database_name().replace("-", "_").replace(".", "_")
+        table_name = self.get_table_name().replace("-", "_").replace(".", "_")
+        return f"{db_name}__{table_name}"
