@@ -136,6 +136,7 @@ class TestDuckDBUnionSyntax:
                         END as age_group,
                         balance as total_balance
                     FROM test_db.users_optional
+                    ORDER BY user_id
                 """,
                 default_namespace="test_db",
             )
@@ -192,6 +193,7 @@ class TestDuckDBUnionSyntax:
                         END as age_group,
                         balance as total_balance
                     FROM test_db.users_pipe_none
+                    ORDER BY user_id
                 """,
                 default_namespace="test_db",
             )
@@ -252,6 +254,7 @@ class TestBigQueryUnionSyntax:
                         END as age_group,
                         CAST(0 AS NUMERIC) as total_balance
                     FROM `test-project.test_dataset.users`
+                    ORDER BY user_id
                 """,
                 default_namespace="test-project.test_dataset",
             )
@@ -305,6 +308,7 @@ class TestSnowflakeUnionSyntax:
                         NULL as age_group,
                         NULL as total_balance
                     FROM TEST_DB.TEST_SCHEMA.USERS
+                    ORDER BY user_id
                 """,
                 default_namespace="TEST_DB.TEST_SCHEMA",
             )
@@ -358,6 +362,7 @@ class TestRedshiftUnionSyntax:
                         NULL as age_group,
                         NULL as total_balance
                     FROM test_db.users
+                    ORDER BY user_id
                 """,
                 default_namespace="test_db",
             )
@@ -410,6 +415,7 @@ class TestAthenaUnionSyntax:
                         NULL as age_group,
                         NULL as total_balance
                     FROM test_db.users
+                    ORDER BY user_id
                 """,
                 default_namespace="test_db",
             )
@@ -462,6 +468,7 @@ class TestTrinoUnionSyntax:
                         NULL as age_group,
                         NULL as total_balance
                     FROM memory.default.users
+                    ORDER BY user_id
                 """,
                 default_namespace="memory.default",
             )
