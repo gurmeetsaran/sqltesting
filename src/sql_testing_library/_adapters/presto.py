@@ -2,10 +2,10 @@
 
 from datetime import date, datetime
 from decimal import Decimal
-from typing import Any, List, Tuple, Type, Union, get_args
+from typing import Any, List, Tuple, Type, get_args
 
 from .._mock_table import BaseMockTable
-from .._types import BaseTypeConverter, is_struct_type
+from .._types import BaseTypeConverter, is_struct_type, is_union_type
 from .base import DatabaseAdapter
 
 
@@ -77,9 +77,9 @@ class PrestoBaseAdapter(DatabaseAdapter):
         """Convert Python type to SQL type string."""
         from .._sql_utils import get_sql_type_string
 
-        # Handle Optional types
-        if hasattr(python_type, "__origin__") and python_type.__origin__ is Union:
-            # Extract the non-None type from Optional[T]
+        # Handle Optional types (both Optional[X] and X | None)
+        if is_union_type(python_type):
+            # Extract the non-None type from Optional[T] or T | None
             non_none_types = [arg for arg in get_args(python_type) if arg is not type(None)]
             if non_none_types:
                 python_type = non_none_types[0]
@@ -164,8 +164,8 @@ class PrestoBaseAdapter(DatabaseAdapter):
 
             # Handle Optional types by extracting the non-None type for proper formatting
             actual_type = col_type
-            if hasattr(col_type, "__origin__") and col_type.__origin__ is Union:
-                # Extract the non-None type from Optional[T]
+            if is_union_type(col_type):
+                # Extract the non-None type from Optional[T] or T | None
                 non_none_types = [arg for arg in get_args(col_type) if arg is not type(None)]
                 if non_none_types:
                     actual_type = non_none_types[0]
@@ -186,8 +186,8 @@ class PrestoBaseAdapter(DatabaseAdapter):
 
                 # Handle Optional types by extracting the non-None type for proper formatting
                 actual_type = col_type
-                if hasattr(col_type, "__origin__") and col_type.__origin__ is Union:
-                    # Extract the non-None type from Optional[T]
+                if is_union_type(col_type):
+                    # Extract the non-None type from Optional[T] or T | None
                     non_none_types = [arg for arg in get_args(col_type) if arg is not type(None)]
                     if non_none_types:
                         actual_type = non_none_types[0]

@@ -10,7 +10,6 @@ from typing import (
     Optional,
     Tuple,
     Type,
-    Union,
     get_args,
     get_type_hints,
 )
@@ -22,7 +21,7 @@ if TYPE_CHECKING:
 
 # Heavy imports moved to function level for better performance
 from .._mock_table import BaseMockTable
-from .._types import BaseTypeConverter
+from .._types import BaseTypeConverter, is_union_type
 from .base import DatabaseAdapter
 
 
@@ -237,9 +236,9 @@ class DuckDBAdapter(DatabaseAdapter):
 
         column_defs = []
         for col_name, col_type in column_types.items():
-            # Handle Optional types
-            if hasattr(col_type, "__origin__") and col_type.__origin__ is Union:
-                # Extract the non-None type from Optional[T]
+            # Handle Optional types (both Optional[X] and X | None)
+            if is_union_type(col_type):
+                # Extract the non-None type from Optional[T] or T | None
                 non_none_types = [arg for arg in get_args(col_type) if arg is not type(None)]
                 if non_none_types:
                     col_type = non_none_types[0]
@@ -301,9 +300,9 @@ class DuckDBAdapter(DatabaseAdapter):
         field_defs = []
 
         for field_name, field_type in type_hints.items():
-            # Handle Optional types
-            if hasattr(field_type, "__origin__") and field_type.__origin__ is Union:
-                # Extract the non-None type from Optional[T]
+            # Handle Optional types (both Optional[X] and X | None)
+            if is_union_type(field_type):
+                # Extract the non-None type from Optional[T] or T | None
                 non_none_types = [arg for arg in get_args(field_type) if arg is not type(None)]
                 if non_none_types:
                     field_type = non_none_types[0]
@@ -360,9 +359,9 @@ class DuckDBAdapter(DatabaseAdapter):
         column_types = mock_table.get_column_types()
 
         for col_name, col_type in column_types.items():
-            # Handle Optional types
-            if hasattr(col_type, "__origin__") and col_type.__origin__ is Union:
-                # Extract the non-None type from Optional[T]
+            # Handle Optional types (both Optional[X] and X | None)
+            if is_union_type(col_type):
+                # Extract the non-None type from Optional[T] or T | None
                 non_none_types = [arg for arg in get_args(col_type) if arg is not type(None)]
                 if non_none_types:
                     col_type = non_none_types[0]

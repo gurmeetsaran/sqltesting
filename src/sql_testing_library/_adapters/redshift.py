@@ -2,7 +2,7 @@
 
 from datetime import date, datetime
 from decimal import Decimal
-from typing import TYPE_CHECKING, Any, List, Optional, Tuple, Type, Union, get_args
+from typing import TYPE_CHECKING, Any, List, Optional, Tuple, Type, get_args
 
 
 if TYPE_CHECKING:
@@ -12,7 +12,7 @@ if TYPE_CHECKING:
 
 # Heavy import moved to function level for better performance
 from .._mock_table import BaseMockTable
-from .._types import BaseTypeConverter
+from .._types import BaseTypeConverter, is_union_type
 from .base import DatabaseAdapter
 
 
@@ -202,9 +202,9 @@ class RedshiftAdapter(DatabaseAdapter):
             # Generate column definitions
             column_defs = []
             for col_name, col_type in column_types.items():
-                # Handle Optional types
-                if hasattr(col_type, "__origin__") and col_type.__origin__ is Union:
-                    # Extract the non-None type from Optional[T]
+                # Handle Optional types (both Optional[X] and X | None)
+                if is_union_type(col_type):
+                    # Extract the non-None type from Optional[T] or T | None
                     non_none_types = [arg for arg in get_args(col_type) if arg is not type(None)]
                     if non_none_types:
                         col_type = non_none_types[0]
