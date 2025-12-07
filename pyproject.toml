@@ -306,3 +306,6 @@ update_changelog_on_bump = true
 major_version_zero = true
 changelog_merge_prerelease = true
 changelog_start_rev = "0.1.0"
+version_files = [
+    "src/sql_testing_library/__init__.py:__version__"
+]
