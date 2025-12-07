@@ -632,6 +632,71 @@ def test_order_items_analysis():
 
 ### BigQuery-Specific Features
 
+#### BigQueryMockTable for Three-Part Naming
+
+BigQuery uses a three-part naming scheme (`project.dataset.table`). The `BigQueryMockTable` class makes this explicit:
+
+```python
+from sql_testing_library import BigQueryMockTable
+from dataclasses import dataclass
+
+@dataclass
+class User:
+    user_id: int
+    name: str
+    email: str
+
+# Clean three-part naming with class variables
+class UsersMockTable(BigQueryMockTable):
+    bigquery_project = "my-project"
+    bigquery_dataset = "analytics"
+    bigquery_table = "users"
+
+class OrdersMockTable(BigQueryMockTable):
+    bigquery_project = "my-project"
+    bigquery_dataset = "analytics"
+    bigquery_table = "orders"
+
+# Use in tests
+@sql_test(
+    adapter_type="bigquery",
+    mock_tables=[
+        UsersMockTable([
+            User(1, "Alice", "alice@example.com"),
+            User(2, "Bob", "bob@example.com")
+        ])
+    ],
+    result_class=User
+)
+def test_premium_users():
+    return TestCase(
+        query="""
+            SELECT user_id, name, email
+            FROM `my-project.analytics.users`
+            WHERE user_id = 1
+        """,
+        default_namespace="analytics"
+    )
+```
+
+**Avoid Repetition with Inheritance:**
+
+```python
+# Base class with shared project
+class MyAnalyticsTable(BigQueryMockTable):
+    bigquery_project = "my-project"
+    bigquery_dataset = "analytics"
+
+# Subclasses just set table name
+class UsersTable(MyAnalyticsTable):
+    bigquery_table = "users"
+
+class OrdersTable(MyAnalyticsTable):
+    bigquery_table = "orders"
+```
+
+#### BigQuery Struct Support
+
 BigQuery now supports struct types with dataclasses and Pydantic models:
 
 ```python

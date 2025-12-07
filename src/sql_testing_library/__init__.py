@@ -10,7 +10,7 @@ from ._exceptions import (
     SQLTestingError,  # noqa: F401
     TypeConversionError,  # noqa: F401
 )
-from ._mock_table import BaseMockTable  # noqa: F401
+from ._mock_table import BaseMockTable, BigQueryMockTable  # noqa: F401
 from ._pytest_plugin import sql_test  # noqa: F401
 
 
@@ -27,12 +27,13 @@ try:
 except ImportError:
     __all__ = []
 
-__version__ = "0.18.0"
+__version__ = "0.19.0"
 __all__.extend(
     [
         "SQLTestFramework",
         "TestCase",
         "BaseMockTable",
+        "BigQueryMockTable",
         "DatabaseAdapter",
         "sql_test",
         "SQLTestingError",

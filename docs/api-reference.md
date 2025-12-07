@@ -133,6 +133,102 @@ products = ProductsMockTable([
 ])
 ```
 
+### BigQueryMockTable
+
+BigQuery-specific mock table class with explicit three-part naming support.
+
+```python
+from sql_testing_library import BigQueryMockTable
+
+class BigQueryMockTable(BaseMockTable):
+    """Mock table for BigQuery with three-part naming: project.dataset.table"""
+
+    # Class variables that subclasses must set (mandatory)
+    bigquery_project: str
+    bigquery_dataset: str
+    bigquery_table: str
+```
+
+#### Class Variables
+
+| Variable | Type | Description |
+|----------|------|-------------|
+| `bigquery_project` | `str` | BigQuery project ID (required) |
+| `bigquery_dataset` | `str` | BigQuery dataset name (required) |
+| `bigquery_table` | `str` | BigQuery table name (required) |
+
+#### Methods
+
+| Method | Returns | Description |
+|--------|---------|-------------|
+| `get_project_name()` | `str` | Returns the BigQuery project ID |
+| `get_dataset_name()` | `str` | Returns the BigQuery dataset name |
+| `get_bigquery_project()` | `str` | Alias for `get_project_name()` |
+| `get_bigquery_dataset()` | `str` | Alias for `get_dataset_name()` |
+| `get_bigquery_table()` | `str` | Alias for `get_table_name()` |
+| `get_fully_qualified_name()` | `str` | Returns `project.dataset.table` |
+| `get_database_name()` | `str` | Returns `project.dataset` (for compatibility) |
+| `get_table_name()` | `str` | Returns table name |
+| `get_qualified_name()` | `str` | Returns `project.dataset.table` |
+| `get_cte_alias()` | `str` | Returns sanitized CTE alias |
+
+#### Example Implementation
+
+```python
+from sql_testing_library import BigQueryMockTable
+from dataclasses import dataclass
+from decimal import Decimal
+
+@dataclass
+class Transaction:
+    id: int
+    user_id: int
+    amount: Decimal
+    category: str
+
+class TransactionsMockTable(BigQueryMockTable):
+    bigquery_project = "my-company-prod"
+    bigquery_dataset = "financial_data"
+    bigquery_table = "transactions"
+
+# Usage
+transactions = TransactionsMockTable([
+    Transaction(1, 101, Decimal("99.99"), "purchase"),
+    Transaction(2, 102, Decimal("149.50"), "refund")
+])
+
+# Access naming components
+print(transactions.get_project_name())           # "my-company-prod"
+print(transactions.get_dataset_name())           # "financial_data"
+print(transactions.get_table_name())             # "transactions"
+print(transactions.get_fully_qualified_name())   # "my-company-prod.financial_data.transactions"
+```
+
+#### Inheritance Pattern for Code Reuse
+
+```python
+# Base class for all production tables
+class ProductionTable(BigQueryMockTable):
+    bigquery_project = "my-company-prod"
+
+# Analytics dataset tables
+class AnalyticsTable(ProductionTable):
+    bigquery_dataset = "analytics"
+
+class UsersTable(AnalyticsTable):
+    bigquery_table = "users"
+
+class EventsTable(AnalyticsTable):
+    bigquery_table = "events"
+
+# Financial dataset tables
+class FinancialTable(ProductionTable):
+    bigquery_dataset = "financial_data"
+
+class TransactionsTable(FinancialTable):
+    bigquery_table = "transactions"
+```
+
 ### SQLTestFramework
 
 The main framework class for executing SQL tests.
