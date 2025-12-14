@@ -28,11 +28,21 @@ When enabled, the SQL logging feature:
 - Logs both the original and transformed queries
 - Captures temp table creation SQL for physical table mode
 - Includes full error details and stack traces for failed tests
-- Automatically logs SQL for failed tests (unless explicitly disabled)
+- **Automatically logs SQL when queries fail due to SQL-level errors** (syntax errors, table not found, etc.)
+- **Does NOT automatically log SQL for assertion failures** (use `log_sql=True` or `SQL_TEST_LOG_ALL` to capture these)
 - Supports environment variables for logging all tests
 - Intelligently finds project root to ensure consistent log location
 
 ## Usage
+
+### Quick Reference: When is SQL Logged?
+
+| Scenario | Automatic Logging | How to Enable |
+|----------|------------------|---------------|
+| **SQL execution error** (syntax error, table not found, etc.) | ✅ Yes | Automatic (unless `log_sql=False`) |
+| **Assertion failure** (test expectations not met) | ❌ No | Use `log_sql=True` or `SQL_TEST_LOG_ALL=true` |
+| **Successful test** (for debugging) | ❌ No | Use `log_sql=True` or `SQL_TEST_LOG_ALL=true` |
+| **All tests in a run** | ❌ No | Use `SQL_TEST_LOG_ALL=true` environment variable |
 
 ### 1. Log SQL for Specific Tests
 
@@ -61,14 +71,31 @@ def test_with_logging() -> SQLTestCase[MyModel]:
     )
 ```
 
-### 2. Automatic Logging on Failure
+### 2. Automatic Logging on SQL-Level Failures
 
-By default, SQL is automatically logged when a test fails. This helps with debugging without requiring you to explicitly enable logging. To disable this behavior:
+**Important**: SQL is automatically logged **only when queries fail due to SQL-level errors** such as:
+- SQL syntax errors
+- Table or column not found errors
+- Type conversion errors
+- Database connection issues
+- Other SQL execution failures
+
+**Assertion failures are NOT automatically logged**. If your test fails during assertion (e.g., `assert result.count == 5`), the SQL will not be logged automatically. For these cases, you need to explicitly enable logging:
 
 ```python
+# Option 1: Enable logging for specific test
+@sql_test(log_sql=True)
+def test_with_explicit_logging() -> SQLTestCase[MyModel]:
+    # SQL will be logged even if only assertions fail
+    ...
+
+# Option 2: Use environment variable for all tests
+# SQL_TEST_LOG_ALL=true pytest tests/
+
+# To completely disable automatic logging (even for SQL errors):
 @sql_test(log_sql=False)
-def test_no_logging_on_failure() -> SQLTestCase[MyModel]:
-    # Even if this test fails, SQL won't be logged
+def test_no_logging_ever() -> SQLTestCase[MyModel]:
+    # SQL won't be logged even if SQL execution fails
     ...
 ```
 
@@ -85,7 +112,58 @@ SQL_TEST_LOG_ALL=1 pytest tests/
 SQL_TEST_LOG_ALL=yes pytest tests/
 ```
 
-### 4. SQL Log Files
+### 4. Understanding SQL-Level vs Assertion Failures
+
+Here's a practical example to illustrate the difference:
+
+```python
+from sql_testing_library import sql_test, TestCase
+
+# Example 1: SQL-level failure - SQL IS LOGGED AUTOMATICALLY
+@sql_test()
+def test_sql_error():
+    return TestCase(
+        query="SELECT * FROM non_existent_table",  # Table doesn't exist
+        default_namespace="test_db",
+        mock_tables=[...],
+        result_class=MyModel,
+    )
+# Result: SQL is automatically logged because the query execution fails
+# Error: "relation 'non_existent_table' does not exist"
+
+# Example 2: Assertion failure - SQL IS NOT LOGGED AUTOMATICALLY
+@sql_test()
+def test_assertion_failure():
+    return TestCase(
+        query="SELECT COUNT(*) as count FROM users",
+        default_namespace="test_db",
+        mock_tables=[users_mock],
+        result_class=MyModel,
+        assertions=[
+            lambda result: result[0].count == 5  # Assertion fails if count != 5
+        ]
+    )
+# Result: SQL is NOT logged automatically if assertion fails
+# You need log_sql=True or SQL_TEST_LOG_ALL=true to see the SQL
+
+# Example 3: Enable logging for assertion failures
+@sql_test(log_sql=True)  # Now SQL will be logged
+def test_assertion_with_logging():
+    return TestCase(
+        query="SELECT COUNT(*) as count FROM users",
+        default_namespace="test_db",
+        mock_tables=[users_mock],
+        result_class=MyModel,
+        assertions=[
+            lambda result: result[0].count == 5
+        ]
+    )
+# Result: SQL is logged regardless of success or failure
+```
+
+**Key Takeaway**: If your test query executes successfully but your assertions fail, you need to explicitly enable logging to debug the SQL. Use `log_sql=True` on the test or set `SQL_TEST_LOG_ALL=true` for all tests.
+
+### 5. SQL Log Files
 
 SQL files are created in the `.sql_logs` directory at the project root, organized by test run:
 
@@ -106,7 +184,7 @@ The filename includes:
 
 **Note**: The SQL logger automatically detects your project root by looking for files like `pyproject.toml`, `setup.py`, or `.git` directory. This ensures logs are always written to the same location regardless of where you run tests from (e.g., PyCharm, command line, subdirectories).
 
-### 5. SQL File Contents
+### 6. SQL File Contents
 
 Each SQL file contains:
 
@@ -253,25 +331,28 @@ framework = SQLTestFramework(adapter, sql_logger=sql_logger)
 ## Best Practices
 
 1. **Development**: Enable `SQL_TEST_LOG_ALL` during development to see all generated queries
-2. **CI/CD**: Rely on automatic failure logging in CI/CD pipelines
-3. **Debugging**: Use `log_sql=True` on specific tests when debugging
-4. **Performance**: Disable logging in production test runs with `log_sql=False` if needed
+2. **CI/CD**: Rely on automatic SQL-level failure logging in CI/CD pipelines. For debugging assertion failures, use `log_sql=True` on specific tests
+3. **Debugging Assertion Failures**: Always use `log_sql=True` when debugging tests that fail on assertions, as these are not automatically logged
+4. **Debugging SQL Errors**: SQL-level errors are automatically logged, no need to explicitly enable logging
+5. **Performance**: Disable logging in production test runs with `log_sql=False` if needed
 
 ## Troubleshooting
 
 ### SQL files not being created
 
-1. Check that the test is actually running (not skipped)
-2. Verify write permissions for the `.sql_logs` directory
-3. For specific tests, ensure `log_sql=True` is set
-4. For all tests, ensure `SQL_TEST_LOG_ALL` environment variable is set correctly
-5. The directory is hidden (starts with a dot), so use `ls -la` to see it
+1. **Check the failure type**: SQL is only automatically logged for SQL-level errors (syntax errors, table not found). If your test fails during assertions, you need to explicitly enable logging with `log_sql=True` or `SQL_TEST_LOG_ALL=true`
+2. Check that the test is actually running (not skipped)
+3. Verify write permissions for the `.sql_logs` directory
+4. For specific tests, ensure `log_sql=True` is set
+5. For all tests, ensure `SQL_TEST_LOG_ALL` environment variable is set correctly
+6. The directory is hidden (starts with a dot), so use `ls -la` to see it
 
 ### Console output not showing
 
 The console will show the SQL file location:
-- Always for failed tests (unless `log_sql=False`)
-- For successful tests only when `SQL_TEST_LOG_ALL` is set
+- For SQL-level failures (syntax errors, table not found, etc.) - automatic (unless `log_sql=False`)
+- For assertion failures - only when `log_sql=True` or `SQL_TEST_LOG_ALL` is set
+- For successful tests - only when `log_sql=True` or `SQL_TEST_LOG_ALL` is set
 
 ### Large SQL files
 
