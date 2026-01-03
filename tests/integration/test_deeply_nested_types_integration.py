@@ -424,9 +424,25 @@ class TestDeeplyNestedTypesIntegration:
                 WHERE id = 1
             """
         elif adapter_type == "redshift":
-            # Redshift has limited nested access - skip for now
-            pytest.skip(f"Nested element access not fully supported for {adapter_type}")
-            return
+            # Redshift uses SUPER type with 0-based indexing and dot/bracket notation
+            query = """
+                SELECT
+                    id,
+                    name,
+                    JSON_ARRAY_LENGTH(addresses) as address_count,
+                    addresses[0].street::varchar as first_address_street,
+                    addresses[0].city::varchar as first_address_city,
+                    contacts[1].email::varchar as second_contact_email,
+                    interaction_matrix[0][0]::int as first_interaction_value,
+                    category_hierarchy[0][0]::varchar as first_category,
+                    JSON_ARRAY_LENGTH(order_history[0]) as first_order_item_count,
+                    order_history[0][0].product_name::varchar as first_order_item_name,
+                    nested_scores[0][0][0]::int as nested_score_value,
+                    metadata.status::varchar as status_metadata,
+                    settings.notifications::int as notification_setting
+                FROM deeply_nested_types
+                WHERE id = 1
+            """
         else:
             pytest.skip(f"Nested element access not implemented for {adapter_type}")
             return
