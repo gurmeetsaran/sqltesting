@@ -112,7 +112,8 @@ class TestComplexTypesIntegration:
     def setup_test_data(self, adapter_type):
         """Set up test data specific to each adapter."""
         # Check if adapter supports struct types
-        supports_structs = adapter_type not in ["snowflake", "redshift"]
+        # Note: Testing Redshift with SUPER type for struct support
+        supports_structs = adapter_type not in ["snowflake"]
 
         # Create test data based on struct support
         if supports_structs:
@@ -191,8 +192,9 @@ class TestComplexTypesIntegration:
     def test_complex_types_comprehensive(self, adapter_type, use_physical_tables):
         """Test all complex types comprehensively for the specified adapter."""
 
-        # Redshift and Snowflake don't support struct types yet
-        supports_structs = adapter_type not in ["snowflake", "redshift"]
+        # Snowflake doesn't support struct types yet
+        # Note: Testing Redshift with SUPER type for struct support
+        supports_structs = adapter_type not in ["snowflake"]
 
         # Choose appropriate result model and query based on struct support
         if supports_structs:

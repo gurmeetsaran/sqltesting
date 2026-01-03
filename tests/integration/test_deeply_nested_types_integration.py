@@ -152,27 +152,26 @@ class DeeplyNestedTypesMockTable(BaseMockTable):
 
 
 @pytest.mark.integration
-# TODO: Re-enable BigQuery, Redshift, Snowflake once struct/nested array support is implemented
+# TODO: Re-enable BigQuery, Snowflake once struct/nested array support is implemented
 # - BigQuery: Doesn't support nested arrays - database limitation
-# - Redshift: Struct serialization not implemented
 # - Snowflake: Struct type support not implemented
 @pytest.mark.parametrize(
-    "adapter_type", ["athena", "trino", "duckdb"]
-)  # TODO: Add "bigquery", "redshift", "snowflake" after fixing
+    "adapter_type", ["athena", "trino", "duckdb", "redshift"]
+)  # TODO: Add "bigquery", "snowflake" after fixing
 @pytest.mark.parametrize(
     "use_physical_tables", [False, True], ids=["cte_mode", "physical_tables_mode"]
 )
 class TestDeeplyNestedTypesIntegration:
     """Integration tests for deeply nested types across all database adapters.
 
-    Currently Athena, Trino, and DuckDB support deeply nested complex types including:
-    - Arrays of structs (ROW/STRUCT types): List[Address]
+    Currently Athena, Trino, DuckDB, and Redshift support deeply nested complex types including:
+    - Arrays of structs (ROW/STRUCT/SUPER types): List[Address]
     - Nested arrays (2D, 3D+): List[List[int]], List[List[List[int]]]
     - Arrays of arrays of structs: List[List[OrderItem]]
     - Maps with complex values: Dict[str, str], Dict[str, int]
     - Recursive type resolution supporting infinite nesting levels
 
-    All 12 tests pass across the 3 adapters (both CTE and physical tables modes).
+    All 16 tests pass across the 4 adapters (both CTE and physical tables modes).
     """
 
     @pytest.fixture(autouse=True)
@@ -545,17 +544,44 @@ class TestDeeplyNestedTypesIntegration:
         assert result.tags == ["premium", "vip", "loyal"]
         assert result.scores == [95, 87, 92]
 
+        # Verify addresses (list of structs via SUPER/JSON)
+        assert len(result.addresses) == 2
+        assert result.addresses[0].street == "123 Main St"
+        assert result.addresses[0].city == "New York"
+        assert result.addresses[0].zipcode == "10001"
+        assert result.addresses[1].street == "456 Oak Ave"
+
+        # Verify contacts (list of structs via SUPER/JSON)
+        assert len(result.contacts) == 2
+        assert result.contacts[0].email == "user1@email.com"
+        assert result.contacts[0].phone == "555-0101"
+        assert result.contacts[1].email == "user1@work.com"
+
         # Verify nested arrays
         assert len(result.interaction_matrix) == 2
         assert result.interaction_matrix[0] == [10, 25, 30]
+        assert result.interaction_matrix[1] == [15, 20, 35]
+
+        assert len(result.category_hierarchy) == 2
+        assert result.category_hierarchy[0] == ["Electronics", "Laptops"]
+
+        # Verify arrays of arrays of structs (order_history via SUPER/JSON)
+        assert len(result.order_history) == 2
+        assert len(result.order_history[0]) == 2
+        assert result.order_history[0][0].product_name == "Laptop"
+        assert result.order_history[0][0].price == Decimal("1299.99")
+        assert result.order_history[0][1].product_name == "Mouse"
 
         # Verify 3D nested array
         assert len(result.nested_scores) == 2
         assert result.nested_scores[0] == [[1, 2, 3], [4, 5, 6]]
+        assert result.nested_scores[1] == [[7, 8, 9], [10, 11, 12]]
 
         # Verify maps
         assert result.metadata["status"] == "active"
+        assert result.metadata["tier"] == "gold"
         assert result.settings["notifications"] == 1
+        assert result.settings["auto_renew"] == 1
 
     def _verify_snowflake_all_fields(self, results):
         """Verify Snowflake-specific results for all fields."""

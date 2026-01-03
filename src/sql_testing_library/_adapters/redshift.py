@@ -29,6 +29,17 @@ except ImportError:
 class RedshiftTypeConverter(BaseTypeConverter):
     """Redshift-specific type converter."""
 
+    def _parse_json_if_string(self, value: Any) -> Any:
+        """Helper to parse JSON strings from SUPER columns."""
+        if isinstance(value, str):
+            import json
+
+            try:
+                return json.loads(value)
+            except json.JSONDecodeError:
+                return value
+        return value
+
     def convert(self, value: Any, target_type: Type) -> Any:
         """Convert Redshift result value to target type."""
         # Handle None/NULL values first
@@ -41,21 +52,32 @@ class RedshiftTypeConverter(BaseTypeConverter):
                 return None
             target_type = self.get_optional_inner_type(target_type)
 
+        # Handle struct types from Redshift SUPER columns
+        from .._types import is_struct_type
+
+        if is_struct_type(target_type):
+            # Parse JSON string if needed
+            parsed_value = self._parse_json_if_string(value)
+            # Delegate to base converter (handles dict → struct)
+            return super().convert(parsed_value, target_type)
+
+        # Handle list/array types from Redshift SUPER columns
+        if hasattr(target_type, "__origin__") and target_type.__origin__ is list:
+            # Parse JSON string if needed
+            parsed_value = self._parse_json_if_string(value)
+
+            if isinstance(parsed_value, list):
+                # Recursively convert each element with proper typing
+                element_type = get_args(target_type)[0] if get_args(target_type) else str
+                return [self.convert(elem, element_type) for elem in parsed_value]
+            else:
+                return []
+
         # Handle dict/map types from Redshift SUPER columns
         if hasattr(target_type, "__origin__") and target_type.__origin__ is dict:
-            # Redshift returns SUPER types as Python dicts already
-            if isinstance(value, dict):
-                return value
-            # If it's a string (shouldn't happen with psycopg2), parse it
-            elif isinstance(value, str):
-                import json
-
-                try:
-                    return json.loads(value)
-                except json.JSONDecodeError:
-                    return {}
-            else:
-                return {}
+            # Parse JSON string if needed
+            parsed_value = self._parse_json_if_string(value)
+            return parsed_value if isinstance(parsed_value, dict) else {}
 
         # Redshift returns proper Python types in most cases, so use base converter
         return super().convert(value, target_type)
