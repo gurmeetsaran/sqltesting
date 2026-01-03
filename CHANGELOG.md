@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 0.21.0 (2026-01-03)
+
+### Feat
+
+- enable Redshift nested element access tests (#140)
+- add Redshift support for deeply nested complex types via SUPER (#139)
+- add DuckDB support for deeply nested complex types (#138)
+- add deeply nested complex types support for Athena and Trino (#136)
+
+### Fix
+
+- use GET_ARRAY_LENGTH for Redshift SUPER type arrays
+
 ## 0.20.0 (2025-12-07)
 
 ### Feat
