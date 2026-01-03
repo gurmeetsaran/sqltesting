@@ -86,15 +86,17 @@ The library supports different data types across database engines. All checkmark
 | **Optional Array** | `Optional[List[T]]` | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | **Map/Dict** | `Dict[K, V]` | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | **Struct/Record** | `dataclass` | ✅ | ✅ | ❌ | ✅ | ❌ | ✅ |
-| **Nested Arrays** | `List[List[T]]` | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| **Nested Arrays** | `List[List[T]]` | ❌ | ✅ | 🚧 | ✅ | 🚧 | ❌ |
+| **Arrays of Structs** | `List[dataclass]` | ✅ | ✅ | 🚧 | ✅ | 🚧 | ✅ |
+| **3D Arrays** | `List[List[List[T]]]` | ❌ | ✅ | 🚧 | ✅ | 🚧 | ❌ |
 
 ### Database-Specific Notes
 
-- **BigQuery**: NULL arrays become empty arrays `[]`; uses scientific notation for large decimals; dict/map types stored as JSON strings; struct types supported using `STRUCT` syntax with named fields (dataclasses and Pydantic models)
-- **Athena**: 256KB query size limit; supports arrays and maps using `ARRAY[]` and `MAP(ARRAY[], ARRAY[])` syntax; supports struct types using `ROW` with named fields (dataclasses and Pydantic models)
-- **Redshift**: Arrays and maps implemented via SUPER type (JSON parsing); 16MB query size limit; struct types not yet supported
-- **Trino**: Memory catalog for testing; excellent decimal precision; supports arrays, maps, and struct types using `ROW` with named fields (dataclasses and Pydantic models)
-- **Snowflake**: Column names normalized to lowercase; 1MB query size limit; dict/map types implemented via VARIANT type (JSON parsing); struct types not yet supported
+- **BigQuery**: NULL arrays become empty arrays `[]`; uses scientific notation for large decimals; dict/map types stored as JSON strings; struct types supported using `STRUCT` syntax with named fields (dataclasses and Pydantic models); **does not support nested arrays** (database limitation)
+- **Athena**: 256KB query size limit; supports arrays and maps using `ARRAY[]` and `MAP(ARRAY[], ARRAY[])` syntax; supports struct types using `ROW` with named fields (dataclasses and Pydantic models); **full support for deeply nested types** including nested arrays, arrays of structs, and 3D arrays
+- **Redshift**: Arrays and maps implemented via SUPER type (JSON parsing); 16MB query size limit; struct types not yet supported (🚧 TODO); nested arrays not yet supported (🚧 TODO)
+- **Trino**: Memory catalog for testing; excellent decimal precision; supports arrays, maps, and struct types using `ROW` with named fields (dataclasses and Pydantic models); **full support for deeply nested types** including nested arrays, arrays of structs, and 3D arrays
+- **Snowflake**: Column names normalized to lowercase; 1MB query size limit; dict/map types implemented via VARIANT type (JSON parsing); struct types not yet supported (🚧 TODO); nested arrays not yet supported (🚧 TODO)
 - **DuckDB**: Fast embedded analytics database; excellent SQL standards compliance; supports arrays, maps, and struct types using `STRUCT` syntax with named fields (dataclasses and Pydantic models)
 
 ## Execution Modes Support
@@ -1369,13 +1371,29 @@ See the [Mocksmith Integration Guide](docs/mocksmith_integration.md) for detaile
 
 The library has a few known limitations that are planned to be addressed in future updates:
 
-### Struct Type Support
-- **Redshift**: Struct types are not supported due to lack of native struct/record types (uses SUPER type for JSON)
-- **Snowflake**: Struct types are not supported due to lack of native struct/record types (uses VARIANT type for JSON)
+### Deeply Nested Complex Types Support
 
+**✅ Fully Supported (Athena & Trino):**
+- Nested arrays (2D, 3D+): `List[List[int]]`, `List[List[List[int]]]`
+- Arrays of structs: `List[Address]` where Address is a dataclass
+- Arrays of arrays of structs: `List[List[OrderItem]]`
+- Maps with complex values: `Dict[str, str]`, `Dict[str, int]`
+- See `tests/integration/test_deeply_nested_types_integration.py` for comprehensive examples
+
+**🚧 TODO - Implementation Needed:**
+- **BigQuery**: Does not support nested arrays - this is a **database limitation**, not a library limitation. BigQuery's type system doesn't allow `ARRAY<ARRAY<T>>` constructs
+- **Redshift**:
+  - Struct serialization not implemented (see `Object of type Address is not JSON serializable`)
+  - Nested arrays not yet supported
+  - TODO: Implement struct type support using SUPER JSON type
+- **Snowflake**:
+  - Struct type support not implemented (see `Struct type not yet supported for dialect: snowflake`)
+  - Nested arrays not yet supported
+  - TODO: Implement struct/nested type support using VARIANT/OBJECT types
 
 ### Database-Specific Limitations
-- **BigQuery**: Does not support nested arrays (arrays of arrays). This is a BigQuery database limitation, not a library limitation. (See TODO in `test_struct_types_integration.py:test_nested_lists`)
+- **BigQuery**: Does not support nested arrays (arrays of arrays). This is a BigQuery database limitation, not a library limitation.
+- **DuckDB**: Nested arrays not yet tested/supported
 
 ### General Improvements
 - Add support for more SQL dialects
