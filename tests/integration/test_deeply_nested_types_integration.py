@@ -78,6 +78,30 @@ class DeeplyNestedTypes:
     settings: Dict[str, int]
 
 
+class AddressPydantic(BaseModel):
+    """Pydantic version of Address for result deserialization."""
+
+    street: str
+    city: str
+    zipcode: str
+
+
+class ContactInfoPydantic(BaseModel):
+    """Pydantic version of ContactInfo for result deserialization."""
+
+    email: str
+    phone: str
+
+
+class OrderItemPydantic(BaseModel):
+    """Pydantic version of OrderItem for result deserialization."""
+
+    item_id: int
+    product_name: str
+    quantity: int
+    price: Decimal
+
+
 class DeeplyNestedTypesResult(BaseModel):
     """Result model for deeply nested types - selecting all fields."""
 
@@ -85,11 +109,11 @@ class DeeplyNestedTypesResult(BaseModel):
     name: str
     tags: List[str]
     scores: List[int]
-    addresses: List[Dict[str, str]]
-    contacts: List[Dict[str, str]]
+    addresses: List[AddressPydantic]  # Use proper struct models
+    contacts: List[ContactInfoPydantic]  # Use proper struct models
     interaction_matrix: List[List[int]]
     category_hierarchy: List[List[str]]
-    order_history: List[List[Dict[str, str]]]
+    order_history: List[List[OrderItemPydantic]]  # Use proper struct models
     nested_scores: List[List[List[int]]]
     metadata: Dict[str, str]
     settings: Dict[str, int]
@@ -129,11 +153,11 @@ class DeeplyNestedTypesMockTable(BaseMockTable):
 
 @pytest.mark.integration
 # TODO: Re-enable BigQuery, Redshift, Snowflake once struct/nested array support is implemented
-# - BigQuery: Doesn't support nested arrays - see "Cannot construct array with ARRAY<INT64>"
-# - Redshift: Struct serialization not implemented - see "Address is not JSON serializable"
-# - Snowflake: Struct type support not implemented - see "not yet supported for snowflake"
+# - BigQuery: Doesn't support nested arrays - database limitation
+# - Redshift: Struct serialization not implemented
+# - Snowflake: Struct type support not implemented
 @pytest.mark.parametrize(
-    "adapter_type", ["athena", "trino"]
+    "adapter_type", ["athena", "trino", "duckdb"]
 )  # TODO: Add "bigquery", "redshift", "snowflake" after fixing
 @pytest.mark.parametrize(
     "use_physical_tables", [False, True], ids=["cte_mode", "physical_tables_mode"]
@@ -141,11 +165,14 @@ class DeeplyNestedTypesMockTable(BaseMockTable):
 class TestDeeplyNestedTypesIntegration:
     """Integration tests for deeply nested types across all database adapters.
 
-    Currently only Athena and Trino support deeply nested complex types including:
-    - Arrays of structs (ROW types)
-    - Nested arrays (2D and 3D arrays)
-    - Arrays of arrays of structs
-    - Maps with complex values
+    Currently Athena, Trino, and DuckDB support deeply nested complex types including:
+    - Arrays of structs (ROW/STRUCT types): List[Address]
+    - Nested arrays (2D, 3D+): List[List[int]], List[List[List[int]]]
+    - Arrays of arrays of structs: List[List[OrderItem]]
+    - Maps with complex values: Dict[str, str], Dict[str, int]
+    - Recursive type resolution supporting infinite nesting levels
+
+    All 12 tests pass across the 3 adapters (both CTE and physical tables modes).
     """
 
     @pytest.fixture(autouse=True)
@@ -243,6 +270,8 @@ class TestDeeplyNestedTypesIntegration:
             self.database_name = "test_db.sqltesting"
         elif adapter_type == "trino":
             self.database_name = "memory"
+        elif adapter_type == "duckdb":
+            self.database_name = ""
 
     def test_select_all_deeply_nested_fields(self, adapter_type, use_physical_tables):
         """Test selecting all deeply nested fields for the specified adapter."""
@@ -289,6 +318,8 @@ class TestDeeplyNestedTypesIntegration:
             self._verify_snowflake_all_fields(results)
         elif adapter_type == "trino":
             self._verify_trino_all_fields(results)
+        elif adapter_type == "duckdb":
+            self._verify_duckdb_all_fields(results)
 
     def test_access_nested_elements(self, adapter_type, use_physical_tables):
         """Test accessing specific elements from deeply nested structures."""
@@ -373,6 +404,26 @@ class TestDeeplyNestedTypesIntegration:
                 FROM deeply_nested_types
                 WHERE id = 1
             """
+        elif adapter_type == "duckdb":
+            # DuckDB uses 1-based indexing and len() function
+            query = """
+                SELECT
+                    id,
+                    name,
+                    len(addresses) as address_count,
+                    addresses[1].street as first_address_street,
+                    addresses[1].city as first_address_city,
+                    contacts[2].email as second_contact_email,
+                    interaction_matrix[1][1] as first_interaction_value,
+                    category_hierarchy[1][1] as first_category,
+                    len(order_history[1]) as first_order_item_count,
+                    (order_history[1][1]).product_name as first_order_item_name,
+                    nested_scores[1][1][1] as nested_score_value,
+                    metadata['status'] as status_metadata,
+                    settings['notifications'] as notification_setting
+                FROM deeply_nested_types
+                WHERE id = 1
+            """
         elif adapter_type == "redshift":
             # Redshift has limited nested access - skip for now
             pytest.skip(f"Nested element access not fully supported for {adapter_type}")
@@ -426,6 +477,19 @@ class TestDeeplyNestedTypesIntegration:
         assert result.tags == ["premium", "vip", "loyal"]
         assert result.scores == [95, 87, 92]
 
+        # Verify addresses (list of structs)
+        assert len(result.addresses) == 2
+        assert result.addresses[0].street == "123 Main St"
+        assert result.addresses[0].city == "New York"
+        assert result.addresses[0].zipcode == "10001"
+        assert result.addresses[1].street == "456 Oak Ave"
+
+        # Verify contacts (list of structs)
+        assert len(result.contacts) == 2
+        assert result.contacts[0].email == "user1@email.com"
+        assert result.contacts[0].phone == "555-0101"
+        assert result.contacts[1].email == "user1@work.com"
+
         # Verify nested arrays
         assert len(result.interaction_matrix) == 2
         assert result.interaction_matrix[0] == [10, 25, 30]
@@ -434,13 +498,24 @@ class TestDeeplyNestedTypesIntegration:
         assert len(result.category_hierarchy) == 2
         assert result.category_hierarchy[0] == ["Electronics", "Laptops"]
 
+        # Verify arrays of arrays of structs (order_history)
+        assert len(result.order_history) == 2
+        assert len(result.order_history[0]) == 2  # First order has 2 items
+        assert result.order_history[0][0].product_name == "Laptop"
+        assert result.order_history[0][0].price == Decimal("1299.99")
+        assert result.order_history[0][0].quantity == 1
+        assert result.order_history[0][1].product_name == "Mouse"
+
         # Verify 3D nested array
         assert len(result.nested_scores) == 2
         assert result.nested_scores[0] == [[1, 2, 3], [4, 5, 6]]
+        assert result.nested_scores[1] == [[7, 8, 9], [10, 11, 12]]
 
         # Verify maps
         assert result.metadata["status"] == "active"
+        assert result.metadata["tier"] == "gold"
         assert result.settings["notifications"] == 1
+        assert result.settings["auto_renew"] == 1
 
     def _verify_bigquery_all_fields(self, results):
         """Verify BigQuery-specific results for all fields."""
@@ -510,6 +585,21 @@ class TestDeeplyNestedTypesIntegration:
         assert result.tags == ["premium", "vip", "loyal"]
         assert result.scores == [95, 87, 92]
 
+        # Verify addresses (list of structs)
+        assert len(result.addresses) == 2
+        assert result.addresses[0].street == "123 Main St"
+        assert result.addresses[0].city == "New York"
+        assert result.addresses[0].zipcode == "10001"
+        assert result.addresses[1].street == "456 Oak Ave"
+        assert result.addresses[1].city == "Boston"
+
+        # Verify contacts (list of structs)
+        assert len(result.contacts) == 2
+        assert result.contacts[0].email == "user1@email.com"
+        assert result.contacts[0].phone == "555-0101"
+        assert result.contacts[1].email == "user1@work.com"
+        assert result.contacts[1].phone == "555-0102"
+
         # Verify nested arrays
         assert len(result.interaction_matrix) == 2
         assert result.interaction_matrix[0] == [10, 25, 30]
@@ -517,6 +607,74 @@ class TestDeeplyNestedTypesIntegration:
 
         assert len(result.category_hierarchy) == 2
         assert result.category_hierarchy[0] == ["Electronics", "Laptops"]
+        assert result.category_hierarchy[1] == ["Home", "Furniture"]
+
+        # Verify arrays of arrays of structs (order_history)
+        assert len(result.order_history) == 2
+        assert len(result.order_history[0]) == 2  # First order has 2 items
+        assert result.order_history[0][0].product_name == "Laptop"
+        assert result.order_history[0][0].price == Decimal("1299.99")
+        assert result.order_history[0][0].quantity == 1
+        assert result.order_history[0][0].item_id == 101
+        assert result.order_history[0][1].product_name == "Mouse"
+        assert result.order_history[0][1].quantity == 2
+        assert len(result.order_history[1]) == 1  # Second order has 1 item
+        assert result.order_history[1][0].product_name == "Monitor"
+
+        # Verify 3D nested array
+        assert len(result.nested_scores) == 2
+        assert result.nested_scores[0] == [[1, 2, 3], [4, 5, 6]]
+        assert result.nested_scores[1] == [[7, 8, 9], [10, 11, 12]]
+
+        # Verify maps
+        assert result.metadata["status"] == "active"
+        assert result.metadata["tier"] == "gold"
+        assert result.settings["notifications"] == 1
+        assert result.settings["auto_renew"] == 1
+
+    def _verify_duckdb_all_fields(self, results):
+        """Verify DuckDB-specific results for all fields."""
+        result = results[0]
+        assert result.id == 1
+        assert result.name == "Duckdb User"
+        assert result.tags == ["premium", "vip", "loyal"]
+        assert result.scores == [95, 87, 92]
+
+        # Verify addresses (list of structs)
+        assert len(result.addresses) == 2
+        assert result.addresses[0].street == "123 Main St"
+        assert result.addresses[0].city == "New York"
+        assert result.addresses[0].zipcode == "10001"
+        assert result.addresses[1].street == "456 Oak Ave"
+        assert result.addresses[1].city == "Boston"
+
+        # Verify contacts (list of structs)
+        assert len(result.contacts) == 2
+        assert result.contacts[0].email == "user1@email.com"
+        assert result.contacts[0].phone == "555-0101"
+        assert result.contacts[1].email == "user1@work.com"
+        assert result.contacts[1].phone == "555-0102"
+
+        # Verify nested arrays
+        assert len(result.interaction_matrix) == 2
+        assert result.interaction_matrix[0] == [10, 25, 30]
+        assert result.interaction_matrix[1] == [15, 20, 35]
+
+        assert len(result.category_hierarchy) == 2
+        assert result.category_hierarchy[0] == ["Electronics", "Laptops"]
+        assert result.category_hierarchy[1] == ["Home", "Furniture"]
+
+        # Verify arrays of arrays of structs (order_history)
+        assert len(result.order_history) == 2
+        assert len(result.order_history[0]) == 2  # First order has 2 items
+        assert result.order_history[0][0].product_name == "Laptop"
+        assert result.order_history[0][0].price == Decimal("1299.99")
+        assert result.order_history[0][0].quantity == 1
+        assert result.order_history[0][0].item_id == 101
+        assert result.order_history[0][1].product_name == "Mouse"
+        assert result.order_history[0][1].quantity == 2
+        assert len(result.order_history[1]) == 1  # Second order has 1 item
+        assert result.order_history[1][0].product_name == "Monitor"
 
         # Verify 3D nested array
         assert len(result.nested_scores) == 2
