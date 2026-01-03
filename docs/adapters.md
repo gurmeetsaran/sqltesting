@@ -241,6 +241,13 @@ port = 5439  # Optional, defaults to 5439
 - **Temporary Tables**: Automatic cleanup at session end
 - **Array Support**: Via SUPER type (JSON parsing)
 - **Map Support**: Via SUPER type for Dict[K, V] types
+- **Struct Support**: Via SUPER type using JSON_PARSE for dataclasses and Pydantic models
+- **Deeply Nested Types**: ✅ **Full support** for:
+  - Nested arrays (2D, 3D+): `List[List[int]]`, `List[List[List[int]]]`
+  - Arrays of structs: `List[Address]` where Address is a dataclass
+  - Arrays of arrays of structs: `List[List[OrderItem]]`
+  - JSON-based serialization/deserialization via SUPER type
+  - See `tests/integration/test_deeply_nested_types_integration.py` for examples
 - **Query Limits**: 16MB limit for CTE mode
 - **Column Store**: Optimized for analytical queries
 
@@ -556,12 +563,12 @@ adapter = redshift  # Default for all tests
 | String Map | `Dict[str, str]` | ✅ JSON | ✅ MAP | ✅ SUPER | ✅ MAP | ✅ VARIANT | ✅ MAP |
 | Int Map | `Dict[str, int]` | ✅ JSON | ✅ MAP | ✅ SUPER | ✅ MAP | ✅ VARIANT | ✅ MAP |
 | Mixed Map | `Dict[K, V]` | ✅ JSON | ✅ MAP | ✅ SUPER | ✅ MAP | ✅ VARIANT | ✅ MAP |
-| Struct | `dataclass` | ✅ STRUCT | ✅ ROW | ❌ | ✅ ROW | ❌ | ✅ STRUCT |
-| Struct | `Pydantic model` | ✅ STRUCT | ✅ ROW | ❌ | ✅ ROW | ❌ | ✅ STRUCT |
-| **Nested Arrays** | `List[List[T]]` | ❌ | ✅ ARRAY | 🚧 TODO | ✅ ARRAY | 🚧 TODO | ✅ LIST |
-| **Arrays of Structs** | `List[dataclass]` | ✅ ARRAY | ✅ ARRAY | 🚧 TODO | ✅ ARRAY | 🚧 TODO | ✅ LIST |
-| **3D Arrays** | `List[List[List[T]]]` | ❌ | ✅ ARRAY | 🚧 TODO | ✅ ARRAY | 🚧 TODO | ✅ LIST |
-| **Arrays of Arrays of Structs** | `List[List[dataclass]]` | ❌ | ✅ ARRAY | 🚧 TODO | ✅ ARRAY | 🚧 TODO | ✅ LIST |
+| Struct | `dataclass` | ✅ STRUCT | ✅ ROW | ✅ SUPER | ✅ ROW | ❌ | ✅ STRUCT |
+| Struct | `Pydantic model` | ✅ STRUCT | ✅ ROW | ✅ SUPER | ✅ ROW | ❌ | ✅ STRUCT |
+| **Nested Arrays** | `List[List[T]]` | ❌ | ✅ ARRAY | ✅ SUPER | ✅ ARRAY | 🚧 TODO | ✅ LIST |
+| **Arrays of Structs** | `List[dataclass]` | ✅ ARRAY | ✅ ARRAY | ✅ SUPER | ✅ ARRAY | 🚧 TODO | ✅ LIST |
+| **3D Arrays** | `List[List[List[T]]]` | ❌ | ✅ ARRAY | ✅ SUPER | ✅ ARRAY | 🚧 TODO | ✅ LIST |
+| **Arrays of Arrays of Structs** | `List[List[dataclass]]` | ❌ | ✅ ARRAY | ✅ SUPER | ✅ ARRAY | 🚧 TODO | ✅ LIST |
 
 **Legend:**
 - ✅ = Fully supported with comprehensive tests
@@ -569,9 +576,9 @@ adapter = redshift  # Default for all tests
 - ❌ = Not supported (database limitation)
 
 **Deeply Nested Types Support:**
-- **Athena, Trino & DuckDB**: Full support for deeply nested complex types including nested arrays (2D, 3D+), arrays of structs, and arrays of arrays of structs. See `tests/integration/test_deeply_nested_types_integration.py` for comprehensive examples with 12 passing tests.
+- **Athena, Trino, DuckDB & Redshift**: Full support for deeply nested complex types including nested arrays (2D, 3D+), arrays of structs, and arrays of arrays of structs. See `tests/integration/test_deeply_nested_types_integration.py` for comprehensive examples with 16 passing tests.
 - **BigQuery**: Does not support nested arrays (arrays of arrays) - this is a database limitation in BigQuery's type system.
-- **Redshift & Snowflake**: Struct and nested array support not yet implemented (TODO).
+- **Snowflake**: Struct and nested array support not yet implemented (TODO).
 
 ## Adapter-Specific SQL
 

@@ -5,7 +5,44 @@ import json
 from dataclasses import is_dataclass
 from datetime import date, datetime
 from decimal import Decimal
-from typing import Any, Dict, Type, get_type_hints
+from typing import Any, Dict, Type, get_args, get_type_hints
+
+
+def _convert_to_json_serializable(val: Any, val_type: Type) -> Any:
+    """Convert Python value to JSON-serializable format for Redshift SUPER type.
+
+    Recursively handles structs, nested lists, and Decimal types.
+    """
+    from ._types import is_struct_type
+
+    if val is None:
+        return None
+    elif is_struct_type(val_type):
+        # Convert struct to dict
+        if hasattr(val, "__dataclass_fields__"):
+            from dataclasses import asdict
+
+            return asdict(val)
+        elif hasattr(val, "model_dump"):
+            return val.model_dump()
+        elif hasattr(val, "dict"):
+            return val.dict()
+        else:
+            return val
+    elif isinstance(val, Decimal):
+        return float(val)
+    elif isinstance(val, (list, tuple)):
+        # Recursively handle nested lists
+        inner_type = (
+            get_args(val_type)[0]
+            if hasattr(val_type, "__origin__") and get_args(val_type)
+            else type(val[0])
+            if val
+            else str
+        )
+        return [_convert_to_json_serializable(item, inner_type) for item in val]
+    else:
+        return val
 
 
 # SQL type mappings for different dialects
@@ -390,17 +427,11 @@ def format_sql_value(value: Any, column_type: Type, dialect: str = "standard") -
                 formatted_elements.append(formatted_element)
             return f"ARRAY[{', '.join(formatted_elements)}]"
         elif dialect == "redshift":
-            # Redshift uses JSON-like syntax for SUPER arrays
-            # Format elements as JSON (double quotes for strings)
-            # Convert elements to JSON-serializable types
-            json_elements = []
-            for element in value:
-                if isinstance(element, Decimal):
-                    json_elements.append(float(element))
-                else:
-                    json_elements.append(element)
-
-            json_array = json.dumps(json_elements)
+            # Redshift uses SUPER type - convert to JSON-serializable then wrap in JSON_PARSE
+            json_elements = [
+                _convert_to_json_serializable(element, element_type) for element in value
+            ]
+            json_array = json.dumps(json_elements, cls=DecimalEncoder)
             return f"JSON_PARSE('{json_array}')"
         elif dialect == "snowflake":
             # Format each element in the array for Snowflake
@@ -633,6 +664,17 @@ def _format_struct_value(value: Any, struct_type: Type, dialect: str) -> str:
             field_pairs.append(f"'{field_name}': {formatted_value}")
 
         return f"{{{', '.join(field_pairs)}}}"
+
+    # For Redshift (using SUPER type with JSON)
+    elif dialect == "redshift":
+        # Handle NULL struct values
+        if value is None:
+            return "NULL"
+
+        # Use helper function to convert struct to JSON-serializable dict
+        json_obj = _convert_to_json_serializable(value, struct_type)
+        json_str = json.dumps(json_obj, cls=DecimalEncoder)
+        return f"JSON_PARSE('{json_str}')"
 
     # For other databases, struct support would need to be implemented
     else:
