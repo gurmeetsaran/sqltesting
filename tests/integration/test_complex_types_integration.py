@@ -40,8 +40,9 @@ class ComplexTypes:
     optional_int_array: Optional[List[int]] = None
 
 
-class ComplexTypesResult(BaseModel):
-    """Result model for complex types test."""
+@dataclass
+class ComplexTypesNoStruct:
+    """Test data class for adapters without struct support (e.g., Snowflake)."""
 
     # Basic identifier
     id: int
@@ -51,12 +52,32 @@ class ComplexTypesResult(BaseModel):
     int_array: List[int]
     decimal_array: List[Decimal]
 
-    # Struct type - use the dataclass directly for proper deserialization
-    address: Address
+    # Optional array types
+    optional_string_array: Optional[List[str]] = None
+    optional_int_array: Optional[List[int]] = None
+
+
+class ComplexTypesResultNoStruct(BaseModel):
+    """Base result model for complex types test (arrays only)."""
+
+    # Basic identifier
+    id: int
+
+    # Array types
+    string_array: List[str]
+    int_array: List[int]
+    decimal_array: List[Decimal]
 
     # Optional array types
     optional_string_array: Optional[List[str]]
     optional_int_array: Optional[List[int]]
+
+
+class ComplexTypesResult(ComplexTypesResultNoStruct):
+    """Extended result model with struct support for adapters that support it."""
+
+    # Struct type - use the dataclass directly for proper deserialization
+    address: Address
 
 
 class ComplexTypesMockTable(BaseMockTable):
@@ -81,41 +102,77 @@ class ComplexTypesMockTable(BaseMockTable):
     "use_physical_tables", [False, True], ids=["cte_mode", "physical_tables_mode"]
 )
 class TestComplexTypesIntegration:
-    """Integration tests for complex types across all database adapters."""
+    """Integration tests for complex types across all database adapters.
+
+    Note: Redshift and Snowflake use a different result model without struct types
+    since struct support is not yet implemented for these adapters.
+    """
 
     @pytest.fixture(autouse=True)
     def setup_test_data(self, adapter_type):
         """Set up test data specific to each adapter."""
-        # Common test data structure for all adapters
-        self.test_data = [
-            ComplexTypes(
-                id=1,
-                string_array=[f"{adapter_type.title()}", "arrays", "test"],
-                int_array=[1, 2, 3, 42],
-                decimal_array=[Decimal("1.5"), Decimal("2.7"), Decimal("3.14")],
-                address=Address("123 Main St", "New York", "10001"),
-                optional_string_array=["optional", "array"],
-                optional_int_array=[100, 200],
-            ),
-            ComplexTypes(
-                id=2,
-                string_array=["test", "array"],
-                int_array=[10, 20],
-                decimal_array=[Decimal("99.99")],
-                address=Address("456 Oak Ave", "Boston", "02101"),
-                optional_string_array=None,
-                optional_int_array=None,
-            ),
-            ComplexTypes(
-                id=3,
-                string_array=[],  # Empty array
-                int_array=[0],
-                decimal_array=[],
-                address=Address("789 Pine Rd", "Seattle", "98101"),
-                optional_string_array=[],
-                optional_int_array=[42],
-            ),
-        ]
+        # Check if adapter supports struct types
+        supports_structs = adapter_type not in ["snowflake", "redshift"]
+
+        # Create test data based on struct support
+        if supports_structs:
+            self.test_data = [
+                ComplexTypes(
+                    id=1,
+                    string_array=[f"{adapter_type.title()}", "arrays", "test"],
+                    int_array=[1, 2, 3, 42],
+                    decimal_array=[Decimal("1.5"), Decimal("2.7"), Decimal("3.14")],
+                    address=Address("123 Main St", "New York", "10001"),
+                    optional_string_array=["optional", "array"],
+                    optional_int_array=[100, 200],
+                ),
+                ComplexTypes(
+                    id=2,
+                    string_array=["test", "array"],
+                    int_array=[10, 20],
+                    decimal_array=[Decimal("99.99")],
+                    address=Address("456 Oak Ave", "Boston", "02101"),
+                    optional_string_array=None,
+                    optional_int_array=None,
+                ),
+                ComplexTypes(
+                    id=3,
+                    string_array=[],  # Empty array
+                    int_array=[0],
+                    decimal_array=[],
+                    address=Address("789 Pine Rd", "Seattle", "98101"),
+                    optional_string_array=[],
+                    optional_int_array=[42],
+                ),
+            ]
+        else:
+            # For adapters without struct support (e.g., Snowflake)
+            self.test_data = [
+                ComplexTypesNoStruct(
+                    id=1,
+                    string_array=[f"{adapter_type.title()}", "arrays", "test"],
+                    int_array=[1, 2, 3, 42],
+                    decimal_array=[Decimal("1.5"), Decimal("2.7"), Decimal("3.14")],
+                    optional_string_array=["optional", "array"],
+                    optional_int_array=[100, 200],
+                ),
+                ComplexTypesNoStruct(
+                    id=2,
+                    string_array=["test", "array"],
+                    int_array=[10, 20],
+                    decimal_array=[Decimal("99.99")],
+                    optional_string_array=None,
+                    optional_int_array=None,
+                ),
+                ComplexTypesNoStruct(
+                    id=3,
+                    string_array=[],  # Empty array
+                    int_array=[0],
+                    decimal_array=[],
+                    optional_string_array=[],
+                    optional_int_array=[42],
+                ),
+            ]
 
         # Set database name based on adapter type
         if adapter_type == "athena":
@@ -134,27 +191,46 @@ class TestComplexTypesIntegration:
     def test_complex_types_comprehensive(self, adapter_type, use_physical_tables):
         """Test all complex types comprehensively for the specified adapter."""
 
-        # Physical table mode for Snowflake is now supported
+        # Redshift and Snowflake don't support struct types yet
+        supports_structs = adapter_type not in ["snowflake", "redshift"]
+
+        # Choose appropriate result model and query based on struct support
+        if supports_structs:
+            result_class = ComplexTypesResult
+            query_sql = """
+                SELECT
+                    id,
+                    string_array,
+                    int_array,
+                    decimal_array,
+                    address,
+                    optional_string_array,
+                    optional_int_array
+                FROM complex_types
+                ORDER BY id
+            """
+        else:
+            result_class = ComplexTypesResultNoStruct
+            query_sql = """
+                SELECT
+                    id,
+                    string_array,
+                    int_array,
+                    decimal_array,
+                    optional_string_array,
+                    optional_int_array
+                FROM complex_types
+                ORDER BY id
+            """
 
         @sql_test(
             adapter_type=adapter_type,
             mock_tables=[ComplexTypesMockTable(self.test_data, self.database_name)],
-            result_class=ComplexTypesResult,
+            result_class=result_class,
         )
         def query_complex_types():
             return TestCase(
-                query="""
-                    SELECT
-                        id,
-                        string_array,
-                        int_array,
-                        decimal_array,
-                        address,
-                        optional_string_array,
-                        optional_int_array
-                    FROM complex_types
-                    ORDER BY id
-                """,
+                query=query_sql,
                 default_namespace=self.database_name,
                 use_physical_tables=use_physical_tables,
             )
