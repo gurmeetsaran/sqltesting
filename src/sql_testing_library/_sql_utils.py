@@ -426,6 +426,8 @@ def format_sql_value(value: Any, column_type: Type, dialect: str = "standard") -
             # If it's not a dict, return an empty map
             if dialect in ("athena", "trino"):
                 return "MAP(ARRAY[], ARRAY[])"
+            elif dialect == "duckdb":
+                return "MAP {}"
             else:
                 raise NotImplementedError(f"Map type not yet supported for dialect: {dialect}")
 
@@ -443,6 +445,14 @@ def format_sql_value(value: Any, column_type: Type, dialect: str = "standard") -
                 keys.append(format_sql_value(k, key_type, dialect))
                 values.append(format_sql_value(v, value_type, dialect))
             return f"MAP(ARRAY[{', '.join(keys)}], ARRAY[{', '.join(values)}])"
+        elif dialect == "duckdb":
+            # DuckDB uses MAP {key: value, ...} syntax
+            pairs = []
+            for k, v in value.items():
+                formatted_key = format_sql_value(k, key_type, dialect)
+                formatted_value = format_sql_value(v, value_type, dialect)
+                pairs.append(f"{formatted_key}: {formatted_value}")
+            return f"MAP {{{', '.join(pairs)}}}"
         elif dialect == "redshift":
             # Redshift uses SUPER type with JSON-like syntax for maps
             json_str = json.dumps(value, cls=DecimalEncoder)
@@ -596,6 +606,33 @@ def _format_struct_value(value: Any, struct_type: Type, dialect: str) -> str:
             field_pairs.append(f"{formatted_value} AS {field_name}")
 
         return f"STRUCT({', '.join(field_pairs)})"
+
+    # For DuckDB
+    elif dialect == "duckdb":
+        # Handle NULL struct values
+        if value is None:
+            return "NULL"
+
+        # Get type hints for the struct
+        type_hints = get_type_hints(struct_type)
+
+        # Format non-NULL struct values as DuckDB struct literals
+        field_pairs = []
+        for field_name, field_type in type_hints.items():
+            # Get the field value
+            if is_dataclass(value):
+                field_value = getattr(value, field_name, None)
+            elif is_pydantic_model_class(type(value)):
+                field_value = getattr(value, field_name, None)
+            else:
+                # If it's a dict
+                field_value = value.get(field_name) if isinstance(value, dict) else None
+
+            # Format the field value recursively
+            formatted_value = format_sql_value(field_value, field_type, dialect)
+            field_pairs.append(f"'{field_name}': {formatted_value}")
+
+        return f"{{{', '.join(field_pairs)}}}"
 
     # For other databases, struct support would need to be implemented
     else:

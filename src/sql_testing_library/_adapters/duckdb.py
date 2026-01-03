@@ -34,6 +34,18 @@ except ImportError:
     duckdb = None  # type: ignore
 
 
+# Type mapping from Python types to DuckDB types
+DUCKDB_TYPE_MAPPING = {
+    str: "VARCHAR",
+    int: "BIGINT",
+    float: "DOUBLE",
+    bool: "BOOLEAN",
+    date: "DATE",
+    datetime: "TIMESTAMP",
+    Decimal: "DECIMAL",
+}
+
+
 class DuckDBTypeConverter(BaseTypeConverter):
     """DuckDB-specific type converter."""
 
@@ -146,8 +158,35 @@ class DuckDBAdapter(DatabaseAdapter):
 
             # Use DuckDB's efficient DataFrame insertion
             self.connection.register("temp_df", df)
-            columns = ", ".join(df.columns)
-            insert_sql = f"INSERT INTO {temp_table_name} SELECT {columns} FROM temp_df"
+
+            # Build SELECT with explicit casts for MAP types to avoid STRUCT inference
+            column_selects = []
+            column_types = mock_table.get_column_types()
+            for col_name in df.columns:
+                col_type = column_types.get(col_name, str)
+
+                # Handle Optional types
+                if is_union_type(col_type):
+                    non_none_types = [arg for arg in get_args(col_type) if arg is not type(None)]
+                    if non_none_types:
+                        col_type = non_none_types[0]
+
+                # For MAP types, explicitly cast to avoid STRUCT inference
+                if hasattr(col_type, "__origin__") and col_type.__origin__ is dict:
+                    key_type = get_args(col_type)[0] if get_args(col_type) else str
+                    value_type = get_args(col_type)[1] if len(get_args(col_type)) > 1 else str
+
+                    key_db_type = DUCKDB_TYPE_MAPPING.get(key_type, "VARCHAR")
+                    value_db_type = DUCKDB_TYPE_MAPPING.get(value_type, "VARCHAR")
+
+                    column_selects.append(
+                        f"CAST({col_name} AS MAP({key_db_type}, {value_db_type}))"
+                    )
+                else:
+                    column_selects.append(col_name)
+
+            columns_sql = ", ".join(column_selects)
+            insert_sql = f"INSERT INTO {temp_table_name} SELECT {columns_sql} FROM temp_df"
             self.connection.execute(insert_sql)
             self.connection.unregister("temp_df")
 
@@ -185,12 +224,35 @@ class DuckDBAdapter(DatabaseAdapter):
 
         # Insert data if any
         if not df.empty:
-            df = self._prepare_dataframe_for_duckdb(df, mock_table)
-            self.connection.register("temp_df", df)
-            columns = ", ".join(df.columns)
-            insert_sql = f"INSERT INTO {temp_table_name} SELECT {columns} FROM temp_df"
-            self.connection.execute(insert_sql)
-            self.connection.unregister("temp_df")
+            # Check if table has MAP types - use VALUES approach to avoid STRUCT/MAP confusion
+            column_types = mock_table.get_column_types()
+            has_map_types = any(
+                hasattr(ct, "__origin__")
+                and ct.__origin__ is dict
+                or (
+                    is_union_type(ct)
+                    and any(
+                        hasattr(arg, "__origin__") and arg.__origin__ is dict
+                        for arg in get_args(ct)
+                        if arg is not type(None)
+                    )
+                )
+                for ct in column_types.values()
+            )
+
+            if has_map_types:
+                # Use VALUES approach for tables with MAP types to preserve type information
+                # This avoids DuckDB inferring dicts as STRUCTs from pandas DataFrames
+                insert_sql_actual = f"INSERT INTO {temp_table_name} VALUES\n{values_sql}"
+                self.connection.execute(insert_sql_actual)
+            else:
+                # Use DataFrame approach for better performance when no MAP types
+                df = self._prepare_dataframe_for_duckdb(df, mock_table)
+                self.connection.register("temp_df", df)
+                columns = ", ".join(df.columns)
+                insert_sql_actual = f"INSERT INTO {temp_table_name} SELECT {columns} FROM temp_df"
+                self.connection.execute(insert_sql_actual)
+                self.connection.unregister("temp_df")
 
         return temp_table_name, full_sql
 
@@ -217,126 +279,64 @@ class DuckDBAdapter(DatabaseAdapter):
         # DuckDB doesn't have strict query size limits like cloud databases
         return None
 
-    def _generate_create_table_sql(self, mock_table: BaseMockTable, table_name: str) -> str:
-        """Generate CREATE TABLE SQL for DuckDB."""
+    def _get_column_sql_type(self, col_type: Type) -> str:
+        """Recursively convert Python type to DuckDB SQL type.
+
+        Handles nested types like List[List[int]], List[Struct], etc.
+        """
         from .._types import is_struct_type
 
-        column_types = mock_table.get_column_types()
+        # Handle Optional types
+        if is_union_type(col_type):
+            non_none_types = [arg for arg in get_args(col_type) if arg is not type(None)]
+            if non_none_types:
+                col_type = non_none_types[0]
 
-        # Type mapping from Python types to DuckDB types
-        type_mapping = {
-            str: "VARCHAR",
-            int: "BIGINT",
-            float: "DOUBLE",
-            bool: "BOOLEAN",
-            date: "DATE",
-            datetime: "TIMESTAMP",
-            Decimal: "DECIMAL",
-        }
+        # Handle List/Array types (recursive)
+        if hasattr(col_type, "__origin__") and col_type.__origin__ is list:
+            element_type = get_args(col_type)[0] if get_args(col_type) else str
+            element_sql_type = self._get_column_sql_type(element_type)  # Recursive call
+            return f"{element_sql_type}[]"
+
+        # Handle Dict/Map types (recursive for key/value types)
+        elif hasattr(col_type, "__origin__") and col_type.__origin__ is dict:
+            key_type = get_args(col_type)[0] if get_args(col_type) else str
+            value_type = get_args(col_type)[1] if len(get_args(col_type)) > 1 else str
+            key_sql_type = self._get_column_sql_type(key_type)  # Recursive call
+            value_sql_type = self._get_column_sql_type(value_type)  # Recursive call
+            return f"MAP({key_sql_type}, {value_sql_type})"
+
+        # Handle Struct types
+        elif is_struct_type(col_type):
+            struct_def = self._get_struct_definition(col_type)
+            return f"STRUCT{struct_def}"
+
+        # Handle scalar types
+        else:
+            return DUCKDB_TYPE_MAPPING.get(col_type, "VARCHAR")
+
+    def _generate_create_table_sql(self, mock_table: BaseMockTable, table_name: str) -> str:
+        """Generate CREATE TABLE SQL for DuckDB."""
+        column_types = mock_table.get_column_types()
 
         column_defs = []
         for col_name, col_type in column_types.items():
-            # Handle Optional types (both Optional[X] and X | None)
-            if is_union_type(col_type):
-                # Extract the non-None type from Optional[T] or T | None
-                non_none_types = [arg for arg in get_args(col_type) if arg is not type(None)]
-                if non_none_types:
-                    col_type = non_none_types[0]
-
-            # Handle List/Array types
-            if hasattr(col_type, "__origin__") and col_type.__origin__ is list:
-                # Get the element type from List[T]
-                element_type = get_args(col_type)[0] if get_args(col_type) else str
-
-                # Check if it's a list of structs
-                if is_struct_type(element_type):
-                    # Create struct array type
-                    struct_def = self._get_struct_definition(element_type)
-                    column_defs.append(f"{col_name} STRUCT{struct_def}[]")
-                else:
-                    # Map element type to DuckDB type
-                    element_db_type = type_mapping.get(element_type, "VARCHAR")
-                    column_defs.append(f"{col_name} {element_db_type}[]")
-
-            # Handle Dict/Map types
-            elif hasattr(col_type, "__origin__") and col_type.__origin__ is dict:
-                # DuckDB has native MAP support
-                key_type = get_args(col_type)[0] if get_args(col_type) else str
-                value_type = get_args(col_type)[1] if len(get_args(col_type)) > 1 else str
-
-                key_db_type = type_mapping.get(key_type, "VARCHAR")
-                value_db_type = type_mapping.get(value_type, "VARCHAR")
-                column_defs.append(f"{col_name} MAP({key_db_type}, {value_db_type})")
-
-            # Handle Struct types
-            elif is_struct_type(col_type):
-                struct_def = self._get_struct_definition(col_type)
-                column_defs.append(f"{col_name} STRUCT{struct_def}")
-
-            else:
-                # Handle scalar types
-                db_type = type_mapping.get(col_type, "VARCHAR")
-                column_defs.append(f"{col_name} {db_type}")
+            # Use the recursive type resolver for all types
+            sql_type = self._get_column_sql_type(col_type)
+            column_defs.append(f"{col_name} {sql_type}")
 
         columns_sql = ",\n  ".join(column_defs)
         return f"CREATE TABLE {table_name} (\n  {columns_sql}\n)"
 
     def _get_struct_definition(self, struct_type: Type) -> str:
         """Convert struct type to DuckDB STRUCT definition."""
-        from .._types import is_struct_type
-
-        # Type mapping from Python types to DuckDB types
-        type_mapping = {
-            str: "VARCHAR",
-            int: "BIGINT",
-            float: "DOUBLE",
-            bool: "BOOLEAN",
-            date: "DATE",
-            datetime: "TIMESTAMP",
-            Decimal: "DECIMAL",
-        }
-
         type_hints = get_type_hints(struct_type)
         field_defs = []
 
         for field_name, field_type in type_hints.items():
-            # Handle Optional types (both Optional[X] and X | None)
-            if is_union_type(field_type):
-                # Extract the non-None type from Optional[T] or T | None
-                non_none_types = [arg for arg in get_args(field_type) if arg is not type(None)]
-                if non_none_types:
-                    field_type = non_none_types[0]
-
-            # Handle nested structs
-            if is_struct_type(field_type):
-                nested_struct_def = self._get_struct_definition(field_type)
-                field_defs.append(f"{field_name} STRUCT{nested_struct_def}")
-
-            # Handle List types in structs
-            elif hasattr(field_type, "__origin__") and field_type.__origin__ is list:
-                element_type = get_args(field_type)[0] if get_args(field_type) else str
-                if is_struct_type(element_type):
-                    # List of structs
-                    nested_struct_def = self._get_struct_definition(element_type)
-                    field_defs.append(f"{field_name} STRUCT{nested_struct_def}[]")
-                else:
-                    # List of scalars
-                    element_db_type = type_mapping.get(element_type, "VARCHAR")
-                    field_defs.append(f"{field_name} {element_db_type}[]")
-
-            # Handle Dict types in structs
-            elif hasattr(field_type, "__origin__") and field_type.__origin__ is dict:
-                key_type = get_args(field_type)[0] if get_args(field_type) else str
-                value_type = get_args(field_type)[1] if len(get_args(field_type)) > 1 else str
-
-                key_db_type = type_mapping.get(key_type, "VARCHAR")
-                value_db_type = type_mapping.get(value_type, "VARCHAR")
-                field_defs.append(f"{field_name} MAP({key_db_type}, {value_db_type})")
-
-            else:
-                # Handle scalar types
-                db_type = type_mapping.get(field_type, "VARCHAR")
-                field_defs.append(f"{field_name} {db_type}")
+            # Use the recursive type resolver for each field
+            field_sql_type = self._get_column_sql_type(field_type)
+            field_defs.append(f"{field_name} {field_sql_type}")
 
         return f"({', '.join(field_defs)})"
 
