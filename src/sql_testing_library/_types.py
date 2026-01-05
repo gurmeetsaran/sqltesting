@@ -224,6 +224,21 @@ class BaseTypeConverter:
         inner_type: Type = next(arg for arg in args if arg is not type(None))
         return inner_type
 
+    @staticmethod
+    def _parse_json_if_string(value: Any) -> Any:
+        """Helper to parse JSON strings from VARIANT/SUPER/OBJECT columns.
+
+        Used by adapters that store complex types as JSON (Redshift, Snowflake).
+        """
+        if isinstance(value, str):
+            import json
+
+            try:
+                return json.loads(value)
+            except json.JSONDecodeError:
+                return value
+        return value
+
     def convert(self, value: Any, target_type: Type) -> Any:
         """Convert value to target type."""
         # Handle None/NULL values

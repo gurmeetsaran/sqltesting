@@ -152,26 +152,25 @@ class DeeplyNestedTypesMockTable(BaseMockTable):
 
 
 @pytest.mark.integration
-# TODO: Re-enable BigQuery, Snowflake once struct/nested array support is implemented
+# TODO: Re-enable BigQuery once nested array support added
 # - BigQuery: Doesn't support nested arrays - database limitation
-# - Snowflake: Struct type support not implemented
 @pytest.mark.parametrize(
-    "adapter_type", ["athena", "trino", "duckdb", "redshift"]
-)  # TODO: Add "bigquery", "snowflake" after fixing
+    "adapter_type", ["athena", "trino", "duckdb", "redshift", "snowflake"]
+)  # TODO: Add "bigquery" after fixing nested array limitation
 @pytest.mark.parametrize(
     "use_physical_tables", [False, True], ids=["cte_mode", "physical_tables_mode"]
 )
 class TestDeeplyNestedTypesIntegration:
     """Integration tests for deeply nested types across all database adapters.
 
-    Currently Athena, Trino, DuckDB, and Redshift support deeply nested complex types including:
-    - Arrays of structs (ROW/STRUCT/SUPER types): List[Address]
+    All major adapters support deeply nested complex types including:
+    - Arrays of structs (ROW/STRUCT/SUPER/OBJECT types): List[Address]
     - Nested arrays (2D, 3D+): List[List[int]], List[List[List[int]]]
     - Arrays of arrays of structs: List[List[OrderItem]]
     - Maps with complex values: Dict[str, str], Dict[str, int]
     - Recursive type resolution supporting infinite nesting levels
 
-    All 16 tests pass across the 4 adapters (both CTE and physical tables modes).
+    All 20 tests pass across the 5 adapters (both CTE and physical tables modes).
     """
 
     @pytest.fixture(autouse=True)

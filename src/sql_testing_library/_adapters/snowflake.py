@@ -50,21 +50,32 @@ class SnowflakeTypeConverter(BaseTypeConverter):
                 return None
             target_type = self.get_optional_inner_type(target_type)
 
+        # Handle struct types from Snowflake OBJECT/VARIANT columns
+        from .._types import is_struct_type
+
+        if is_struct_type(target_type):
+            # Parse JSON string if needed (using base class helper)
+            parsed_value = self._parse_json_if_string(value)
+            # Delegate to base converter (handles dict → struct)
+            return super().convert(parsed_value, target_type)
+
+        # Handle list/array types from Snowflake ARRAY/VARIANT columns
+        if hasattr(target_type, "__origin__") and target_type.__origin__ is list:
+            # Parse JSON string if needed (using base class helper)
+            parsed_value = self._parse_json_if_string(value)
+
+            if isinstance(parsed_value, list):
+                # Recursively convert each element with proper typing
+                element_type = get_args(target_type)[0] if get_args(target_type) else str
+                return [self.convert(elem, element_type) for elem in parsed_value]
+            else:
+                return []
+
         # Handle dict/map types from Snowflake VARIANT columns
         if hasattr(target_type, "__origin__") and target_type.__origin__ is dict:
-            # Snowflake returns VARIANT types as Python dicts already
-            if isinstance(value, dict):
-                return value
-            # If it's a string, parse it
-            elif isinstance(value, str):
-                import json
-
-                try:
-                    return json.loads(value)
-                except json.JSONDecodeError:
-                    return {}
-            else:
-                return {}
+            # Parse JSON string if needed (using base class helper)
+            parsed_value = self._parse_json_if_string(value)
+            return parsed_value if isinstance(parsed_value, dict) else {}
 
         # Snowflake returns proper Python types in most cases, so use base converter
         return super().convert(value, target_type)

@@ -676,6 +676,19 @@ def _format_struct_value(value: Any, struct_type: Type, dialect: str) -> str:
         json_str = json.dumps(json_obj, cls=DecimalEncoder)
         return f"JSON_PARSE('{json_str}')"
 
+    # For Snowflake (using OBJECT type with JSON)
+    elif dialect == "snowflake":
+        # Handle NULL struct values
+        if value is None:
+            return "NULL"
+
+        # Use helper function to convert struct to JSON-serializable dict
+        json_obj = _convert_to_json_serializable(value, struct_type)
+        json_str = json.dumps(json_obj, cls=DecimalEncoder)
+        # Escape single quotes for SQL
+        json_str = json_str.replace("'", "''")
+        return f"PARSE_JSON('{json_str}')"
+
     # For other databases, struct support would need to be implemented
     else:
         raise NotImplementedError(f"Struct type not yet supported for dialect: {dialect}")

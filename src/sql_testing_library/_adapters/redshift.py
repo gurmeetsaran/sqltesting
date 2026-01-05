@@ -29,17 +29,6 @@ except ImportError:
 class RedshiftTypeConverter(BaseTypeConverter):
     """Redshift-specific type converter."""
 
-    def _parse_json_if_string(self, value: Any) -> Any:
-        """Helper to parse JSON strings from SUPER columns."""
-        if isinstance(value, str):
-            import json
-
-            try:
-                return json.loads(value)
-            except json.JSONDecodeError:
-                return value
-        return value
-
     def convert(self, value: Any, target_type: Type) -> Any:
         """Convert Redshift result value to target type."""
         # Handle None/NULL values first

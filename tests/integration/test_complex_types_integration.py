@@ -113,7 +113,7 @@ class TestComplexTypesIntegration:
         """Set up test data specific to each adapter."""
         # Check if adapter supports struct types
         # Note: Testing Redshift with SUPER type for struct support
-        supports_structs = adapter_type not in ["snowflake"]
+        supports_structs = True  # All adapters now support structs
 
         # Create test data based on struct support
         if supports_structs:
@@ -194,7 +194,7 @@ class TestComplexTypesIntegration:
 
         # Snowflake doesn't support struct types yet
         # Note: Testing Redshift with SUPER type for struct support
-        supports_structs = adapter_type not in ["snowflake"]
+        supports_structs = True  # All adapters now support structs
 
         # Choose appropriate result model and query based on struct support
         if supports_structs:
@@ -352,6 +352,9 @@ class TestComplexTypesIntegration:
         assert row1.string_array == ["Snowflake", "arrays", "test"]
         assert row1.int_array == [1, 2, 3, 42]
         assert row1.decimal_array == [Decimal("1.5"), Decimal("2.7"), Decimal("3.14")]
+        assert row1.address.street == "123 Main St"
+        assert row1.address.city == "New York"
+        assert row1.address.zipcode == "10001"
         assert row1.optional_string_array == ["optional", "array"]
         assert row1.optional_int_array == [100, 200]
 
@@ -361,6 +364,8 @@ class TestComplexTypesIntegration:
         assert row2.string_array == ["test", "array"]
         assert row2.int_array == [10, 20]
         assert row2.decimal_array == [Decimal("99.99")]
+        assert row2.address.street == "456 Oak Ave"
+        assert row2.address.city == "Boston"
         assert row2.optional_string_array is None
         assert row2.optional_int_array is None
 
@@ -370,6 +375,8 @@ class TestComplexTypesIntegration:
         assert row3.string_array == []
         assert row3.int_array == [0]
         assert row3.decimal_array == []
+        assert row3.address.street == "789 Pine Rd"
+        assert row3.address.city == "Seattle"
         assert row3.optional_string_array == []
         assert row3.optional_int_array == [42]
 
