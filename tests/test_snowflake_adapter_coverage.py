@@ -477,16 +477,17 @@ class TestSnowflakeTypeConverterCoverage(unittest.TestCase):
         """Test array conversion handling."""
         converter = SnowflakeTypeConverter()
 
-        # Test list types
+        # Test list types (already parsed)
         test_list = [1, 2, 3]
         result = converter.convert(test_list, List[int])
         self.assertEqual(result, test_list)
 
-        # Test string array format
+        # Test JSON string format (Snowflake OBJECT/VARIANT returns JSON, not Python repr)
         result = converter.convert("[1, 2, 3]", List[int])
         self.assertEqual(result, [1, 2, 3])
 
-        result = converter.convert("['hello', 'world']", List[str])
+        # Test JSON string with string elements (use valid JSON with double quotes)
+        result = converter.convert('["hello", "world"]', List[str])
         self.assertEqual(result, ["hello", "world"])
 
         # Test empty array
