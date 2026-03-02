@@ -33,10 +33,13 @@ class TestSQLTestCaseBackwardCompatibility:
         # Should prefer default_namespace
         assert test_case.default_namespace == "new_db"
 
-    def test_neither_parameter_raises_error(self):
-        """Test error when neither parameter is provided."""
-        with pytest.raises(ValueError, match="Must provide either"):
-            SQLTestCase(query="SELECT 1")
+    def test_neither_parameter_is_allowed(self):
+        """Test that omitting default_namespace is allowed (for fully-qualified queries)."""
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
+            test_case = SQLTestCase(query="SELECT 1")
+
+        assert test_case.default_namespace is None
 
     def test_default_namespace_only_no_warning(self):
         """Test no warning when only default_namespace is used (preferred)."""

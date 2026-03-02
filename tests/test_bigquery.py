@@ -322,6 +322,83 @@ SELECT id, name FROM active_users WHERE id = 1""",
             # Restore original decorator
             pytest_plugin._sql_test_decorator = original_decorator_instance
 
+    def test_cte_alias_same_name_as_real_table(self, mock_bigquery_client):
+        """Test CTE where the alias matches the unqualified name of the real table.
+
+        Regression test: when a CTE is named e.g. 'invoice' and the real table
+        inside that CTE is 'my_project.my_dataset.invoice', _parse_sql_tables was
+        incorrectly skipping the real table reference because table.name == CTE alias.
+        This caused no mock-table CTE to be generated and the query to run against
+        the real (non-existent) table.
+        """
+        mock_bigquery_client.from_service_account_json.return_value = self.mock_client
+        mock_bigquery_client.return_value = self.mock_client
+
+        from sql_testing_library import _pytest_plugin as pytest_plugin
+
+        original_decorator_instance = pytest_plugin._sql_test_decorator
+
+        # Mock returns one invoice row
+        self.mock_df = pd.DataFrame([{"id": 1}])
+        self.mock_query_job.to_dataframe.return_value = self.mock_df
+
+        try:
+            decorator = SQLTestDecorator()
+            decorator._config_parser = self.mock_config
+            pytest_plugin._sql_test_decorator = decorator
+
+            @dataclass
+            class Invoice:
+                id: int
+                active: bool
+
+            class InvoiceResult(BaseModel):
+                id: int
+
+            class InvoiceMockTable(BaseMockTable):
+                def get_database_name(self) -> str:
+                    return "my_project.my_dataset"
+
+                def get_table_name(self) -> str:
+                    return "invoice"
+
+            @sql_test(
+                adapter_type="bigquery",
+                mock_tables=[
+                    InvoiceMockTable(
+                        [
+                            Invoice(id=1, active=True),
+                            Invoice(id=2, active=False),
+                        ]
+                    )
+                ],
+                result_class=InvoiceResult,
+            )
+            def test_invoice_cte_query():
+                return TestCase(
+                    query="""WITH invoice AS (
+    SELECT id
+    FROM my_project.my_dataset.invoice
+    WHERE active = TRUE
+)
+SELECT id FROM invoice""",
+                    default_namespace="my_project.my_dataset",
+                )
+
+            results = test_invoice_cte_query()
+
+            self.assertEqual(len(results), 1)
+            self.assertEqual(results[0].id, 1)
+
+            # The generated query must contain the mock-table CTE
+            query_arg = self.mock_client.query.call_args[0][0]
+            self.assertIn("my_project_my_dataset__invoice", query_arg)
+            # The real table reference should be replaced by the mock CTE alias
+            self.assertNotIn("my_project.my_dataset.invoice", query_arg)
+
+        finally:
+            pytest_plugin._sql_test_decorator = original_decorator_instance
+
 
 if __name__ == "__main__":
     unittest.main()
