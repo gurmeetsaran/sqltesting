@@ -160,6 +160,70 @@ class TestBigQueryIntegration(unittest.TestCase):
             # Restore original decorator
             pytest_plugin._sql_test_decorator = original_decorator_instance
 
+    def test_bigquery_with_leading_comments(self, mock_bigquery_client):
+        """Test that SQL with leading comments before a WITH clause is handled correctly.
+
+        Regression test: previously the WITH-detection only checked if the query started
+        with 'WITH', so comments before the WITH clause caused a second WITH keyword to be
+        prepended, producing invalid SQL.
+        """
+        mock_bigquery_client.from_service_account_json.return_value = self.mock_client
+        mock_bigquery_client.return_value = self.mock_client
+
+        decorator = SQLTestDecorator()
+        decorator._config_parser = self.mock_config
+
+        from sql_testing_library import _pytest_plugin as pytest_plugin
+
+        original_decorator_instance = pytest_plugin._sql_test_decorator
+
+        try:
+            pytest_plugin._sql_test_decorator = decorator
+
+            @sql_test(
+                adapter_type="bigquery",
+                mock_tables=[
+                    UsersMockTable(
+                        [
+                            User(1, "Alice", "alice@example.com", True, date(2023, 1, 1)),
+                            User(2, "Bob", "bob@example.com", False, date(2023, 1, 2)),
+                        ]
+                    )
+                ],
+                result_class=UserResult,
+            )
+            def test_query_with_leading_comments():
+                return TestCase(
+                    query="""/* Get active users filtered by ID
+   This query uses a CTE for clarity
+*/
+WITH active_users AS (
+    SELECT id, name
+    FROM users
+    WHERE active = TRUE
+)
+SELECT id, name FROM active_users WHERE id = 1""",
+                    default_namespace="test_dataset",
+                )
+
+            results = test_query_with_leading_comments()
+
+            self.assertEqual(len(results), 1)
+            self.assertEqual(results[0].id, 1)
+            self.assertEqual(results[0].name, "Alice")
+
+            query_arg = self.mock_client.query.call_args[0][0]
+            self.assertEqual(
+                query_arg.upper().count("WITH "),
+                1,
+                f"Expected exactly one WITH keyword, got: {query_arg}",
+            )
+            self.assertIn("test_dataset__users", query_arg)
+            self.assertIn("active_users", query_arg)
+
+        finally:
+            pytest_plugin._sql_test_decorator = original_decorator_instance
+
     def test_bigquery_dict_types(self, mock_bigquery):
         """Test BigQuery dict/map type handling."""
         from sql_testing_library import _pytest_plugin as pytest_plugin

@@ -96,14 +96,7 @@ class SQLLogger:
                 # Generate run ID with timestamp
                 timestamp = datetime.now().strftime("%Y%m%dT%H%M%S")
 
-                # Check if running in parallel mode
-                worker_id = self._get_worker_id()
-                if worker_id:
-                    # Include worker ID in run directory name for parallel execution
-                    SQLLogger._run_id = f"runid_{timestamp}_{worker_id}"
-                else:
-                    # Serial execution - use standard run ID
-                    SQLLogger._run_id = f"runid_{timestamp}"
+                SQLLogger._run_id = f"runid_{timestamp}"
 
                 SQLLogger._run_directory = self.log_dir / SQLLogger._run_id
                 SQLLogger._run_directory.mkdir(parents=True, exist_ok=True)
