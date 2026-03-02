@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 0.22.1 (2026-03-02)
+
+### Fix
+
+- skip CTE alias check for qualified table names and make default_namespace optional (#143)
+- remove worker log suffix and handle leading SQL comments before WITH clause (#142)
+
 ## 0.22.0 (2026-01-05)
 
 ### Feat
