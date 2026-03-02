@@ -93,12 +93,8 @@ class SQLTestCase(Generic[T]):
                 stacklevel=2,
             )
             self.default_namespace = self.execution_database
-        elif self.default_namespace is None and self.execution_database is None:
-            # Neither provided - this is an error
-            raise ValueError(
-                "Must provide either 'default_namespace' (preferred) or 'execution_database' "
-                "(deprecated) parameter"
-            )
+        # Both None is fine — queries using only fully-qualified table names
+        # don't need a default_namespace.
 
 
 class SQLTestFramework:
@@ -147,9 +143,8 @@ class SQLTestFramework:
             # Parse SQL to find table references
             referenced_tables = self._parse_sql_tables(test_case.query)
 
-            # Resolve unqualified table names
-            # default_namespace is guaranteed to be set by __post_init__
-            assert test_case.default_namespace is not None
+            # Resolve unqualified table names (default_namespace may be None if
+            # all table references in the query are already fully qualified)
             resolved_tables = self._resolve_table_names(
                 referenced_tables, test_case.default_namespace
             )
@@ -363,8 +358,11 @@ class SQLTestFramework:
             # Find all real tables (excluding the CTEs)
             tables = []
             for table in parsed.find_all(exp.Table):
-                # Skip tables that are actually CTE references
-                if str(table.name) in cte_aliases:
+                # Skip tables that are actually CTE references.
+                # Only unqualified names (no db/catalog) can be CTE references;
+                # a fully-qualified name like project.dataset.table is always a
+                # real table even when its unqualified name matches a CTE alias.
+                if not table.db and not table.catalog and str(table.name) in cte_aliases:
                     continue
 
                 # Get the fully qualified name including catalog/schema if present
@@ -383,7 +381,7 @@ class SQLTestFramework:
             raise SQLParseError(query, str(e))  # noqa:  B904
 
     def _resolve_table_names(
-        self, referenced_tables: List[str], default_namespace: str
+        self, referenced_tables: List[str], default_namespace: Optional[str]
     ) -> Dict[str, str]:
         """
         Resolve unqualified table names using default namespace context.
@@ -397,7 +395,13 @@ class SQLTestFramework:
                 # Already qualified
                 resolved[table_name] = table_name
             else:
-                # Add namespace prefix
+                if default_namespace is None:
+                    raise ValueError(
+                        f"Table '{table_name}' is not fully qualified and no "
+                        f"default_namespace was provided. Either use a fully qualified "
+                        f"table name (e.g. 'project.dataset.{table_name}') or set "
+                        f"default_namespace in your TestCase."
+                    )
                 qualified_name = f"{default_namespace}.{table_name}"
                 resolved[table_name] = qualified_name
 
