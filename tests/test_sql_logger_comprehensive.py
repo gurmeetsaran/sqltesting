@@ -86,10 +86,11 @@ class TestSQLLoggerReal:
             with patch.object(logger, "_get_worker_id", return_value="gw0"):
                 run_dir = logger._ensure_run_directory()
 
-                # Verify run directory created with worker ID
+                # Verify run directory created without worker ID in folder name
                 assert run_dir.exists()
                 assert SQLLogger._run_id is not None
-                assert "gw0" in SQLLogger._run_id
+                assert SQLLogger._run_id.startswith("runid_")
+                assert "gw0" not in SQLLogger._run_id
 
     def test_ensure_run_directory_shared_across_instances(self):
         """Test that run directory is shared across multiple logger instances."""
