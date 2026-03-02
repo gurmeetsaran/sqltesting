@@ -805,6 +805,92 @@ class TestBigQueryIntegration:
         assert results[0].total_orders == 2
         assert results[0].total_amount == Decimal("250.00")
 
+    def test_cte_with_leading_block_comment(self, use_physical_tables):
+        """Test that a WITH clause preceded by a block comment generates valid SQL.
+
+        Regression test: the WITH-detection logic used a simple startswith("WITH") check
+        which failed when the query had leading /* */ comments, producing a double-WITH
+        that BigQuery rejects with 400 Bad Request.
+        """
+
+        @sql_test(
+            adapter_type="bigquery",
+            mock_tables=[
+                UsersMockTable(
+                    [
+                        User(1, "Alice", "alice@example.com", date(2023, 1, 1), True),
+                        User(2, "Bob", "bob@example.com", date(2023, 2, 1), False),
+                        User(3, "Carol", "carol@example.com", date(2023, 3, 1), True),
+                    ]
+                )
+            ],
+            result_class=UserWithOptionalEmail,
+        )
+        def query_cte_with_leading_comment():
+            project_id = "test-project"
+            database = "test_dataset"
+            return TestCase(
+                query=f"""/* Returns only premium users.
+   Uses a CTE for readability. */
+WITH premium_users AS (
+    SELECT user_id, name, email
+    FROM {project_id}.{database}.users
+    WHERE is_premium = TRUE
+)
+SELECT user_id, name, email
+FROM premium_users
+ORDER BY user_id""",
+                default_namespace=database,
+                use_physical_tables=use_physical_tables,
+            )
+
+        results = query_cte_with_leading_comment()
+
+        assert len(results) == 2
+        assert results[0].user_id == 1
+        assert results[0].name == "Alice"
+        assert results[1].user_id == 3
+        assert results[1].name == "Carol"
+
+    def test_cte_with_leading_line_comments(self, use_physical_tables):
+        """Test that a WITH clause preceded by -- line comments generates valid SQL."""
+
+        @sql_test(
+            adapter_type="bigquery",
+            mock_tables=[
+                UsersMockTable(
+                    [
+                        User(1, "Alice", "alice@example.com", date(2023, 1, 1), True),
+                        User(2, "Bob", "bob@example.com", date(2023, 2, 1), False),
+                    ]
+                )
+            ],
+            result_class=UserWithOptionalEmail,
+        )
+        def query_cte_with_line_comments():
+            project_id = "test-project"
+            database = "test_dataset"
+            return TestCase(
+                query=f"""-- Returns only premium users
+-- Uses a CTE for readability
+WITH premium_users AS (
+    SELECT user_id, name, email
+    FROM {project_id}.{database}.users
+    WHERE is_premium = TRUE
+)
+SELECT user_id, name, email
+FROM premium_users
+ORDER BY user_id""",
+                default_namespace=database,
+                use_physical_tables=use_physical_tables,
+            )
+
+        results = query_cte_with_line_comments()
+
+        assert len(results) == 1
+        assert results[0].user_id == 1
+        assert results[0].name == "Alice"
+
     def test_unqualified_table_names_with_default_namespace(self, use_physical_tables):
         """Test how default_namespace resolves unqualified table names to mock tables.
 

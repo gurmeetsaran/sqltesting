@@ -1,6 +1,7 @@
 """Core SQL testing framework."""
 
 import os
+import re
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
 from typing import (
@@ -34,6 +35,14 @@ from ._sql_logger import SQLLogger
 
 # Type for adapter types
 AdapterType = Literal["bigquery", "athena", "redshift", "trino", "snowflake", "duckdb"]
+
+
+# Matches an optional run of SQL comments (-- … and /* … */) followed by the WITH
+# keyword.  Group 1 captures everything before WITH so it can be preserved as a prefix.
+_WITH_AFTER_COMMENTS_RE = re.compile(
+    r"\A(\s*(?:(?:/\*.*?\*/|--[^\n]*)\s*)*)WITH\b",
+    re.DOTALL | re.IGNORECASE,
+)
 
 T = TypeVar("T")
 
@@ -463,12 +472,17 @@ class SQLTestFramework:
 
         # Combine CTEs with original query
         if ctes:
-            # Check if modified query already starts with WITH
             modified_query_stripped = modified_query.strip()
-            if modified_query_stripped.upper().startswith("WITH"):
-                # Query already has WITH clause, so append our CTEs with comma
+            m = _WITH_AFTER_COMMENTS_RE.match(modified_query_stripped)
+            if m:
+                # Query already has a WITH clause (possibly after leading comments).
+                # Preserve any leading comments and inject mock-table CTEs right
+                # before the existing WITH keyword.
+                prefix = m.group(1)
                 cte_block = ",\n".join(ctes)
-                final_query = f"WITH {cte_block},\n{modified_query_stripped[4:].strip()}"
+                final_query = (
+                    f"{prefix}WITH {cte_block},\n{modified_query_stripped[m.end() :].strip()}"
+                )
             else:
                 # Query doesn't have WITH clause, add it
                 cte_block = "WITH " + ",\n".join(ctes)
