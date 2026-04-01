@@ -267,7 +267,7 @@ jobs:
 
       - name: Upload Snowflake integration coverage to Codecov
         if: github.event_name == 'push' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main')
-        uses: codecov/codecov-action@v5
+        uses: codecov/codecov-action@v6
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: ./coverage-snowflake-integration.xml
