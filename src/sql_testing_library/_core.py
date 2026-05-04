@@ -579,6 +579,7 @@ class SQLTestFramework:
         """Replace table names in query using sqlglot AST transformation."""
         try:
             import sqlglot
+            from sqlglot import Expression as SqlglotExpression
             from sqlglot import exp
 
             dialect = self.adapter.get_sqlglot_dialect()
@@ -587,7 +588,7 @@ class SQLTestFramework:
             parsed = sqlglot.parse_one(query, dialect=dialect)
 
             # Create a transformer to replace table names
-            def transform_tables(node: exp.Expression) -> exp.Expression:
+            def transform_tables(node: SqlglotExpression) -> SqlglotExpression:
                 if isinstance(node, exp.Table):
                     # Get the original table name
                     if node.db and node.catalog:
