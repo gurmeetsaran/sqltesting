@@ -39,11 +39,43 @@ AdapterType = Literal["bigquery", "athena", "redshift", "trino", "snowflake", "d
 
 # Matches an optional run of SQL comments (-- … and /* … */) followed by the WITH
 # keyword.  Group 1 captures everything before WITH so it can be preserved as a prefix.
-# Uses [^*] and [*][^/] to avoid backtracking issues with .*? in DOTALL mode.
-_WITH_AFTER_COMMENTS_RE = re.compile(
-    r"\A(\s*(?:(?:/\*(?:[^*]|\*(?!/))*\*/|--[^\n]*)\s*)*)WITH\b",
-    re.DOTALL | re.IGNORECASE,
-)
+
+
+def _match_with_after_comments(sql: str) -> "re.Match[str] | None":
+    """Match WITH keyword preceded only by whitespace and SQL comments.
+
+    Uses a two-pass approach to avoid ReDoS from nested quantifiers:
+    first strip comments/whitespace, then check for WITH.
+    """
+    _BLOCK_COMMENT = re.compile(r"/\*(?:[^*]|\*(?!/))*\*/")
+    _LINE_COMMENT = re.compile(r"--[^\n]*")
+
+    pos = 0
+    while pos < len(sql):
+        # Skip whitespace
+        if sql[pos] in (" ", "\t", "\n", "\r"):
+            pos += 1
+            continue
+        # Skip block comments
+        m = _BLOCK_COMMENT.match(sql, pos)
+        if m:
+            pos = m.end()
+            continue
+        # Skip line comments
+        m = _LINE_COMMENT.match(sql, pos)
+        if m:
+            pos = m.end()
+            continue
+        # Not whitespace or comment — check for WITH
+        break
+
+    if sql[pos : pos + 4].upper() == "WITH" and (
+        pos + 4 >= len(sql) or not sql[pos + 4].isalnum() and sql[pos + 4] != "_"
+    ):
+        # Build a fake match-like result using a simple regex on the known position
+        return re.match(r"(?s)(.{" + str(pos) + r"})WITH\b", sql, re.IGNORECASE)
+    return None
+
 
 T = TypeVar("T")
 
@@ -478,7 +510,7 @@ class SQLTestFramework:
         # Combine CTEs with original query
         if ctes:
             modified_query_stripped = modified_query.strip()
-            m = _WITH_AFTER_COMMENTS_RE.match(modified_query_stripped)
+            m = _match_with_after_comments(modified_query_stripped)
             if m:
                 # Query already has a WITH clause (possibly after leading comments).
                 # Preserve any leading comments and inject mock-table CTEs right

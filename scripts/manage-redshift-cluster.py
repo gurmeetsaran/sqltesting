@@ -391,28 +391,37 @@ class RedshiftClusterManager:
         print("⏰ Timeout waiting for namespace deletion")
         return False
 
-    def generate_pytest_config(
+    def generate_pytest_config_template(
         self,
         endpoint_info: Dict[str, str],
         database: str = "sqltesting_db",
         admin_user: str = "admin",
-        admin_password: str = None
     ) -> str:
-        """Generate pytest.ini configuration for testing."""
-        if not admin_password:
-            admin_password = os.getenv("REDSHIFT_ADMIN_PASSWORD", "CHANGE_ME")
-
-        config = f"""[sql_testing]
+        """Generate pytest.ini configuration template (no secrets)."""
+        return f"""[sql_testing]
 adapter = redshift
 
 [sql_testing.redshift]
 host = {endpoint_info['host']}
 database = {database}
 user = {admin_user}
-password = {admin_password}
+password = <set REDSHIFT_ADMIN_PASSWORD env var>
 port = {endpoint_info['port']}"""
 
-        return config
+    def write_pytest_config(
+        self,
+        path: str,
+        endpoint_info: Dict[str, str],
+        database: str = "sqltesting_db",
+        admin_user: str = "admin",
+        admin_password: str = None,
+    ) -> None:
+        """Write pytest.ini configuration file with credentials."""
+        password = admin_password or os.getenv("REDSHIFT_ADMIN_PASSWORD", "CHANGE_ME")  # nosec
+        template = self.generate_pytest_config_template(endpoint_info, database, admin_user)
+        config = template.replace("<set REDSHIFT_ADMIN_PASSWORD env var>", password)
+        with open(path, "w") as f:
+            f.write(config)
 
     def configure_security_group_for_workgroup(self, workgroup_name: str) -> bool:
         """Configure security group to allow Redshift access."""
@@ -759,22 +768,13 @@ def main():
         if success and args.generate_config:
             endpoint_info = manager.get_endpoint_info(args.workgroup)
             if endpoint_info:
-                config = manager.generate_pytest_config(
+                print(manager.generate_pytest_config_template(
                     endpoint_info,
                     args.database,
                     args.admin_user,
-                    args.admin_password
-                )
-
-                masked_config = manager.generate_pytest_config(
-                    endpoint_info,
-                    args.database,
-                    args.admin_user,
-                    "***"
-                )
-                print(masked_config)
+                ))
                 print("✅ Sample pytest.ini configuration file")
-                print("Note: Replace '***' with your actual password or use REDSHIFT_ADMIN_PASSWORD env var")
+                print("Note: Set REDSHIFT_ADMIN_PASSWORD env var or replace the password placeholder")
 
     elif args.command == "status":
         print("📊 Checking status of Redshift resources")
@@ -811,25 +811,22 @@ def main():
             if args.generate_config:
                 if not args.quiet:
                     print("\n📋 Pytest Configuration:")
-                    masked_config = manager.generate_pytest_config(
+                    print(manager.generate_pytest_config_template(
                         endpoint_info,
                         args.database,
                         args.admin_user,
-                        "***"
-                    )
-                    print(masked_config)
+                    ))
                     print("\n✅ Sample pytest.ini configuration generated")
-                    print("Note: Replace '***' with your actual password or use REDSHIFT_ADMIN_PASSWORD env var")
+                    print("Note: Set REDSHIFT_ADMIN_PASSWORD env var or replace the password placeholder")
                 else:
                     # In quiet mode, write the config file
-                    config = manager.generate_pytest_config(
+                    manager.write_pytest_config(
+                        "pytest.ini",
                         endpoint_info,
                         args.database,
                         args.admin_user,
-                        args.admin_password
+                        args.admin_password,
                     )
-                    with open("pytest.ini", "w") as f:
-                        f.write(config)
         else:
             success = False
 
