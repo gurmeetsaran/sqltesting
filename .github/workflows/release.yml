@@ -14,7 +14,8 @@ on:
           - minor
           - major
 
-permissions: {}
+permissions:
+  contents: write
 
 jobs:
   unit-tests:

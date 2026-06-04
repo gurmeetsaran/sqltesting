@@ -5,7 +5,8 @@ on:
   pull_request:
   workflow_call:  # Allow workflow reuse
 
-permissions: {}
+permissions:
+  contents: read
 
 jobs:
   unit-tests:

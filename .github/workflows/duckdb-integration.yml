@@ -46,7 +46,8 @@ on:
   workflow_dispatch:  # Allow manual trigger
   workflow_call:      # Allow workflow reuse
 
-permissions: {}
+permissions:
+  contents: read
 
 env:
   PYTHON_VERSION: '3.10'
