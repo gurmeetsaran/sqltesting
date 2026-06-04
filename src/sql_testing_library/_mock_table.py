@@ -159,18 +159,16 @@ class BaseMockTable(ABC):
 
         df = pd.DataFrame(self.data)
 
-        # STEP 2: Convert pandas-generated NaN values to Python None
-        #
-        # WHY THIS IS NEEDED:
-        # - Original data may contain explicit None values for optional fields
-        # - pandas DataFrame creation may convert None → NaN during dtype inference
-        # - Subsequent nullable dtype conversion (Int64, boolean) may introduce more NaN
-        # - We need to preserve None for SQL NULL generation in CTE queries
-        #
-        # DIFFERENCE FROM core.py NaN HANDLING:
-        # - mock_table.py: Converts NaN → None on mock data going INTO SQL queries
-        # - core.py: Converts NaN → None on real data coming OUT OF SQL queries
-        # - Uses df.where() for efficiency during bulk DataFrame dtype operations
+        # Convert string-backed columns (e.g. pyarrow StringDtype in pandas 3.x)
+        # to plain object dtype so that None values are preserved as Python None
+        # rather than being converted to NaN by df.where().
+        for col in df.columns:
+            if pd.api.types.is_string_dtype(df[col]) and df[col].dtype != "object":
+                df[col] = df[col].astype(object)
+
+        # Convert pandas-generated NaN values to Python None.
+        # This is needed because pandas may convert None → NaN during dtype
+        # inference, and we need to preserve None for SQL NULL generation.
         df = df.where(pd.notnull(df), None)
 
         # Apply proper nullable types based on model class type hints
