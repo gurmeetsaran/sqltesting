@@ -766,8 +766,15 @@ def main():
                     args.admin_password
                 )
 
-                print(config)
+                masked_config = manager.generate_pytest_config(
+                    endpoint_info,
+                    args.database,
+                    args.admin_user,
+                    "***"
+                )
+                print(masked_config)
                 print("✅ Sample pytest.ini configuration file")
+                print("Note: Replace '***' with your actual password or use REDSHIFT_ADMIN_PASSWORD env var")
 
     elif args.command == "status":
         print("📊 Checking status of Redshift resources")
@@ -789,34 +796,38 @@ def main():
                 print(f"Database: {args.database}")
                 print(f"User: {args.admin_user}")
 
-                # Generate psql connection command
-                if args.admin_password:
-                    password_env = f"PGPASSWORD='{args.admin_password}' "
-                    psql_cmd = f"{password_env}psql -h {endpoint_info['host']} -p {endpoint_info['port']} -U {args.admin_user} -d {args.database}"
-                else:
-                    psql_cmd = f"psql -h {endpoint_info['host']} -p {endpoint_info['port']} -U {args.admin_user} -d {args.database}"
+                # Generate psql connection command (never embed password in output)
+                psql_cmd = f"psql -h {endpoint_info['host']} -p {endpoint_info['port']} -U {args.admin_user} -d {args.database}"
 
                 print("\n🔗 Manual Connection Commands:")
                 print("psql command:")
-                print(f"  {psql_cmd}")
-
-                if not args.admin_password:
+                if args.admin_password:
+                    print(f"  PGPASSWORD='***' {psql_cmd}")
+                    print("\nTip: Use PGPASSWORD=$REDSHIFT_ADMIN_PASSWORD before the psql command")
+                else:
+                    print(f"  {psql_cmd}")
                     print("\nNote: Set REDSHIFT_ADMIN_PASSWORD environment variable for automatic password inclusion")
 
             if args.generate_config:
                 if not args.quiet:
                     print("\n📋 Pytest Configuration:")
-                config = manager.generate_pytest_config(
-                    endpoint_info,
-                    args.database,
-                    args.admin_user,
-                    args.admin_password
-                )
-                if not args.quiet:
-                    print(config)
+                    masked_config = manager.generate_pytest_config(
+                        endpoint_info,
+                        args.database,
+                        args.admin_user,
+                        "***"
+                    )
+                    print(masked_config)
                     print("\n✅ Sample pytest.ini configuration generated")
+                    print("Note: Replace '***' with your actual password or use REDSHIFT_ADMIN_PASSWORD env var")
                 else:
-                    # In quiet mode, just write the config file
+                    # In quiet mode, write the config file
+                    config = manager.generate_pytest_config(
+                        endpoint_info,
+                        args.database,
+                        args.admin_user,
+                        args.admin_password
+                    )
                     with open("pytest.ini", "w") as f:
                         f.write(config)
         else:

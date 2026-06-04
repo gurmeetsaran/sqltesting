@@ -6,6 +6,8 @@ on:
     branches: [master, main]
   workflow_call:
 
+permissions: {}
+
 env:
   PYTHON_VERSION: '3.12'
 
@@ -13,6 +15,8 @@ jobs:
   code-quality:
     name: Code Quality (Linting, Formatting, Type Checking)
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
 
     steps:
       - name: Checkout code

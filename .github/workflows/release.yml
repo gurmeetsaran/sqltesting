@@ -14,6 +14,8 @@ on:
           - minor
           - major
 
+permissions: {}
+
 jobs:
   unit-tests:
     name: Unit Tests and Code Quality
@@ -54,6 +56,8 @@ jobs:
     name: Create release
     needs: [unit-tests, athena-integration, bigquery-integration, redshift-integration, trino-integration, snowflake-integration, duckdb-integration]
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
 
     steps:
       - name: Check out code

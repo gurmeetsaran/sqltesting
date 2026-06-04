@@ -39,8 +39,9 @@ AdapterType = Literal["bigquery", "athena", "redshift", "trino", "snowflake", "d
 
 # Matches an optional run of SQL comments (-- … and /* … */) followed by the WITH
 # keyword.  Group 1 captures everything before WITH so it can be preserved as a prefix.
+# Uses [^*] and [*][^/] to avoid backtracking issues with .*? in DOTALL mode.
 _WITH_AFTER_COMMENTS_RE = re.compile(
-    r"\A(\s*(?:(?:/\*.*?\*/|--[^\n]*)\s*)*)WITH\b",
+    r"\A(\s*(?:(?:/\*(?:[^*]|\*(?!/))*\*/|--[^\n]*)\s*)*)WITH\b",
     re.DOTALL | re.IGNORECASE,
 )
 
