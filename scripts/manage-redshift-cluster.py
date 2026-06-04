@@ -408,20 +408,17 @@ user = {admin_user}
 password = <set REDSHIFT_ADMIN_PASSWORD env var>
 port = {endpoint_info['port']}"""
 
-    def write_pytest_config(
+    def write_pytest_config_template(
         self,
         path: str,
         endpoint_info: Dict[str, str],
         database: str = "sqltesting_db",
         admin_user: str = "admin",
-        admin_password: str = None,
     ) -> None:
-        """Write pytest.ini configuration file with credentials."""
-        password = admin_password or os.getenv("REDSHIFT_ADMIN_PASSWORD", "CHANGE_ME")  # nosec
+        """Write pytest.ini configuration template (password placeholder only)."""
         template = self.generate_pytest_config_template(endpoint_info, database, admin_user)
-        config = template.replace("<set REDSHIFT_ADMIN_PASSWORD env var>", password)
         with open(path, "w") as f:
-            f.write(config)
+            f.write(template)
 
     def configure_security_group_for_workgroup(self, workgroup_name: str) -> bool:
         """Configure security group to allow Redshift access."""
@@ -819,13 +816,12 @@ def main():
                     print("\n✅ Sample pytest.ini configuration generated")
                     print("Note: Set REDSHIFT_ADMIN_PASSWORD env var or replace the password placeholder")
                 else:
-                    # In quiet mode, write the config file
-                    manager.write_pytest_config(
+                    # In quiet mode, write the config template file
+                    manager.write_pytest_config_template(
                         "pytest.ini",
                         endpoint_info,
                         args.database,
                         args.admin_user,
-                        args.admin_password,
                     )
         else:
             success = False
