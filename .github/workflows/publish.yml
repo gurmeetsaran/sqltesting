@@ -5,11 +5,16 @@ on:
     types: [published]
   workflow_dispatch:
 
+permissions: {}
+
 jobs:
   publish:
     name: Build and publish to PyPI
     runs-on: ubuntu-latest
     environment: release
+    permissions:
+      id-token: write
+      contents: read
 
     steps:
       - name: Check out code

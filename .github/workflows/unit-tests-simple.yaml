@@ -3,10 +3,14 @@ name: Unit Tests (Simple)
 on:
   workflow_call:  # Only callable from other workflows
 
+permissions: {}
+
 jobs:
   unit-tests-simple:
     name: Unit Tests - Python 3.10 on Ubuntu
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
 
     steps:
     - uses: actions/checkout@v6

@@ -5,10 +5,14 @@ on:
   pull_request:
   workflow_call:  # Allow workflow reuse
 
+permissions: {}
+
 jobs:
   unit-tests:
     name: Unit Tests - Python ${{ matrix.python-version }} on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
+    permissions:
+      contents: read
     strategy:
       fail-fast: false
       matrix:
