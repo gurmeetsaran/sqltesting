@@ -57,7 +57,6 @@ classifiers = [
     "Topic :: Scientific/Engineering :: Information Analysis",
     "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
@@ -83,11 +82,10 @@ include = ["LICENSE", "README.md", "CHANGELOG.md", "py.typed", "src/sql_testing_
 "Contributing" = "https://github.com/gurmeetsaran/sqltesting/blob/master/CONTRIBUTING.md"
 
 [tool.poetry.dependencies]
-python = ">=3.9"
+python = ">=3.10"
 sqlglot = ">=26.0.0"
 pydantic = ">=2.0.0"
 pandas = ">=1.0.0"
-typing-extensions = {version = ">=4.5.0", python = "<3.10"}
 docutils = ">=0.21.2,<0.24.0"
 db-dtypes = "^1.4.3"
 
@@ -95,7 +93,7 @@ db-dtypes = "^1.4.3"
 google-cloud-bigquery = ">=3.0.0"
 
 [tool.poetry.group.athena.dependencies]
-boto3 = ">=1.26.0"
+boto3 = ">=1.35.0"
 
 [tool.poetry.group.redshift.dependencies]
 psycopg2-binary = ">=2.9.0"
@@ -104,7 +102,7 @@ psycopg2-binary = ">=2.9.0"
 trino = ">=0.322.0"
 
 [tool.poetry.group.snowflake.dependencies]
-snowflake-connector-python = ">=3.13.1"
+snowflake-connector-python = ">=4.6.0"
 
 [tool.poetry.group.duckdb.dependencies]
 duckdb = ">=0.8.0"
@@ -119,13 +117,13 @@ snowflake = ["snowflake-connector-python"]
 duckdb = ["duckdb"]
 
 [tool.poetry.group.dev.dependencies]
-pytest = ">=8.4.0"
+pytest = ">=9.0.3"
 pytest-asyncio = ">=0.21.0"
 pytest-mock = ">=3.10.0"
 pytest-cov = ">=4.1.0"
 pytest-xdist = ">=3.0.0"
 pytest-rerunfailures = ">=12.0.0"
-black = ">=24.10.0"
+black = ">=26.3.1"
 flake8 = ">=4.0.0"
 pyright = ">=1.1.350"
 tox = ">=4.0.0"
@@ -141,7 +139,7 @@ mocksmith = ">=6.0.1"
 sql_testing = "sql_testing_library._pytest_plugin"
 
 [tool.pyright]
-pythonVersion = "3.9"
+pythonVersion = "3.10"
 include = ["src"]
 exclude = ["tests", "scripts"]
 reportMissingImports = true
