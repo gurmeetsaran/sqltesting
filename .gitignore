@@ -182,7 +182,6 @@ cython_debug/
 # PyPI configuration file
 .pypirc
 
-poetry.lock
 .DS_Store
 .idea/
 pytest.ini
