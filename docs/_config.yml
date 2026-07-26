@@ -2,7 +2,7 @@
 title: SQL Testing Library
 description: >-
   Python SQL testing library for unit testing database queries with mock data injection.
-  Test BigQuery, Snowflake, Redshift, Athena, Trino, and DuckDB with pytest integration.
+  Test BigQuery, Snowflake, Redshift, Athena, Trino, DuckDB, and ClickHouse with pytest integration.
   Perfect for data engineering teams building ETL pipelines, validating data transformations,
   and testing analytics queries. Type-safe results with Pydantic models.
 url: "https://gurmeetsaran.github.io"
