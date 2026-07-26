@@ -34,7 +34,9 @@ from ._sql_logger import SQLLogger
 
 
 # Type for adapter types
-AdapterType = Literal["bigquery", "athena", "redshift", "trino", "snowflake", "duckdb"]
+AdapterType = Literal[
+    "bigquery", "athena", "redshift", "trino", "snowflake", "duckdb", "clickhouse"
+]
 
 
 # Matches an optional run of SQL comments (-- … and /* … */) followed by the WITH
@@ -541,9 +543,11 @@ class SQLTestFramework:
         # Get dialect to determine the correct CTE format
         dialect = self.adapter.get_sqlglot_dialect()
 
-        if dialect in ["bigquery", "snowflake"]:
-            # BigQuery and Snowflake-specific format using UNION ALL
-            # (Snowflake VALUES clauses don't support complex expressions like ARRAY_CONSTRUCT)
+        if dialect in ["bigquery", "snowflake", "clickhouse"]:
+            # BigQuery, Snowflake, ClickHouse: use UNION ALL SELECT
+            # (Snowflake VALUES clauses don't support complex expressions like ARRAY_CONSTRUCT;
+            # ClickHouse doesn't support the standard "SELECT * FROM (VALUES ...) AS t(cols)"
+            # column-list aliasing pattern.)
             columns = list(df.columns)
             select_statements = []
 

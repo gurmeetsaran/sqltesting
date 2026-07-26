@@ -1,5 +1,5 @@
 [sql_testing]
-adapter = bigquery  # Use 'bigquery', 'athena', 'redshift', 'trino', or 'snowflake'
+adapter = bigquery  # Use 'bigquery', 'athena', 'redshift', 'trino', 'snowflake', 'duckdb', or 'clickhouse'
 
 # BigQuery configuration
 [sql_testing.bigquery]
@@ -58,3 +58,12 @@ credentials_path = ${GOOGLE_APPLICATION_CREDENTIALS}
 # # private_key_path = ${SNOWFLAKE_PRIVATE_KEY_PATH}  # Path to private key file
 # # Or use environment variable SNOWFLAKE_PRIVATE_KEY with key content
 # # private_key_passphrase = ${SNOWFLAKE_PRIVATE_KEY_PASSPHRASE}  # Optional: if key is encrypted
+
+# ClickHouse configuration - uncomment and customize for ClickHouse
+# [sql_testing.clickhouse]
+# host = ${CLICKHOUSE_HOST}
+# port = ${CLICKHOUSE_PORT:-8123}      # Optional: default HTTP port is 8123 (9440 for TLS)
+# username = ${CLICKHOUSE_USERNAME:-default}
+# password = ${CLICKHOUSE_PASSWORD}
+# database = ${CLICKHOUSE_DATABASE:-default}
+# secure = ${CLICKHOUSE_SECURE:-false} # Set true when connecting via HTTPS

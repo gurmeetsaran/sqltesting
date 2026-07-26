@@ -61,7 +61,10 @@ class MapTypesMockTable(BaseMockTable):
 
 
 @pytest.mark.integration
-@pytest.mark.parametrize("adapter_type", ["athena", "trino", "redshift", "bigquery", "snowflake"])
+@pytest.mark.parametrize(
+    "adapter_type",
+    ["athena", "trino", "redshift", "bigquery", "snowflake", "clickhouse"],
+)
 @pytest.mark.parametrize(
     "use_physical_tables", [False, True], ids=["cte_mode", "physical_tables_mode"]
 )
@@ -121,6 +124,8 @@ class TestMapTypesIntegration:
             self.database_name = "test_dataset"
         elif adapter_type == "snowflake":
             self.database_name = "test_db.sqltesting"
+        elif adapter_type == "clickhouse":
+            self.database_name = "default"
 
     def test_map_types_comprehensive(self, adapter_type, use_physical_tables):
         """Test all map types comprehensively for the specified adapter."""
@@ -164,6 +169,8 @@ class TestMapTypesIntegration:
             self._verify_bigquery_results(results)
         elif adapter_type == "snowflake":
             self._verify_snowflake_results(results)
+        elif adapter_type == "clickhouse":
+            self._verify_clickhouse_results(results)
 
     def _verify_athena_results(self, results):
         """Verify Athena-specific results."""
@@ -302,6 +309,47 @@ class TestMapTypesIntegration:
         assert row2.optional_int_map is None
 
         # Verify third row (with empty maps)
+        row3 = results[2]
+        assert row3.id == 3
+        assert row3.string_map == {}
+        assert row3.int_map == {"zero": 0}
+        assert row3.decimal_map == {}
+        assert row3.mixed_map == {42: "answer"}
+        assert row3.optional_string_map == {}
+        assert row3.optional_int_map == {"value": 42}
+
+    def _verify_clickhouse_results(self, results):
+        """Verify ClickHouse-specific results.
+
+        ClickHouse's ``Map(K, V)`` type is not itself nullable, so ``None``
+        optional maps round-trip as empty dicts (not ``None``). ``Decimal(38, 9)``
+        columns come back with the full 9-digit scale.
+        """
+        # First row
+        row1 = results[0]
+        assert row1.id == 1
+        assert row1.string_map == {"key1": "Clickhouse", "key2": "maps", "key3": "test"}
+        assert row1.int_map == {"count": 42, "total": 100, "items": 3}
+        assert row1.decimal_map == {
+            "price": Decimal("19.990000000"),
+            "tax": Decimal("1.500000000"),
+            "total": Decimal("21.490000000"),
+        }
+        assert row1.mixed_map == {1: "first", 2: "second", 3: "third"}
+        assert row1.optional_string_map == {"optional": "value", "test": "data"}
+        assert row1.optional_int_map == {"a": 100, "b": 200}
+
+        # Second row — optional maps are None in source data but come back as {}
+        row2 = results[1]
+        assert row2.id == 2
+        assert row2.string_map == {"hello": "world"}
+        assert row2.int_map == {"single": 1}
+        assert row2.decimal_map == {"amount": Decimal("99.990000000")}
+        assert row2.mixed_map == {10: "ten"}
+        assert row2.optional_string_map == {}
+        assert row2.optional_int_map == {}
+
+        # Third row (empty maps)
         row3 = results[2]
         assert row3.id == 3
         assert row3.string_map == {}

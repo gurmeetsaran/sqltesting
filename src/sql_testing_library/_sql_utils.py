@@ -93,6 +93,15 @@ SQL_TYPE_MAPPINGS: Dict[str, Dict[Type, str]] = {
         datetime: "TIMESTAMP",
         Decimal: "NUMBER(38,9)",
     },
+    "clickhouse": {
+        str: "String",
+        int: "Int64",
+        float: "Float64",
+        bool: "Bool",
+        date: "Date",
+        datetime: "DateTime64(6)",
+        Decimal: "Decimal(38, 9)",
+    },
 }
 
 
@@ -199,6 +208,8 @@ def get_sql_type_string(py_type: Type, dialect: str) -> str:
         element_sql_type = get_sql_type_string(element_type, dialect)
         if dialect == "bigquery":
             return f"ARRAY<{element_sql_type}>"
+        elif dialect == "clickhouse":
+            return f"Array({element_sql_type})"
         else:
             return f"ARRAY({element_sql_type})"
 
@@ -222,6 +233,11 @@ def get_sql_type_string(py_type: Type, dialect: str) -> str:
         elif dialect == "snowflake":
             # Snowflake uses VARIANT type for JSON
             return "VARIANT"
+        elif dialect == "clickhouse":
+            # ClickHouse has a native Map(K, V) type
+            key_sql_type = get_sql_type_string(key_type, dialect)
+            value_sql_type = get_sql_type_string(value_type, dialect)
+            return f"Map({key_sql_type}, {value_sql_type})"
         else:
             # Default to string for other dialects
             return "VARCHAR"
@@ -233,15 +249,25 @@ def get_sql_type_string(py_type: Type, dialect: str) -> str:
         nested_fields = []
         for nested_name, nested_type in nested_hints.items():
             nested_sql = get_sql_type_string(nested_type, dialect)
-            if dialect == "bigquery":
-                # BigQuery uses STRUCT<field_name type> syntax
-                nested_fields.append(f"{nested_name} {nested_sql}")
-            else:
-                # Athena/Trino use ROW syntax
-                nested_fields.append(f"{nested_name} {nested_sql}")
+            if dialect == "clickhouse":
+                # ClickHouse: wrap primitive Tuple fields in Nullable so an
+                # entire NULL struct can be emitted as tuple(NULL, NULL, ...).
+                # Array/Map/Tuple types cannot themselves be Nullable in CH, so
+                # leave them alone; also skip if already Nullable.
+                if (
+                    not nested_sql.startswith("Nullable(")
+                    and not nested_sql.startswith("Array(")
+                    and not nested_sql.startswith("Map(")
+                    and not nested_sql.startswith("Tuple(")
+                ):
+                    nested_sql = f"Nullable({nested_sql})"
+            nested_fields.append(f"{nested_name} {nested_sql}")
 
         if dialect == "bigquery":
             return f"STRUCT<{', '.join(nested_fields)}>"
+        elif dialect == "clickhouse":
+            # ClickHouse uses named Tuple(name type, ...) syntax
+            return f"Tuple({', '.join(nested_fields)})"
         else:
             return f"ROW({', '.join(nested_fields)})"
 
@@ -315,6 +341,11 @@ def format_sql_value(value: Any, column_type: Type, dialect: str = "standard") -
             elif dialect == "snowflake":
                 # Snowflake VARIANT type handles NULL arrays
                 return "NULL::VARIANT"
+            elif dialect == "clickhouse":
+                # ClickHouse Array cannot be wrapped in Nullable, so a NULL array
+                # round-trips as an empty typed array.
+                sql_element_type = get_sql_type_string(element_type, dialect)
+                return f"CAST([] AS Array({sql_element_type}))"
             else:
                 return "NULL"
 
@@ -355,6 +386,12 @@ def format_sql_value(value: Any, column_type: Type, dialect: str = "standard") -
             elif dialect == "snowflake":
                 # Snowflake VARIANT type handles NULL maps
                 return "NULL::VARIANT"
+            elif dialect == "clickhouse":
+                # ClickHouse Map is not itself nullable, but we can use
+                # an empty map cast to signal absence.
+                key_sql_type = get_sql_type_string(key_type, dialect)
+                value_sql_type = get_sql_type_string(value_type, dialect)
+                return f"CAST(map() AS Map({key_sql_type}, {value_sql_type}))"
             else:
                 return "NULL"
 
@@ -394,6 +431,10 @@ def format_sql_value(value: Any, column_type: Type, dialect: str = "standard") -
             else:
                 # Both Athena and Trino support VARCHAR without size specification
                 return "CAST(NULL AS VARCHAR)"
+        elif dialect == "clickhouse":
+            # ClickHouse requires typed NULLs so UNION ALL SELECT branches agree
+            sql_type = get_sql_type_string(column_type, dialect)
+            return f"CAST(NULL AS Nullable({sql_type}))"
         else:
             return "NULL"
 
@@ -440,6 +481,16 @@ def format_sql_value(value: Any, column_type: Type, dialect: str = "standard") -
                 formatted_element = format_sql_value(element, element_type, dialect)
                 formatted_elements.append(formatted_element)
             return f"ARRAY_CONSTRUCT({', '.join(formatted_elements)})"
+        elif dialect == "clickhouse":
+            # ClickHouse array literal: [a, b, c]
+            formatted_elements = []
+            for element in value:
+                formatted_element = format_sql_value(element, element_type, dialect)
+                formatted_elements.append(formatted_element)
+            if not formatted_elements:
+                sql_element_type = get_sql_type_string(element_type, dialect)
+                return f"CAST([] AS Array({sql_element_type}))"
+            return f"[{', '.join(formatted_elements)}]"
         else:
             # Default to generic array syntax
             formatted_elements = []
@@ -500,6 +551,17 @@ def format_sql_value(value: Any, column_type: Type, dialect: str = "standard") -
             # Escape single quotes in JSON string for SQL
             json_str = json_str.replace("'", "''")
             return f"PARSE_JSON('{json_str}')"
+        elif dialect == "clickhouse":
+            # ClickHouse map literal: map(k1, v1, k2, v2, ...)
+            pairs = []
+            for k, v in value.items():
+                pairs.append(format_sql_value(k, key_type, dialect))
+                pairs.append(format_sql_value(v, value_type, dialect))
+            if not pairs:
+                key_sql_type = get_sql_type_string(key_type, dialect)
+                value_sql_type = get_sql_type_string(value_type, dialect)
+                return f"CAST(map() AS Map({key_sql_type}, {value_sql_type}))"
+            return f"map({', '.join(pairs)})"
         else:
             # Other databases don't have native map support yet
             raise NotImplementedError(f"Map type not yet supported for dialect: {dialect}")
@@ -525,6 +587,8 @@ def format_sql_value(value: Any, column_type: Type, dialect: str = "standard") -
     elif column_type is date:
         if dialect == "bigquery":
             return f"DATE('{value}')"
+        elif dialect == "clickhouse":
+            return f"toDate('{value}')"
         else:
             return f"DATE '{value}'"
 
@@ -545,6 +609,13 @@ def format_sql_value(value: Any, column_type: Type, dialect: str = "standard") -
             else:
                 timestamp_str = str(value)
             return f"TIMESTAMP '{timestamp_str}'"
+        elif dialect == "clickhouse":
+            # ClickHouse doesn't accept the 'T' separator; use space
+            if isinstance(value, datetime):
+                timestamp_str = value.strftime("%Y-%m-%d %H:%M:%S.%f")
+            else:
+                timestamp_str = str(value).replace("T", " ")
+            return f"toDateTime64('{timestamp_str}', 6)"
         else:
             if isinstance(value, datetime):
                 return f"TIMESTAMP '{value.isoformat()}'"
@@ -558,6 +629,9 @@ def format_sql_value(value: Any, column_type: Type, dialect: str = "standard") -
         if dialect == "bigquery":
             # BigQuery needs explicit NUMERIC casting for decimals
             return f"NUMERIC '{value}'"
+        elif dialect == "clickhouse":
+            # ClickHouse: use explicit cast so UNION ALL branches agree on scale
+            return f"CAST('{value}' AS Decimal(38, 9))"
         else:
             return str(value)
 
@@ -675,6 +749,34 @@ def _format_struct_value(value: Any, struct_type: Type, dialect: str) -> str:
         json_obj = _convert_to_json_serializable(value, struct_type)
         json_str = json.dumps(json_obj, cls=DecimalEncoder)
         return f"JSON_PARSE('{json_str}')"
+
+    # For ClickHouse (native named Tuple type)
+    elif dialect == "clickhouse":
+        # Build the Tuple(...) type text. get_sql_type_string wraps primitive
+        # Tuple fields in Nullable() so a fully-NULL struct is representable
+        # (ClickHouse doesn't allow Nullable(Tuple(...))).
+        tuple_type = get_sql_type_string(struct_type, dialect)
+        type_hints = get_type_hints(struct_type)
+
+        # Whether we're emitting a NULL struct or a real one, walk each field
+        # and let format_sql_value produce a type-correct literal (recursing
+        # into nested structs so their inner Tuple fields also become
+        # tuple(NULL, ...) rather than bare NULL, which CH rejects).
+        field_values = []
+        for field_name, field_type in type_hints.items():
+            if value is None:
+                field_value = None
+            elif is_dataclass(value):
+                field_value = getattr(value, field_name, None)
+            elif is_pydantic_model_class(type(value)):
+                field_value = getattr(value, field_name, None)
+            else:
+                field_value = value.get(field_name) if isinstance(value, dict) else None
+            formatted = format_sql_value(field_value, field_type, dialect)
+            field_values.append(formatted)
+
+        # CAST is required so the CTE's UNION ALL branches agree on the tuple type
+        return f"CAST(tuple({', '.join(field_values)}) AS {tuple_type})"
 
     # For Snowflake (using OBJECT type with JSON)
     elif dialect == "snowflake":
