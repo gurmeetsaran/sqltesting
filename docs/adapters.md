@@ -2,13 +2,13 @@
 layout: default
 title: Database Adapters - Configuration Guide
 nav_order: 4
-description: "Configure SQL Testing Library for BigQuery, Snowflake, Redshift, Athena, Trino, and DuckDB. Database adapter setup and connection configuration guide."
+description: "Configure SQL Testing Library for BigQuery, Snowflake, Redshift, Athena, Trino, DuckDB, and ClickHouse. Database adapter setup and connection configuration guide."
 ---
 
 # Database Adapters Configuration
 {: .no_toc }
 
-Configure database adapters for SQL unit testing with BigQuery, Snowflake, Redshift, Athena, Trino, and DuckDB.
+Configure database adapters for SQL unit testing with BigQuery, Snowflake, Redshift, Athena, Trino, DuckDB, and ClickHouse.
 {: .fs-6 .fw-300 }
 
 ## Table of contents
@@ -33,6 +33,7 @@ The SQL Testing Library supports multiple database engines through adapters. Eac
 | Trino | `TrinoAdapter` | `trino` | Trino SQL |
 | Snowflake | `SnowflakeAdapter` | `snowflake-connector-python` | Snowflake SQL |
 | DuckDB | `DuckDBAdapter` | `duckdb` | DuckDB SQL |
+| ClickHouse | `ClickHouseAdapter` | `clickhouse-connect` | ClickHouse SQL |
 
 ## BigQuery Adapter
 
@@ -505,6 +506,185 @@ GROUP BY u.address.city
 - No need for indexing in test scenarios
 - Automatic query optimization and vectorized execution
 
+## ClickHouse Adapter
+
+### Installation
+
+```bash
+pip install sql-testing-library[clickhouse]
+```
+
+Uses the official `clickhouse-connect` HTTP client. For a fully local
+setup, start a server with Docker:
+
+```bash
+docker run -d --name clickhouse -p 8123:8123 \
+  -e CLICKHOUSE_SKIP_USER_SETUP=1 \
+  clickhouse/clickhouse-server:24.8-alpine
+```
+
+### Configuration
+
+```ini
+[sql_testing.clickhouse]
+host = localhost
+port = 8123          # HTTP port (8443 or 9440 for HTTPS)
+username = default
+password =
+database = default
+secure = false       # Set true for HTTPS connections (ClickHouse Cloud)
+```
+
+### Features
+
+- **HTTP Transport**: Uses `clickhouse-connect` against port 8123 (or 8443/9440 for TLS)
+- **Memory-Engine Tables**: Physical-mode temp tables use `ENGINE = Memory`
+  for zero-config, ephemeral storage
+- **Native Complex Types**: Full support for:
+  - Arrays: `Array(T)` for `List[T]`
+  - Maps: `Map(K, V)` for `Dict[K, V]`
+  - Structs: named `Tuple(field T, ...)` for dataclasses and Pydantic models
+- **Deeply Nested Types**: Nested arrays, arrays of tuples, arrays of arrays of tuples
+- **No Query Size Limit**: `get_query_size_limit()` returns `None`
+  (ClickHouse's default HTTP `max_query_size` is 256 KiB but is server-side configurable)
+
+### Nullability Rules
+
+ClickHouse forbids wrapping `Array`, `Map`, and `Tuple` in `Nullable(...)`.
+The adapter encodes the following rules so that NULLs round-trip cleanly:
+
+| Column type | Emitted CH type | NULL round-trip |
+|-------------|-----------------|-----------------|
+| Scalar (`str`, `int`, ...) | `Nullable(T)` | `None` |
+| `List[T]` (`Optional[List[T]]`) | `Array(T)` — never Nullable | Empty list `[]` (not `None`) |
+| `Dict[K, V]` (`Optional[Dict[K, V]]`) | `Map(K, V)` — never Nullable | Empty dict `{}` (not `None`) |
+| Struct (`Address`) | `Tuple(field Nullable(T), ...)` | All-None tuple → converter returns `None` for `Optional[Address]` |
+
+### Database Context
+
+ClickHouse uses a database-qualified name (default database is `default`):
+
+```python
+class MyMockTable(BaseMockTable):
+    def get_database_name(self) -> str:
+        return "default"
+
+    def get_table_name(self) -> str:
+        return "users"
+```
+
+Queries reference tables as `default.users`.
+
+### Example
+
+```python
+from dataclasses import dataclass
+from datetime import date
+from decimal import Decimal
+from typing import Dict, List, Optional
+from pydantic import BaseModel
+from sql_testing_library import TestCase, sql_test
+from sql_testing_library._mock_table import BaseMockTable
+
+@dataclass
+class Address:
+    street: str
+    city: str
+    zip_code: str
+
+@dataclass
+class Customer:
+    customer_id: int
+    name: str
+    signup_date: date
+    lifetime_value: Optional[Decimal]
+    tags: List[str]
+    address: Address
+
+class CustomerResult(BaseModel):
+    customer_id: int
+    name: str
+    city: str
+    tag_count: int
+
+class CustomersMockTable(BaseMockTable):
+    def get_database_name(self) -> str:
+        return "default"
+    def get_table_name(self) -> str:
+        return "customers"
+
+@sql_test(
+    adapter_type="clickhouse",
+    mock_tables=[CustomersMockTable([
+        Customer(
+            1, "Alice", date(2023, 1, 15), Decimal("1500.00"),
+            ["premium", "vip"],
+            Address("123 Main St", "New York", "10001"),
+        ),
+    ])],
+    result_class=CustomerResult,
+)
+def test_customer_query():
+    return TestCase(
+        query="""
+            SELECT
+                customer_id,
+                name,
+                tupleElement(address, 'city') AS city,
+                length(tags) AS tag_count
+            FROM customers
+        """,
+        default_namespace="default",
+    )
+```
+
+### SQL Examples
+
+```sql
+-- Named-tuple field access. sqlglot's clickhouse dialect rewrites
+-- `x.field` and drops quoting, so prefer tupleElement(...) explicitly.
+SELECT
+    tupleElement(address, 'street') AS street,
+    tupleElement(address, 'city')   AS city
+FROM customers
+
+-- Array operations (1-based indexing, length() for size, has() for contains)
+SELECT
+    name,
+    length(tags)        AS tag_count,
+    tags[1]             AS first_tag,
+    has(tags, 'premium') AS is_premium
+FROM customers
+
+-- Map operations (default value for missing keys; use mapContains to preserve NULL)
+SELECT
+    name,
+    metadata['role']    AS role_or_default,
+    if(mapContains(metadata, 'role'), metadata['role'], NULL) AS role_or_null
+FROM customers
+
+-- Unnest an array (ARRAY JOIN, not UNNEST)
+SELECT id, tag
+FROM customers
+ARRAY JOIN tags AS tag
+
+-- Higher-order array functions (arraySum, arrayCount, arrayMap, arrayFilter)
+SELECT
+    id,
+    arraySum(p -> assumeNotNull(tupleElement(p, 'budget')), projects) AS total_budget,
+    arrayCount(p -> assumeNotNull(tupleElement(p, 'is_active')), projects) AS active_count
+FROM developers
+```
+
+### Testing Tips
+
+- The `clickhouse-connect` client is **not thread-safe**. Multi-table physical-mode
+  tests should set `parallel_table_creation=False` on the `@sql_test` decorator.
+- `Decimal(38, 9)` columns come back with full 9-digit scale (e.g., `Decimal('1.500000000')`).
+  Python's `Decimal` equality is by value, so `Decimal('1.5') == Decimal('1.500000000')` still holds.
+- The `Memory` engine is fastest for tests but data is lost on server restart —
+  which is exactly what we want for test isolation.
+
 ## Choosing an Adapter
 
 ### Default Adapter Configuration
@@ -550,40 +730,41 @@ adapter = redshift  # Default for all tests
 
 ### Primitive Types
 
-| Type | BigQuery | Athena | Redshift | Trino | Snowflake | DuckDB |
-|------|----------|---------|----------|-------|-----------|---------|
-| String | ✅ STRING | ✅ VARCHAR | ✅ VARCHAR | ✅ VARCHAR | ✅ VARCHAR | ✅ VARCHAR |
-| Integer | ✅ INT64 | ✅ BIGINT | ✅ INTEGER | ✅ BIGINT | ✅ NUMBER | ✅ BIGINT |
-| Float | ✅ FLOAT64 | ✅ DOUBLE | ✅ REAL | ✅ DOUBLE | ✅ FLOAT | ✅ DOUBLE |
-| Boolean | ✅ BOOL | ✅ BOOLEAN | ✅ BOOLEAN | ✅ BOOLEAN | ✅ BOOLEAN | ✅ BOOLEAN |
-| Date | ✅ DATE | ✅ DATE | ✅ DATE | ✅ DATE | ✅ DATE | ✅ DATE |
-| Datetime | ✅ DATETIME | ✅ TIMESTAMP | ✅ TIMESTAMP | ✅ TIMESTAMP | ✅ TIMESTAMP | ✅ TIMESTAMP |
-| Decimal | ✅ NUMERIC | ✅ DECIMAL | ✅ DECIMAL | ✅ DECIMAL | ✅ NUMBER | ✅ DECIMAL |
+| Type | BigQuery | Athena | Redshift | Trino | Snowflake | DuckDB | ClickHouse |
+|------|----------|---------|----------|-------|-----------|---------|-----------|
+| String | ✅ STRING | ✅ VARCHAR | ✅ VARCHAR | ✅ VARCHAR | ✅ VARCHAR | ✅ VARCHAR | ✅ String |
+| Integer | ✅ INT64 | ✅ BIGINT | ✅ INTEGER | ✅ BIGINT | ✅ NUMBER | ✅ BIGINT | ✅ Int64 |
+| Float | ✅ FLOAT64 | ✅ DOUBLE | ✅ REAL | ✅ DOUBLE | ✅ FLOAT | ✅ DOUBLE | ✅ Float64 |
+| Boolean | ✅ BOOL | ✅ BOOLEAN | ✅ BOOLEAN | ✅ BOOLEAN | ✅ BOOLEAN | ✅ BOOLEAN | ✅ Bool |
+| Date | ✅ DATE | ✅ DATE | ✅ DATE | ✅ DATE | ✅ DATE | ✅ DATE | ✅ Date |
+| Datetime | ✅ DATETIME | ✅ TIMESTAMP | ✅ TIMESTAMP | ✅ TIMESTAMP | ✅ TIMESTAMP | ✅ TIMESTAMP | ✅ DateTime64(6) |
+| Decimal | ✅ NUMERIC | ✅ DECIMAL | ✅ DECIMAL | ✅ DECIMAL | ✅ NUMBER | ✅ DECIMAL | ✅ Decimal(38, 9) |
 
 ### Complex Types
 
-| Type | Python Type | BigQuery | Athena | Redshift | Trino | Snowflake | DuckDB |
-|------|-------------|----------|---------|----------|-------|-----------|---------|
-| String Array | `List[str]` | ✅ ARRAY | ✅ ARRAY | ✅ JSON | ✅ ARRAY | ✅ ARRAY | ✅ LIST |
-| Int Array | `List[int]` | ✅ ARRAY | ✅ ARRAY | ✅ JSON | ✅ ARRAY | ✅ ARRAY | ✅ LIST |
-| Decimal Array | `List[Decimal]` | ✅ ARRAY | ✅ ARRAY | ✅ JSON | ✅ ARRAY | ✅ ARRAY | ✅ LIST |
-| String Map | `Dict[str, str]` | ✅ JSON | ✅ MAP | ✅ SUPER | ✅ MAP | ✅ VARIANT | ✅ MAP |
-| Int Map | `Dict[str, int]` | ✅ JSON | ✅ MAP | ✅ SUPER | ✅ MAP | ✅ VARIANT | ✅ MAP |
-| Mixed Map | `Dict[K, V]` | ✅ JSON | ✅ MAP | ✅ SUPER | ✅ MAP | ✅ VARIANT | ✅ MAP |
-| Struct | `dataclass` | ✅ STRUCT | ✅ ROW | ✅ SUPER | ✅ ROW | ✅ OBJECT | ✅ STRUCT |
-| Struct | `Pydantic model` | ✅ STRUCT | ✅ ROW | ✅ SUPER | ✅ ROW | ✅ OBJECT | ✅ STRUCT |
-| **Nested Arrays** | `List[List[T]]` | ❌ | ✅ ARRAY | ✅ SUPER | ✅ ARRAY | ✅ ARRAY | ✅ LIST |
-| **Arrays of Structs** | `List[dataclass]` | ✅ ARRAY | ✅ ARRAY | ✅ SUPER | ✅ ARRAY | ✅ ARRAY | ✅ LIST |
-| **3D Arrays** | `List[List[List[T]]]` | ❌ | ✅ ARRAY | ✅ SUPER | ✅ ARRAY | ✅ ARRAY | ✅ LIST |
-| **Arrays of Arrays of Structs** | `List[List[dataclass]]` | ❌ | ✅ ARRAY | ✅ SUPER | ✅ ARRAY | ✅ ARRAY | ✅ LIST |
+| Type | Python Type | BigQuery | Athena | Redshift | Trino | Snowflake | DuckDB | ClickHouse |
+|------|-------------|----------|---------|----------|-------|-----------|---------|-----------|
+| String Array | `List[str]` | ✅ ARRAY | ✅ ARRAY | ✅ JSON | ✅ ARRAY | ✅ ARRAY | ✅ LIST | ✅ Array |
+| Int Array | `List[int]` | ✅ ARRAY | ✅ ARRAY | ✅ JSON | ✅ ARRAY | ✅ ARRAY | ✅ LIST | ✅ Array |
+| Decimal Array | `List[Decimal]` | ✅ ARRAY | ✅ ARRAY | ✅ JSON | ✅ ARRAY | ✅ ARRAY | ✅ LIST | ✅ Array |
+| String Map | `Dict[str, str]` | ✅ JSON | ✅ MAP | ✅ SUPER | ✅ MAP | ✅ VARIANT | ✅ MAP | ✅ Map |
+| Int Map | `Dict[str, int]` | ✅ JSON | ✅ MAP | ✅ SUPER | ✅ MAP | ✅ VARIANT | ✅ MAP | ✅ Map |
+| Mixed Map | `Dict[K, V]` | ✅ JSON | ✅ MAP | ✅ SUPER | ✅ MAP | ✅ VARIANT | ✅ MAP | ✅ Map |
+| Struct | `dataclass` | ✅ STRUCT | ✅ ROW | ✅ SUPER | ✅ ROW | ✅ OBJECT | ✅ STRUCT | ✅ Tuple |
+| Struct | `Pydantic model` | ✅ STRUCT | ✅ ROW | ✅ SUPER | ✅ ROW | ✅ OBJECT | ✅ STRUCT | ✅ Tuple |
+| **Nested Arrays** | `List[List[T]]` | ❌ | ✅ ARRAY | ✅ SUPER | ✅ ARRAY | ✅ ARRAY | ✅ LIST | ✅ Array |
+| **Arrays of Structs** | `List[dataclass]` | ✅ ARRAY | ✅ ARRAY | ✅ SUPER | ✅ ARRAY | ✅ ARRAY | ✅ LIST | ✅ Array |
+| **3D Arrays** | `List[List[List[T]]]` | ❌ | ✅ ARRAY | ✅ SUPER | ✅ ARRAY | ✅ ARRAY | ✅ LIST | ✅ Array |
+| **Arrays of Arrays of Structs** | `List[List[dataclass]]` | ❌ | ✅ ARRAY | ✅ SUPER | ✅ ARRAY | ✅ ARRAY | ✅ LIST | ✅ Array |
 
 **Legend:**
 - ✅ = Fully supported with comprehensive tests
 - ❌ = Not supported (database limitation)
 
 **Deeply Nested Types Support:**
-- **All Major Adapters**: Full support for deeply nested complex types including nested arrays (2D, 3D+), arrays of structs, and arrays of arrays of structs across Athena, Trino, DuckDB, Redshift, and Snowflake. See `tests/integration/test_deeply_nested_types_integration.py` for comprehensive examples with 20 passing tests.
+- **All Major Adapters**: Full support for deeply nested complex types including nested arrays (2D, 3D+), arrays of structs, and arrays of arrays of structs across Athena, Trino, DuckDB, Redshift, Snowflake, and ClickHouse. See `tests/integration/test_deeply_nested_types_integration.py` for comprehensive examples.
 - **BigQuery**: Does not support nested arrays (arrays of arrays) - this is a database limitation in BigQuery's type system. Struct types and arrays of structs work fine.
+- **ClickHouse**: `Array`, `Map`, and `Tuple` types cannot themselves be `Nullable` (a CH restriction), so NULL arrays/maps round-trip as empty containers (`[]` / `{}`). Struct fields are wrapped in `Nullable(...)` so a fully-NULL struct is representable as `tuple(NULL, ...)` and deserialized back to `None` when the Python target is `Optional[Struct]`.
 
 ## Adapter-Specific SQL
 
@@ -772,6 +953,38 @@ SELECT
 FROM users u
 ```
 
+### ClickHouse
+
+```sql
+-- Arrays: 1-based indexing, length() for size, has() for contains,
+-- ARRAY JOIN for unnesting
+SELECT length(tags), tags[1], has(tags, 'premium') FROM customers
+SELECT id, tag FROM customers ARRAY JOIN tags AS tag
+
+-- Named-tuple field access: prefer tupleElement(...) explicitly since
+-- sqlglot's clickhouse dialect rewrites `x.field` and drops quoting
+SELECT tupleElement(address, 'city') FROM customers
+
+-- Map access. Missing keys return the value type's default (0 / '')
+-- rather than NULL, so use mapContains(...) when NULL semantics matter
+SELECT
+    metadata['role'] AS role_or_default,
+    if(mapContains(metadata, 'role'), metadata['role'], NULL) AS role_or_null
+FROM customers
+
+-- Higher-order array functions (arraySum, arrayCount, arrayMap, arrayFilter)
+-- Note: Tuple fields are Nullable(...), so unwrap with assumeNotNull
+-- before feeding into aggregations that don't accept Nullable numerics
+SELECT
+    id,
+    arraySum(p -> assumeNotNull(tupleElement(p, 'budget')), projects) AS total,
+    arrayCount(p -> assumeNotNull(tupleElement(p, 'is_active')), projects) AS active
+FROM developers
+
+-- Date/datetime literals
+SELECT toDate('2023-01-15'), toDateTime64('2023-01-15 10:30:00.123456', 6)
+```
+
 ## Troubleshooting
 
 ### Connection Issues
@@ -782,6 +995,7 @@ FROM users u
 4. **Trino**: Ensure correct authentication method
 5. **Snowflake**: Verify account identifier format
 6. **DuckDB**: Check file permissions for file-based databases
+7. **ClickHouse**: Verify HTTP port (`8123`, or `8443`/`9440` for HTTPS with `secure = true`); confirm the `default` user's password (self-hosted images that don't set `CLICKHOUSE_SKIP_USER_SETUP=1` will generate a random one on first boot)
 
 ### Query Failures
 

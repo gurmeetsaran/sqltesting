@@ -2,13 +2,13 @@
 layout: default
 title: Examples - SQL Unit Testing with Python
 nav_order: 3
-description: "Real-world examples of SQL unit testing with Python. Learn how to test BigQuery, Snowflake, Redshift, Athena queries with mock data using pytest."
+description: "Real-world examples of SQL unit testing with Python. Learn how to test BigQuery, Snowflake, Redshift, Athena, and ClickHouse queries with mock data using pytest."
 ---
 
 # SQL Testing Examples
 {: .no_toc }
 
-Real-world examples of SQL unit testing for BigQuery, Snowflake, Athena, and other cloud databases using Python and pytest.
+Real-world examples of SQL unit testing for BigQuery, Snowflake, Athena, ClickHouse, and other cloud databases using Python and pytest.
 {: .fs-6 .fw-300 }
 
 ## Table of contents
@@ -1004,6 +1004,132 @@ def test_duckdb_map_operations():
         default_namespace="analytics_db"
     )
 ```
+
+### ClickHouse-Specific Features
+
+ClickHouse uses `Array(T)`, `Map(K, V)`, and named `Tuple(field T, ...)`
+for complex types. Its SQL syntax diverges from ANSI in a few common
+ways: `length()` instead of `CARDINALITY`, `has()` instead of `CONTAINS`,
+`tupleElement(x, 'field')` for named-tuple field access (sqlglot
+mangles bare `x.field` for CH), and `ARRAY JOIN` instead of `UNNEST`.
+
+```python
+from dataclasses import dataclass
+from typing import Dict, List
+from decimal import Decimal
+from datetime import date
+
+@dataclass
+class CustomerAddress:
+    street: str
+    city: str
+    zip_code: str
+
+@dataclass
+class Customer:
+    customer_id: int
+    name: str
+    signup_date: date
+    tags: List[str]
+    metadata: Dict[str, str]
+    address: CustomerAddress
+
+class CustomersMockTable(BaseMockTable):
+    def get_database_name(self) -> str:
+        return "default"
+    def get_table_name(self) -> str:
+        return "customers"
+
+class CustomerSummary(BaseModel):
+    customer_id: int
+    name: str
+    city: str
+    tag_count: int
+    is_premium: bool
+    role: Optional[str]
+
+# ClickHouse Array + Map + Tuple field access
+@sql_test(
+    adapter_type="clickhouse",
+    mock_tables=[
+        CustomersMockTable([
+            Customer(
+                1, "Alice", date(2023, 1, 15),
+                tags=["premium", "vip"],
+                metadata={"role": "admin", "region": "us-east"},
+                address=CustomerAddress("123 Main St", "New York", "10001"),
+            ),
+            Customer(
+                2, "Bob", date(2023, 2, 20),
+                tags=["standard"],
+                metadata={"region": "us-west"},
+                address=CustomerAddress("456 Oak Ave", "San Francisco", "94105"),
+            ),
+        ])
+    ],
+    result_class=CustomerSummary,
+)
+def test_clickhouse_customer_summary():
+    return TestCase(
+        query="""
+            SELECT
+                customer_id,
+                name,
+                tupleElement(address, 'city') AS city,
+                length(tags) AS tag_count,
+                has(tags, 'premium') AS is_premium,
+                if(mapContains(metadata, 'role'),
+                   metadata['role'],
+                   NULL) AS role
+            FROM customers
+            ORDER BY customer_id
+        """,
+        default_namespace="default",
+    )
+
+# ClickHouse ARRAY JOIN (equivalent to UNNEST/CROSS JOIN in ANSI SQL)
+class UnnestedTag(BaseModel):
+    customer_id: int
+    tag: str
+
+@sql_test(
+    adapter_type="clickhouse",
+    mock_tables=[
+        CustomersMockTable([
+            Customer(
+                1, "Alice", date(2023, 1, 15),
+                tags=["premium", "vip"],
+                metadata={},
+                address=CustomerAddress("", "", ""),
+            ),
+        ])
+    ],
+    result_class=UnnestedTag,
+)
+def test_clickhouse_array_join():
+    return TestCase(
+        query="""
+            SELECT customer_id, tag
+            FROM customers
+            ARRAY JOIN tags AS tag
+            ORDER BY customer_id, tag
+        """,
+        default_namespace="default",
+    )
+```
+
+**ClickHouse nullability quirks:**
+- `Array` and `Map` cannot be `Nullable`, so `None` optional arrays/maps come back
+  as empty containers (`[]` / `{}`), never `None`.
+- `Tuple` also cannot be `Nullable`, but its scalar fields are wrapped in `Nullable(...)`
+  so a NULL struct becomes `tuple(NULL, NULL, ...)` — the type converter recognizes
+  an all-None tuple as `None` when the Python target is `Optional[Struct]`.
+- `Decimal(38, 9)` columns return values with the full 9-digit scale
+  (`Decimal('1.500000000')`). Python `Decimal` compares by value, so
+  `Decimal('1.5') == Decimal('1.500000000')` still holds.
+- Multi-mock-table tests in physical-tables mode should pass
+  `parallel_table_creation=False` because `clickhouse-connect` clients
+  are not thread-safe.
 
 ## Testing Patterns
 

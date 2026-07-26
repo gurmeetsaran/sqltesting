@@ -2,14 +2,14 @@
 layout: default
 title: Python SQL Unit Testing with Pytest
 nav_order: 1
-description: "Python SQL testing library for unit testing database queries with mock data. Test BigQuery, Snowflake, Redshift, Athena, Trino & DuckDB with pytest. Perfect for data engineering and ETL pipeline testing."
+description: "Python SQL testing library for unit testing database queries with mock data. Test BigQuery, Snowflake, Redshift, Athena, Trino, DuckDB & ClickHouse with pytest. Perfect for data engineering and ETL pipeline testing."
 permalink: /
 ---
 
 # SQL Testing Library for Python
 {: .fs-9 }
 
-Unit test SQL queries with mock data injection for BigQuery, Snowflake, Redshift, Athena, Trino, and DuckDB. Pytest integration for data engineering and ETL testing.
+Unit test SQL queries with mock data injection for BigQuery, Snowflake, Redshift, Athena, Trino, DuckDB, and ClickHouse. Pytest integration for data engineering and ETL testing.
 {: .fs-6 .fw-300 }
 
 [Get started now](getting-started){: .btn .btn-primary .fs-5 .mb-4 .mb-md-0 .mr-2 } [View on GitHub](https://github.com/gurmeetsaran/sqltesting){: .btn .fs-5 .mb-4 .mb-md-0 }
@@ -18,7 +18,7 @@ Unit test SQL queries with mock data injection for BigQuery, Snowflake, Redshift
 
 ## 🎯 Why Use SQL Testing Library for Python?
 
-**SQL unit testing** in data engineering can be challenging, especially when working with cloud databases like **BigQuery, Snowflake, Redshift, and Athena**. This **Python SQL testing framework** addresses critical pain points:
+**SQL unit testing** in data engineering can be challenging, especially when working with cloud databases like **BigQuery, Snowflake, Redshift, Athena, and ClickHouse**. This **Python SQL testing framework** addresses critical pain points:
 
 - **Fragile Integration Tests**: Traditional SQL tests that depend on live data break when data changes, causing flaky CI/CD pipelines
 - **Slow Feedback Loops**: Running database tests against full datasets takes too long for continuous integration
@@ -33,7 +33,7 @@ Whether you're building **ETL pipelines**, validating **data transformations**, 
 ## ✨ Key Features
 
 ### 🚀 Multi-Database Support
-Test your SQL queries across BigQuery, Athena, Redshift, Trino, Snowflake, and DuckDB with a unified API.
+Test your SQL queries across BigQuery, Athena, Redshift, Trino, Snowflake, DuckDB, and ClickHouse with a unified API.
 
 ### 🎯 Type-Safe Testing
 Use Python dataclasses and Pydantic models for type-safe test data and results.
@@ -101,6 +101,7 @@ def test_user_query():
 | **Trino** | ✅ | ✅ | ~16MB |
 | **Snowflake** | ✅ | ✅ | 1MB |
 | **DuckDB** | ✅ | ✅ | No limit |
+| **ClickHouse** | ✅ | ✅ | No hard limit |
 
 ### Data Types Support
 
@@ -115,11 +116,11 @@ def test_user_query():
 - Arrays
 - Map/Dict types (Dict[K, V])
 - Optional/Nullable types
-- Struct/Record types (Athena/Trino/BigQuery - using dataclasses or Pydantic models)
+- Struct/Record types (Athena/Trino/BigQuery/DuckDB/ClickHouse - using dataclasses or Pydantic models; ClickHouse uses native named `Tuple`)
 
 ❌ **Not Yet Supported**:
 - Struct/Record types for Redshift and Snowflake
-- Nested Arrays (arrays of arrays)
+- Nested Arrays (arrays of arrays) on BigQuery
 
 ## 📚 Documentation
 
@@ -170,6 +171,7 @@ pip install sql-testing-library[redshift]
 pip install sql-testing-library[trino]
 pip install sql-testing-library[snowflake]
 pip install sql-testing-library[duckdb]
+pip install sql-testing-library[clickhouse]
 
 # Or install with all database adapters
 pip install sql-testing-library[all]
@@ -218,7 +220,7 @@ Built with ❤️ by the data engineering community. Special thanks to all [cont
 
 ### How do I unit test SQL queries in Python?
 
-Use SQL Testing Library with pytest to write unit tests for SQL queries. The library injects mock data via CTEs or temporary tables, allowing you to test query logic without accessing real databases. Perfect for testing BigQuery, Snowflake, Redshift, Athena, Trino, and DuckDB queries.
+Use SQL Testing Library with pytest to write unit tests for SQL queries. The library injects mock data via CTEs or temporary tables, allowing you to test query logic without accessing real databases. Perfect for testing BigQuery, Snowflake, Redshift, Athena, Trino, DuckDB, and ClickHouse queries.
 
 ### Can I test BigQuery SQL queries without a BigQuery account?
 

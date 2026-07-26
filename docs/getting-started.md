@@ -2,7 +2,7 @@
 layout: default
 title: Getting Started - Installation & Setup
 nav_order: 2
-description: "Install and configure SQL Testing Library for Python. Setup pytest integration for BigQuery, Snowflake, Redshift, Athena, Trino, and DuckDB unit testing."
+description: "Install and configure SQL Testing Library for Python. Setup pytest integration for BigQuery, Snowflake, Redshift, Athena, Trino, DuckDB, and ClickHouse unit testing."
 ---
 
 # Getting Started with SQL Testing Library
@@ -43,6 +43,9 @@ pip install sql-testing-library[snowflake]
 
 # For DuckDB
 pip install sql-testing-library[duckdb]
+
+# For ClickHouse
+pip install sql-testing-library[clickhouse]
 ```
 
 ### Install with all database adapters
@@ -61,7 +64,7 @@ git clone https://github.com/gurmeetsaran/sqltesting.git
 cd sqltesting
 
 # Install with poetry
-poetry install --with bigquery,athena,redshift,trino,snowflake,dev
+poetry install --with bigquery,athena,redshift,trino,snowflake,duckdb,clickhouse,dev
 ```
 
 ## Configuration
@@ -72,7 +75,7 @@ The library uses pytest configuration files to manage database connections. Crea
 
 ```ini
 [sql_testing]
-adapter = bigquery  # Choose: bigquery, athena, redshift, trino, snowflake, or duckdb
+adapter = bigquery  # Choose: bigquery, athena, redshift, trino, snowflake, duckdb, or clickhouse
 ```
 
 ### Database-specific configuration
@@ -170,6 +173,40 @@ database = :memory:  # Use in-memory database (default, fastest for testing)
 - Excellent performance for analytical queries
 - Full support for complex types (arrays, structs, maps)
 - Perfect for local development and CI/CD testing
+
+#### ClickHouse
+
+ClickHouse is a column-oriented analytics database. Point the adapter at
+any HTTP(S) endpoint — self-hosted, Docker, or ClickHouse Cloud:
+
+```ini
+[sql_testing.clickhouse]
+host = localhost
+port = 8123          # HTTP port (8443 or 9440 for HTTPS)
+username = default
+password =
+database = default
+secure = false       # Set true for HTTPS (ClickHouse Cloud)
+```
+
+**ClickHouse Configuration Options:**
+
+- **`host`** *(required)*: Server hostname or IP
+- **`port`**: HTTP port (default `8123`, use `8443` / `9440` for HTTPS)
+- **`username`** / **`password`**: Server credentials (defaults to `default`, empty)
+- **`database`**: Default database (defaults to `default`)
+- **`secure`**: `true` for HTTPS connections (ClickHouse Cloud)
+
+**Local Docker quickstart:**
+
+```bash
+docker run -d --name clickhouse -p 8123:8123 \
+  -e CLICKHOUSE_SKIP_USER_SETUP=1 \
+  clickhouse/clickhouse-server:24.8-alpine
+```
+
+The `CLICKHOUSE_SKIP_USER_SETUP=1` env var keeps the `default` user
+password-free (newer images generate a random password by default).
 
 ## Writing Your First Test
 

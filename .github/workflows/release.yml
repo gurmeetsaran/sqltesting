@@ -53,9 +53,14 @@ jobs:
     uses: ./.github/workflows/duckdb-integration.yml
     secrets: inherit
 
+  clickhouse-integration:
+    name: ClickHouse Integration Tests
+    uses: ./.github/workflows/clickhouse-integration.yml
+    secrets: inherit
+
   release:
     name: Create release
-    needs: [unit-tests, athena-integration, bigquery-integration, redshift-integration, trino-integration, snowflake-integration, duckdb-integration]
+    needs: [unit-tests, athena-integration, bigquery-integration, redshift-integration, trino-integration, snowflake-integration, duckdb-integration, clickhouse-integration]
     runs-on: ubuntu-latest
     permissions:
       contents: write
