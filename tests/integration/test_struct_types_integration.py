@@ -81,7 +81,7 @@ class StructTypesMockTable(BaseMockTable):
 
 
 @pytest.mark.integration
-@pytest.mark.parametrize("adapter_type", ["athena", "trino", "bigquery"])
+@pytest.mark.parametrize("adapter_type", ["athena", "trino", "bigquery", "clickhouse"])
 @pytest.mark.parametrize(
     "use_physical_tables", [False, True], ids=["cte_mode", "physical_tables_mode"]
 )
@@ -147,6 +147,8 @@ class TestStructTypesIntegration:
             self.database_name = "memory"
         elif adapter_type == "bigquery":
             self.database_name = "test-project.test_dataset"
+        elif adapter_type == "clickhouse":
+            self.database_name = "default"
 
     def test_struct_types_basic_query(self, adapter_type, use_physical_tables):
         """Test basic struct type queries returning full structs."""
@@ -345,8 +347,21 @@ class TestStructTypesIntegration:
             result_class=NullHandlingResult,
         )
         def query_null_handling():
-            return TestCase(
-                query="""
+            if adapter_type == "clickhouse":
+                # ClickHouse can't wrap Tuple in Nullable, so a NULL struct
+                # round-trips as a tuple with NULL fields — the tuple itself
+                # is never NULL. Use one of its Nullable fields to detect it.
+                query = """
+                    SELECT
+                        id,
+                        tupleElement(optional_person, 'name') IS NOT NULL
+                            AS has_optional_person,
+                        tupleElement(optional_person, 'name') AS optional_person_name
+                    FROM struct_types
+                    ORDER BY id
+                """
+            else:
+                query = """
                     SELECT
                         id,
                         optional_person IS NOT NULL AS has_optional_person,
@@ -357,7 +372,9 @@ class TestStructTypesIntegration:
                         END AS optional_person_name
                     FROM struct_types
                     ORDER BY id
-                """,
+                """
+            return TestCase(
+                query=query,
                 default_namespace=self.database_name,
                 use_physical_tables=use_physical_tables,
             )
@@ -398,6 +415,8 @@ class TestStructTypesIntegration:
                     return "test_db"
                 elif adapter_type == "bigquery":
                     return "test-project.test_dataset"
+                elif adapter_type == "clickhouse":
+                    return "default"
                 return "memory"
 
             def get_table_name(self) -> str:
@@ -442,6 +461,20 @@ class TestStructTypesIntegration:
                             THEN addresses[OFFSET(0)].city
                             ELSE NULL
                         END AS first_city
+                    FROM list_structs
+                    ORDER BY id
+                """
+            elif adapter_type == "clickhouse":
+                # ClickHouse: length() for array size, tupleElement for
+                # named-tuple field access (sqlglot mangles `.field`), and
+                # `if(cond, a, b)` for ternary.
+                query = """
+                    SELECT
+                        id,
+                        length(addresses) AS num_addresses,
+                        if(length(addresses) > 0,
+                           tupleElement(addresses[1], 'city'),
+                           NULL) AS first_city
                     FROM list_structs
                     ORDER BY id
                 """
@@ -513,6 +546,8 @@ class TestStructTypesIntegration:
                     return "test_db"
                 elif adapter_type == "bigquery":
                     return "test-project.test_dataset"
+                elif adapter_type == "clickhouse":
+                    return "default"
                 return "memory"
 
             def get_table_name(self) -> str:
@@ -568,6 +603,21 @@ class TestStructTypesIntegration:
                             THEN (SELECT SUM(p) FROM UNNEST(prices) AS p)
                             ELSE NULL
                         END AS total_price
+                    FROM list_primitives
+                    ORDER BY id
+                """
+            elif adapter_type == "clickhouse":
+                # ClickHouse: length(), arrayMax(), arraySum(), if() ternary.
+                query = """
+                    SELECT
+                        id,
+                        length(tags) AS num_tags,
+                        length(scores) AS num_scores,
+                        if(length(tags) > 0, tags[1], NULL) AS first_tag,
+                        if(length(scores) > 0, arrayMax(scores), NULL) AS max_score,
+                        if(length(prices) > 0,
+                           CAST(arraySum(prices) AS Decimal(38, 9)),
+                           NULL) AS total_price
                     FROM list_primitives
                     ORDER BY id
                 """
@@ -653,6 +703,8 @@ class TestStructTypesIntegration:
                     return "test_db"
                 elif adapter_type == "bigquery":
                     return "test-project.test_dataset"
+                elif adapter_type == "clickhouse":
+                    return "default"
                 return "memory"
 
             def get_table_name(self) -> str:
@@ -678,6 +730,16 @@ class TestStructTypesIntegration:
                         item
                     FROM list_table,
                     UNNEST(items) AS item
+                    ORDER BY id, item
+                """
+            elif adapter_type == "clickhouse":
+                # ClickHouse: ARRAY JOIN unwinds an array column into rows.
+                query = """
+                    SELECT
+                        id,
+                        item
+                    FROM list_table
+                    ARRAY JOIN items AS item
                     ORDER BY id, item
                 """
             else:
@@ -743,6 +805,8 @@ class TestStructTypesIntegration:
                     return "test_db"
                 elif adapter_type == "bigquery":
                     return "test-project.test_dataset"
+                elif adapter_type == "clickhouse":
+                    return "default"
                 return "memory"
 
             def get_table_name(self) -> str:
@@ -786,6 +850,18 @@ class TestStructTypesIntegration:
                             THEN matrix[OFFSET(0)][OFFSET(0)]
                             ELSE NULL
                         END AS first_element
+                    FROM nested_lists
+                    ORDER BY id
+                """
+            elif adapter_type == "clickhouse":
+                query = """
+                    SELECT
+                        id,
+                        length(matrix) AS num_rows,
+                        if(length(matrix) > 0, length(matrix[1]), NULL)
+                            AS first_row_length,
+                        if(length(matrix) > 0 AND length(matrix[1]) > 0,
+                           matrix[1][1], NULL) AS first_element
                     FROM nested_lists
                     ORDER BY id
                 """
@@ -860,6 +936,8 @@ class TestStructTypesIntegration:
                     return "test_db"
                 elif adapter_type == "bigquery":
                     return "test-project.test_dataset"
+                elif adapter_type == "clickhouse":
+                    return "default"
                 return "memory"
 
             def get_table_name(self) -> str:
@@ -899,6 +977,17 @@ class TestStructTypesIntegration:
                     FROM array_filter
                     WHERE 'electronics' IN UNNEST(categories)
                         AND 200 IN UNNEST(status_codes)
+                    ORDER BY id
+                """
+            elif adapter_type == "clickhouse":
+                # ClickHouse: has(array, value) is the array-contains predicate.
+                query = """
+                    SELECT
+                        id,
+                        categories
+                    FROM array_filter
+                    WHERE has(categories, 'electronics')
+                        AND has(status_codes, 200)
                     ORDER BY id
                 """
             else:
@@ -1039,6 +1128,22 @@ class TestStructTypesIntegration:
                             ELSE NULL
                         END AS max_score,
                         ARRAY_LENGTH(person.phone_numbers) > 0 AS has_phone
+                    FROM struct_with_lists
+                    ORDER BY id
+                """
+            elif adapter_type == "clickhouse":
+                query = """
+                    SELECT
+                        id,
+                        tupleElement(person, 'name') AS person_name,
+                        length(tupleElement(person, 'hobbies')) AS num_hobbies,
+                        if(length(tupleElement(person, 'hobbies')) > 0,
+                           tupleElement(person, 'hobbies')[1],
+                           NULL) AS first_hobby,
+                        if(length(tupleElement(person, 'scores')) > 0,
+                           arrayMax(tupleElement(person, 'scores')),
+                           NULL) AS max_score,
+                        length(tupleElement(person, 'phone_numbers')) > 0 AS has_phone
                     FROM struct_with_lists
                     ORDER BY id
                 """
@@ -1187,6 +1292,16 @@ class TestStructTypesIntegration:
                     WHERE 'python' IN UNNEST(department.required_skills)
                     ORDER BY id
                 """
+            elif adapter_type == "clickhouse":
+                query = """
+                    SELECT
+                        id,
+                        name,
+                        tupleElement(department, 'name') AS dept_name
+                    FROM employees_with_dept
+                    WHERE has(tupleElement(department, 'required_skills'), 'python')
+                    ORDER BY id
+                """
             else:
                 # Athena and Trino syntax
                 query = """
@@ -1320,6 +1435,18 @@ class TestStructTypesIntegration:
                             THEN (SELECT SUM(s) FROM UNNEST(person.scores) AS s)
                             ELSE NULL
                         END AS scores_sum
+                    FROM struct_with_lists_full
+                    ORDER BY id
+                """
+            elif adapter_type == "clickhouse":
+                query = """
+                    SELECT
+                        id,
+                        person,
+                        length(tupleElement(person, 'hobbies')) AS hobbies_count,
+                        if(length(tupleElement(person, 'scores')) > 0,
+                           arraySum(tupleElement(person, 'scores')),
+                           NULL) AS scores_sum
                     FROM struct_with_lists_full
                     ORDER BY id
                 """
@@ -1478,6 +1605,26 @@ class TestStructTypesIntegration:
                         ) AS total_budget,
                         (
                             SELECT COUNT(*) FROM UNNEST(projects) AS p WHERE p.is_active
+                        ) AS active_project_count
+                    FROM developers
+                    ORDER BY id
+                """
+            elif adapter_type == "clickhouse":
+                # `budget` inside the Tuple is Nullable(Decimal(38, 9)) so we
+                # unwrap with assumeNotNull before summing (arraySum doesn't
+                # accept Nullable numerics).
+                query = """
+                    SELECT
+                        id,
+                        name,
+                        projects,
+                        CAST(arraySum(
+                            p -> assumeNotNull(tupleElement(p, 'budget')),
+                            projects
+                        ) AS Decimal(38, 9)) AS total_budget,
+                        arrayCount(
+                            p -> assumeNotNull(tupleElement(p, 'is_active')),
+                            projects
                         ) AS active_project_count
                     FROM developers
                     ORDER BY id
@@ -1782,6 +1929,32 @@ class TestStructTypesIntegration:
                     FROM struct_with_dicts
                     ORDER BY id
                 """
+            elif adapter_type == "clickhouse":
+                # ClickHouse Map returns the value-type default (empty string /
+                # 0) for missing keys, so we use mapContains(...) to preserve
+                # NULL semantics matching the other adapters. length(map)
+                # counts entries.
+                query = """
+                    SELECT
+                        id,
+                        tupleElement(person, 'name') AS person_name,
+                        if(mapContains(tupleElement(person, 'preferences'), 'theme'),
+                           tupleElement(person, 'preferences')['theme'],
+                           NULL) AS theme_pref,
+                        if(mapContains(tupleElement(person, 'scores'), 'math'),
+                           tupleElement(person, 'scores')['math'],
+                           NULL) AS math_score,
+                        if(mapContains(tupleElement(person, 'metadata'), 'department'),
+                           tupleElement(person, 'metadata')['department'],
+                           NULL) AS department,
+                        length(tupleElement(person, 'preferences')) AS num_preferences,
+                        tupleElement(person, 'scores')['math']
+                        + tupleElement(person, 'scores')['english']
+                        + tupleElement(person, 'scores')['science']
+                        + tupleElement(person, 'scores')['history'] AS total_score
+                    FROM struct_with_dicts
+                    ORDER BY id
+                """
             else:
                 raise NotImplementedError(f"Struct with dict not implemented for {adapter_type}")
 
@@ -1932,6 +2105,24 @@ class TestStructTypesIntegration:
                         REDUCE(profile.scores, CAST(0.0 AS DOUBLE), (s, x) -> s + x, s -> s) /
                         CARDINALITY(profile.scores) AS avg_score,
                         TRY(profile.attributes['location']) AS location
+                    FROM profiles
+                    ORDER BY id
+                """
+            elif adapter_type == "clickhouse":
+                query = """
+                    SELECT
+                        id,
+                        tupleElement(profile, 'name') AS name,
+                        length(tupleElement(profile, 'tags')) AS num_tags,
+                        if(mapContains(tupleElement(profile, 'settings'), 'premium'),
+                           tupleElement(profile, 'settings')['premium'],
+                           NULL) AS has_premium,
+                        arraySum(tupleElement(profile, 'scores'))
+                            / length(tupleElement(profile, 'scores'))
+                            AS avg_score,
+                        if(mapContains(tupleElement(profile, 'attributes'), 'location'),
+                           tupleElement(profile, 'attributes')['location'],
+                           NULL) AS location
                     FROM profiles
                     ORDER BY id
                 """

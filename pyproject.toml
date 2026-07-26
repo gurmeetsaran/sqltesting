@@ -5,7 +5,7 @@ build-backend = "poetry.core.masonry.api"
 [tool.poetry]
 name = "sql-testing-library"
 version = "0.22.1"
-description = "SQL Testing Framework for Python: Unit test SQL queries with mock data injection for BigQuery, Snowflake, Redshift, Athena, Trino, and DuckDB. Simplify data engineering ETL testing and analytics validation."
+description = "SQL Testing Framework for Python: Unit test SQL queries with mock data injection for BigQuery, Snowflake, Redshift, Athena, Trino, DuckDB, and ClickHouse. Simplify data engineering ETL testing and analytics validation."
 authors = ["Gurmeet Saran <gurmeetx@gmail.com>", "Kushal Thakkar <kushal.thakkar@gmail.com>"]
 maintainers = ["Gurmeet Saran <gurmeetx@gmail.com>", "Kushal Thakkar <kushal.thakkar@gmail.com>"]
 license = "MIT"
@@ -41,6 +41,8 @@ keywords = [
     "google-bigquery",
     "amazon-redshift",
     "snowflake-testing",
+    "clickhouse",
+    "clickhouse-testing",
     "ci-cd-testing",
     "test-automation"
 ]
@@ -107,14 +109,18 @@ snowflake-connector-python = ">=4.6.0"
 [tool.poetry.group.duckdb.dependencies]
 duckdb = ">=0.8.0"
 
+[tool.poetry.group.clickhouse.dependencies]
+clickhouse-connect = { version = ">=0.7.0", python = "<3.15" }
+
 [tool.poetry.extras]
-all = ["google-cloud-bigquery", "boto3", "psycopg2-binary", "trino", "snowflake-connector-python", "duckdb"]
+all = ["google-cloud-bigquery", "boto3", "psycopg2-binary", "trino", "snowflake-connector-python", "duckdb", "clickhouse-connect"]
 bigquery = ["google-cloud-bigquery"]
 athena = ["boto3"]
 redshift = ["psycopg2-binary"]
 trino = ["trino"]
 snowflake = ["snowflake-connector-python"]
 duckdb = ["duckdb"]
+clickhouse = ["clickhouse-connect"]
 
 [tool.poetry.group.dev.dependencies]
 pytest = ">=9.0.3"

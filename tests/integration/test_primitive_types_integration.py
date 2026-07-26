@@ -92,7 +92,7 @@ class PrimitiveTypesMockTable(BaseMockTable):
 
 
 @pytest.mark.integration
-@pytest.mark.parametrize("adapter_type", ["athena", "bigquery", "redshift", "trino"])
+@pytest.mark.parametrize("adapter_type", ["athena", "bigquery", "redshift", "trino", "clickhouse"])
 @pytest.mark.parametrize(
     "use_physical_tables", [False, True], ids=["cte_mode", "physical_tables_mode"]
 )
@@ -270,6 +270,47 @@ class TestPrimitiveTypesIntegration:
             self.database_name = "memory"
             self.expected_results = 2
 
+        elif adapter_type == "clickhouse":
+            # ClickHouse Date supports 1970-01-01 through 2149-06-06.
+            # DateTime64(6) supports 1900-01-01 through 2299-12-31.
+            # We stick to the Date range for date_col so both engines agree.
+            self.test_data = [
+                PrimitiveTypes(
+                    int_col=9223372036854775807,  # Max Int64
+                    float_col=1.23456789012345,
+                    decimal_col=Decimal("12345678901234567890123456789.123456789"),
+                    string_col="Hello ClickHouse",
+                    varchar_col="ClickHouse string test",
+                    boolean_col=True,
+                    date_col=date(2149, 6, 6),  # Near max Date
+                    timestamp_col=datetime(2023, 12, 31, 23, 59, 59, 123456),
+                    optional_string="ClickHouse optional",
+                    optional_int=111222333,
+                    optional_decimal=Decimal("98765.43210"),
+                    optional_bool=True,
+                    optional_date=date(2023, 10, 5),
+                    optional_timestamp=datetime(2023, 10, 5, 20, 15, 30),
+                ),
+                PrimitiveTypes(
+                    int_col=-9223372036854775808,  # Min Int64
+                    float_col=-1.23456789012345e-10,
+                    decimal_col=Decimal("-12345678901234567890123456789.123456789"),
+                    string_col="CH with 'single' and \"double\" quotes",
+                    varchar_col='JSON-like: {"key": "value"}',
+                    boolean_col=False,
+                    date_col=date(1970, 1, 1),  # Min Date
+                    timestamp_col=datetime(1970, 1, 1, 0, 0, 1),
+                    optional_string=None,
+                    optional_int=None,
+                    optional_decimal=None,
+                    optional_bool=None,
+                    optional_date=None,
+                    optional_timestamp=None,
+                ),
+            ]
+            self.database_name = "default"
+            self.expected_results = 2
+
     def test_primitive_types_comprehensive(self, adapter_type, use_physical_tables):
         """Test all primitive types comprehensively for the specified adapter."""
 
@@ -315,6 +356,8 @@ class TestPrimitiveTypesIntegration:
             self._verify_redshift_results(results)
         elif adapter_type == "trino":
             self._verify_trino_results(results)
+        elif adapter_type == "clickhouse":
+            self._verify_clickhouse_results(results)
 
     def _verify_athena_results(self, results):
         """Verify Athena-specific results."""
@@ -478,6 +521,42 @@ class TestPrimitiveTypesIntegration:
         assert min_row.boolean_col is False
         assert min_row.date_col == date(1582, 10, 15)
         assert min_row.timestamp_col == datetime(1582, 10, 15, 0, 0, 0)
+        assert min_row.optional_string is None
+        assert min_row.optional_int is None
+        assert min_row.optional_decimal is None
+        assert min_row.optional_bool is None
+        assert min_row.optional_date is None
+        assert min_row.optional_timestamp is None
+
+    def _verify_clickhouse_results(self, results):
+        """Verify ClickHouse-specific results."""
+        # Max values row
+        max_row = results[0]
+        assert max_row.int_col == 9223372036854775807
+        assert max_row.float_col == 1.23456789012345
+        assert max_row.decimal_col == Decimal("12345678901234567890123456789.123456789")
+        assert max_row.string_col == "Hello ClickHouse"
+        assert max_row.varchar_col == "ClickHouse string test"
+        assert max_row.boolean_col is True
+        assert max_row.date_col == date(2149, 6, 6)
+        assert max_row.timestamp_col == datetime(2023, 12, 31, 23, 59, 59, 123456)
+        assert max_row.optional_string == "ClickHouse optional"
+        assert max_row.optional_int == 111222333
+        assert max_row.optional_decimal == Decimal("98765.43210")
+        assert max_row.optional_bool is True
+        assert max_row.optional_date == date(2023, 10, 5)
+        assert max_row.optional_timestamp == datetime(2023, 10, 5, 20, 15, 30)
+
+        # Min values row with nulls
+        min_row = results[1]
+        assert min_row.int_col == -9223372036854775808
+        assert min_row.float_col == -1.23456789012345e-10
+        assert min_row.decimal_col == Decimal("-12345678901234567890123456789.123456789")
+        assert min_row.string_col == "CH with 'single' and \"double\" quotes"
+        assert min_row.varchar_col == 'JSON-like: {"key": "value"}'
+        assert min_row.boolean_col is False
+        assert min_row.date_col == date(1970, 1, 1)
+        assert min_row.timestamp_col == datetime(1970, 1, 1, 0, 0, 1)
         assert min_row.optional_string is None
         assert min_row.optional_int is None
         assert min_row.optional_decimal is None

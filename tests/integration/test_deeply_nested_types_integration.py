@@ -155,7 +155,7 @@ class DeeplyNestedTypesMockTable(BaseMockTable):
 # TODO: Re-enable BigQuery once nested array support added
 # - BigQuery: Doesn't support nested arrays - database limitation
 @pytest.mark.parametrize(
-    "adapter_type", ["athena", "trino", "duckdb", "redshift", "snowflake"]
+    "adapter_type", ["athena", "trino", "duckdb", "redshift", "snowflake", "clickhouse"]
 )  # TODO: Add "bigquery" after fixing nested array limitation
 @pytest.mark.parametrize(
     "use_physical_tables", [False, True], ids=["cte_mode", "physical_tables_mode"]
@@ -270,6 +270,8 @@ class TestDeeplyNestedTypesIntegration:
             self.database_name = "memory"
         elif adapter_type == "duckdb":
             self.database_name = ""
+        elif adapter_type == "clickhouse":
+            self.database_name = "default"
 
     def test_select_all_deeply_nested_fields(self, adapter_type, use_physical_tables):
         """Test selecting all deeply nested fields for the specified adapter."""
@@ -318,6 +320,8 @@ class TestDeeplyNestedTypesIntegration:
             self._verify_trino_all_fields(results)
         elif adapter_type == "duckdb":
             self._verify_duckdb_all_fields(results)
+        elif adapter_type == "clickhouse":
+            self._verify_clickhouse_all_fields(results)
 
     def test_access_nested_elements(self, adapter_type, use_physical_tables):
         """Test accessing specific elements from deeply nested structures."""
@@ -443,6 +447,30 @@ class TestDeeplyNestedTypesIntegration:
                 FROM deeply_nested_types
                 WHERE id = 1
             """
+        elif adapter_type == "clickhouse":
+            # ClickHouse: 1-based array indexing, length() for size,
+            # tupleElement(tuple, 'field') for named Tuple field access
+            # (sqlglot's clickhouse dialect rewrites `x.field` and drops
+            # quoting, so we spell it out), map access via ['key'].
+            query = """
+                SELECT
+                    id,
+                    name,
+                    length(addresses) as address_count,
+                    tupleElement(addresses[1], 'street') as first_address_street,
+                    tupleElement(addresses[1], 'city') as first_address_city,
+                    tupleElement(contacts[2], 'email') as second_contact_email,
+                    interaction_matrix[1][1] as first_interaction_value,
+                    category_hierarchy[1][1] as first_category,
+                    length(order_history[1]) as first_order_item_count,
+                    tupleElement(order_history[1][1], 'product_name')
+                        as first_order_item_name,
+                    nested_scores[1][1][1] as nested_score_value,
+                    metadata['status'] as status_metadata,
+                    settings['notifications'] as notification_setting
+                FROM deeply_nested_types
+                WHERE id = 1
+            """
         else:
             pytest.skip(f"Nested element access not implemented for {adapter_type}")
             return
@@ -475,6 +503,8 @@ class TestDeeplyNestedTypesIntegration:
         elif adapter_type == "bigquery":
             assert result.first_category == "Electronics"
         elif adapter_type == "snowflake":
+            assert result.first_category == "Electronics"
+        elif adapter_type == "clickhouse":
             assert result.first_category == "Electronics"
 
         assert result.first_order_item_count == 2
@@ -669,6 +699,64 @@ class TestDeeplyNestedTypesIntegration:
         assert result.nested_scores[1] == [[7, 8, 9], [10, 11, 12]]
 
         # Verify maps
+        assert result.metadata["status"] == "active"
+        assert result.metadata["tier"] == "gold"
+        assert result.settings["notifications"] == 1
+        assert result.settings["auto_renew"] == 1
+
+    def _verify_clickhouse_all_fields(self, results):
+        """Verify ClickHouse-specific results for all fields.
+
+        ClickHouse uses named ``Tuple(...)`` for structs and ``Map(K, V)`` for
+        dicts. Full deserialization into Pydantic/dataclass round-trips works
+        because ``ClickHouseTypeConverter`` handles the tuple-to-struct case.
+        """
+        result = results[0]
+        assert result.id == 1
+        assert result.name == "Clickhouse User"
+        assert result.tags == ["premium", "vip", "loyal"]
+        assert result.scores == [95, 87, 92]
+
+        # Addresses (list of tuples deserialized to structs)
+        assert len(result.addresses) == 2
+        assert result.addresses[0].street == "123 Main St"
+        assert result.addresses[0].city == "New York"
+        assert result.addresses[0].zipcode == "10001"
+        assert result.addresses[1].street == "456 Oak Ave"
+        assert result.addresses[1].city == "Boston"
+
+        # Contacts
+        assert len(result.contacts) == 2
+        assert result.contacts[0].email == "user1@email.com"
+        assert result.contacts[0].phone == "555-0101"
+        assert result.contacts[1].email == "user1@work.com"
+        assert result.contacts[1].phone == "555-0102"
+
+        # Nested arrays (2D)
+        assert result.interaction_matrix == [[10, 25, 30], [15, 20, 35]]
+        assert result.category_hierarchy == [
+            ["Electronics", "Laptops"],
+            ["Home", "Furniture"],
+        ]
+
+        # Arrays of arrays of structs (order_history)
+        assert len(result.order_history) == 2
+        assert len(result.order_history[0]) == 2
+        assert result.order_history[0][0].product_name == "Laptop"
+        assert result.order_history[0][0].price == Decimal("1299.99")
+        assert result.order_history[0][0].quantity == 1
+        assert result.order_history[0][0].item_id == 101
+        assert result.order_history[0][1].product_name == "Mouse"
+        assert len(result.order_history[1]) == 1
+        assert result.order_history[1][0].product_name == "Monitor"
+
+        # 3D nested array
+        assert result.nested_scores == [
+            [[1, 2, 3], [4, 5, 6]],
+            [[7, 8, 9], [10, 11, 12]],
+        ]
+
+        # Maps
         assert result.metadata["status"] == "active"
         assert result.metadata["tier"] == "gold"
         assert result.settings["notifications"] == 1

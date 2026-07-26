@@ -96,7 +96,8 @@ class ComplexTypesMockTable(BaseMockTable):
 
 @pytest.mark.integration
 @pytest.mark.parametrize(
-    "adapter_type", ["athena", "bigquery", "redshift", "snowflake", "trino", "duckdb"]
+    "adapter_type",
+    ["athena", "bigquery", "redshift", "snowflake", "trino", "duckdb", "clickhouse"],
 )
 @pytest.mark.parametrize(
     "use_physical_tables", [False, True], ids=["cte_mode", "physical_tables_mode"]
@@ -188,6 +189,8 @@ class TestComplexTypesIntegration:
             self.database_name = "memory"
         elif adapter_type == "duckdb":
             self.database_name = ""  # DuckDB doesn't need database prefix
+        elif adapter_type == "clickhouse":
+            self.database_name = "default"
 
     def test_complex_types_comprehensive(self, adapter_type, use_physical_tables):
         """Test all complex types comprehensively for the specified adapter."""
@@ -253,6 +256,8 @@ class TestComplexTypesIntegration:
             self._verify_trino_results(results)
         elif adapter_type == "duckdb":
             self._verify_duckdb_results(results)
+        elif adapter_type == "clickhouse":
+            self._verify_clickhouse_results(results)
 
     def _verify_athena_results(self, results):
         """Verify Athena-specific results."""
@@ -406,6 +411,49 @@ class TestComplexTypesIntegration:
         assert row2.optional_int_array is None
 
         # Verify third row (with empty arrays)
+        row3 = results[2]
+        assert row3.id == 3
+        assert row3.string_array == []
+        assert row3.int_array == [0]
+        assert row3.decimal_array == []
+        assert row3.address.street == "789 Pine Rd"
+        assert row3.address.city == "Seattle"
+        assert row3.optional_string_array == []
+        assert row3.optional_int_array == [42]
+
+    def _verify_clickhouse_results(self, results):
+        """Verify ClickHouse-specific results.
+
+        ClickHouse ``Array(T)`` cannot itself be ``Nullable``, so NULL arrays
+        round-trip as empty arrays (same as BigQuery). ``Decimal(38, 9)``
+        values come back with full 9-digit scale (they compare equal to the
+        shorter-form Decimals used in the source data, so no bespoke asserts
+        are needed).
+        """
+        # First row
+        row1 = results[0]
+        assert row1.id == 1
+        assert row1.string_array == ["Clickhouse", "arrays", "test"]
+        assert row1.int_array == [1, 2, 3, 42]
+        assert row1.decimal_array == [Decimal("1.5"), Decimal("2.7"), Decimal("3.14")]
+        assert row1.address.street == "123 Main St"
+        assert row1.address.city == "New York"
+        assert row1.address.zipcode == "10001"
+        assert row1.optional_string_array == ["optional", "array"]
+        assert row1.optional_int_array == [100, 200]
+
+        # Second row — optional arrays were None in source, come back as [] in CH
+        row2 = results[1]
+        assert row2.id == 2
+        assert row2.string_array == ["test", "array"]
+        assert row2.int_array == [10, 20]
+        assert row2.decimal_array == [Decimal("99.99")]
+        assert row2.address.street == "456 Oak Ave"
+        assert row2.address.city == "Boston"
+        assert row2.optional_string_array == []
+        assert row2.optional_int_array == []
+
+        # Third row (empty arrays)
         row3 = results[2]
         assert row3.id == 3
         assert row3.string_array == []

@@ -1,0 +1,193 @@
+name: ClickHouse Integration Tests
+
+on:
+  pull_request:
+    branches: [master, main]
+    paths:
+      # Adapter-specific files
+      - 'src/sql_testing_library/_adapters/clickhouse.py'
+      - 'tests/integration/test_clickhouse_integration.py'
+      - 'tests/test_clickhouse.py'
+      - 'tests/test_clickhouse_adapter_unit.py'
+
+      # Core files that affect all adapters
+      - 'src/sql_testing_library/_sql_utils.py'
+      - 'src/sql_testing_library/_core.py'
+      - 'src/sql_testing_library/_mock_table.py'
+      - 'src/sql_testing_library/_types.py'
+
+      # Cross-adapter test files
+      - 'tests/integration/test_complex_types_integration.py'
+      - 'tests/integration/test_primitive_types_integration.py'
+      - 'tests/integration/test_map_types_integration.py'
+
+      # Workflow file itself
+      - '.github/workflows/clickhouse-integration.yml'
+  push:
+    branches: [master, main]
+    paths:
+      - 'src/sql_testing_library/_adapters/clickhouse.py'
+      - 'tests/integration/test_clickhouse_integration.py'
+      - 'tests/test_clickhouse.py'
+      - 'tests/test_clickhouse_adapter_unit.py'
+      - 'src/sql_testing_library/_sql_utils.py'
+      - 'src/sql_testing_library/_core.py'
+      - 'src/sql_testing_library/_mock_table.py'
+      - 'src/sql_testing_library/_types.py'
+      - 'tests/integration/test_complex_types_integration.py'
+      - 'tests/integration/test_primitive_types_integration.py'
+      - 'tests/integration/test_map_types_integration.py'
+      - '.github/workflows/clickhouse-integration.yml'
+  workflow_dispatch:
+  workflow_call:
+
+permissions:
+  contents: read
+
+env:
+  PYTHON_VERSION: '3.10'
+  CLICKHOUSE_VERSION: '24.8-alpine'
+
+jobs:
+
+  unit-tests:
+    name: Unit Tests (Prerequisite)
+    uses: ./.github/workflows/unit-tests-simple.yaml
+
+  real-integration:
+    name: Real ClickHouse Integration Tests
+    runs-on: ubuntu-latest
+    needs: unit-tests
+    permissions:
+      contents: read
+    # Skip integration tests for Dependabot PRs due to security restrictions
+    if: |
+      github.actor != 'dependabot[bot]' && (
+        (github.event_name == 'push' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main')) ||
+        (github.event_name == 'pull_request') ||
+        (github.event_name == 'workflow_dispatch') ||
+        (github.event_name == 'workflow_call')
+      )
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install dependencies
+        run: |
+          python -m pip install -U pip poetry
+          poetry install --with dev,clickhouse
+
+      - name: Start ClickHouse server
+        run: |
+          # Start ClickHouse in a Docker container. Using `docker run` in a
+          # step (rather than the GitHub `services:` block) mirrors the
+          # Trino workflow and gives us control over startup readiness.
+          # CLICKHOUSE_SKIP_USER_SETUP=1 keeps the default user password-free.
+          echo "Starting ClickHouse server..."
+          docker run -d \
+            --name clickhouse \
+            -p 8123:8123 \
+            -e CLICKHOUSE_SKIP_USER_SETUP=1 \
+            --ulimit nofile=262144:262144 \
+            clickhouse/clickhouse-server:${{ env.CLICKHOUSE_VERSION }}
+
+          echo "Waiting for ClickHouse HTTP endpoint..."
+          timeout 120 bash -c '
+            until curl -f -s http://localhost:8123/ping | grep -q "Ok"; do
+              echo "Waiting for HTTP endpoint..."
+              sleep 3
+            done
+          '
+          echo "✅ ClickHouse HTTP endpoint is ready!"
+
+      - name: Configure ClickHouse tests
+        run: |
+          # Generate pytest.ini file for ClickHouse integration tests
+          cat > pytest.ini <<'EOF'
+          [pytest]
+          testpaths = tests
+          python_files = test_*.py
+          python_classes = Test*
+          python_functions = test_*
+          addopts = -v --tb=short
+          markers =
+              integration: marks tests as integration tests
+              clickhouse: marks tests as ClickHouse-specific
+              athena: marks tests as Athena-specific
+              bigquery: marks tests as BigQuery-specific
+              redshift: marks tests as Redshift-specific
+              snowflake: marks tests as Snowflake-specific
+              trino: marks tests as Trino-specific
+              duckdb: marks tests as DuckDB-specific
+              unit: marks tests as unit tests
+
+          [sql_testing]
+          adapter = clickhouse
+
+          [sql_testing.clickhouse]
+          host = localhost
+          port = 8123
+          username = default
+          password =
+          database = default
+          secure = false
+          EOF
+
+          echo "✅ Generated pytest.ini for ClickHouse integration tests"
+          cat pytest.ini
+
+      - name: Test ClickHouse connectivity
+        run: |
+          poetry run python -c "
+          import clickhouse_connect
+
+          client = clickhouse_connect.get_client(host='localhost', port=8123)
+          result = client.query('SELECT version(), 1 AS test_value').result_rows
+          print(f'✅ ClickHouse version + query: {result}')
+          "
+
+      - name: Run ClickHouse integration tests
+        run: |
+          echo "Running ClickHouse integration tests..."
+          poetry run pytest tests/integration/ -v -n auto --tb=short -m "integration and clickhouse" --reruns 2 --reruns-delay 5 --cov=src/sql_testing_library --cov-report=xml:coverage-clickhouse-integration.xml
+        timeout-minutes: 15
+
+      - name: Upload ClickHouse integration coverage to Codecov
+        if: github.event_name == 'push' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main')
+        uses: codecov/codecov-action@v7
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: ./coverage-clickhouse-integration.xml
+          flags: integration,clickhouse
+          name: clickhouse-integration-coverage
+          fail_ci_if_error: false
+
+      - name: Dump ClickHouse container logs
+        if: failure()
+        run: |
+          echo "===== docker ps ====="
+          docker ps -a || true
+          echo "===== clickhouse container logs ====="
+          docker logs clickhouse --tail 500 || true
+
+      - name: Stop ClickHouse server
+        if: always()
+        run: |
+          docker stop clickhouse || true
+          docker rm clickhouse || true
+
+      - name: Upload test artifacts
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: clickhouse-test-artifacts
+          path: |
+            pytest.ini
+            *.log
+          retention-days: 7

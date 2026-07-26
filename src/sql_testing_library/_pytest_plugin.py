@@ -224,6 +224,27 @@ class SQLTestDecorator:
             database = adapter_config.get("database", ":memory:")
 
             database_adapter = DuckDBAdapter(database=database)
+        elif adapter_type == "clickhouse":
+            from ._adapters.clickhouse import ClickHouseAdapter
+
+            host = adapter_config.get("host")
+            port = int(adapter_config.get("port", "8123"))
+            username = adapter_config.get("username", "default")
+            password = adapter_config.get("password", "")
+            database = adapter_config.get("database", "default")
+            secure = adapter_config.get("secure", "false").lower() in ("true", "1", "yes")
+
+            if not host:
+                raise ValueError("ClickHouse adapter requires 'host' in configuration")
+
+            database_adapter = ClickHouseAdapter(
+                host=host,
+                port=port,
+                username=username,
+                password=password,
+                database=database,
+                secure=secure,
+            )
         else:
             raise ValueError(f"Unsupported adapter type: {adapter_type}")
 
