@@ -108,13 +108,17 @@ jobs:
           git push origin master --tags
 
       - name: Create GitHub Release
+        # NB: pass the PAT via `with: token:`, not the GITHUB_TOKEN env var.
+        # softprops/action-gh-release@v3 no longer honors the env fallback,
+        # and if it falls back to the default GITHUB_TOKEN the resulting
+        # `release: published` event is treated as "created by a workflow"
+        # and will NOT trigger publish.yml (GitHub loop protection).
         uses: softprops/action-gh-release@v3
         with:
+          token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
           tag_name: ${{ steps.version.outputs.version }}
           name: Release ${{ steps.version.outputs.version }}
           body_path: "CHANGELOG.md"
           draft: false
           prerelease: ${{ startsWith(steps.version.outputs.version, '0.') }}
           make_latest: ${{ !startsWith(steps.version.outputs.version, '0.') }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
