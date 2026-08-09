@@ -60,11 +60,13 @@ jobs:
     needs: unit-tests
     permissions:
       contents: read
-    # Skip integration tests for Dependabot PRs due to security restrictions
+    # Skip integration tests for Dependabot PRs due to security restrictions.
+    # Skip fork PRs entirely — secrets are not passed to fork-PR runs (would
+    # fail anyway), and this makes intent explicit and skips the setup work.
     if: |
       github.actor != 'dependabot[bot]' && (
         (github.event_name == 'push' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main')) ||
-        (github.event_name == 'pull_request') ||
+        (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository) ||
         (github.event_name == 'workflow_dispatch') ||
         (github.event_name == 'workflow_call')
       )
