@@ -1203,14 +1203,14 @@ urllib3 = ["packaging", "urllib3"]
 
 [[package]]
 name = "google-cloud-bigquery"
-version = "3.44.0"
+version = "3.45.2"
 description = "Google BigQuery API client library"
 optional = false
 python-versions = ">=3.10"
 groups = ["bigquery"]
 files = [
-    {file = "google_cloud_bigquery-3.44.0-py3-none-any.whl", hash = "sha256:ac2f0a6ab61a3c742ba4674dc220fb98461c13e1def96fe7a980ef7d5e0c0285"},
-    {file = "google_cloud_bigquery-3.44.0.tar.gz", hash = "sha256:30651ae469b419f450b9c96581fd4942e2e060490df1ac0314bf379f16883215"},
+    {file = "google_cloud_bigquery-3.45.2-py3-none-any.whl", hash = "sha256:6920be2d7199810e2472be58204d7787dcf3cf677a21e682d5c636bae1b082ea"},
+    {file = "google_cloud_bigquery-3.45.2.tar.gz", hash = "sha256:9342158e1a413c66b44b676a42c79cb8d1750da3971b957b267c9327749b4723"},
 ]
 
 [package.dependencies]
