@@ -99,8 +99,9 @@ class SQLLogger:
                 SQLLogger._run_id = f"runid_{timestamp}"
 
                 SQLLogger._run_directory = self.log_dir / SQLLogger._run_id
-                SQLLogger._run_directory.mkdir(parents=True, exist_ok=True)
-        return SQLLogger._run_directory
+            run_directory = self.log_dir / SQLLogger._run_directory.name
+            run_directory.mkdir(parents=True, exist_ok=True)
+        return run_directory
 
     def should_log(self, log_sql: Optional[bool] = None) -> bool:
         """Determine if SQL should be logged based on environment and parameters.
