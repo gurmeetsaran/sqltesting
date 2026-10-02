@@ -9,6 +9,10 @@ updates:
     directory: "/" # Location of package manifests
     schedule:
       interval: "monthly"
+    # Include transitive dependencies so vulnerable sub-dependencies
+    # (e.g. urllib3 via requests, virtualenv via tox) get version PRs too.
+    allow:
+      - dependency-type: "all"
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
