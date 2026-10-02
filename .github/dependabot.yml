@@ -9,10 +9,15 @@ updates:
     directory: "/" # Location of package manifests
     schedule:
       interval: "monthly"
-    # Include transitive dependencies so vulnerable sub-dependencies
-    # (e.g. urllib3 via requests, virtualenv via tox) get version PRs too.
-    allow:
-      - dependency-type: "all"
+    # Batch version bumps into two PRs a month instead of one per package.
+    # Vulnerable transitive dependencies are handled by Dependabot security
+    # updates, which key off the alert and ignore the allow/groups config.
+    groups:
+      production-dependencies:
+        dependency-type: "production"
+      dev-dependencies:
+        dependency-type: "development"
+    open-pull-requests-limit: 5
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
