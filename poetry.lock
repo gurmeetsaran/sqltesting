@@ -3721,21 +3721,22 @@ markers = {clickhouse = "python_version < \"3.15\" and sys_platform == \"win32\"
 
 [[package]]
 name = "tzlocal"
-version = "5.3.1"
+version = "5.4.4"
 description = "tzinfo object for the local timezone"
 optional = false
-python-versions = ">=3.9"
-groups = ["trino"]
+python-versions = ">=3.10"
+groups = ["dev", "trino"]
 files = [
-    {file = "tzlocal-5.3.1-py3-none-any.whl", hash = "sha256:eb1a66c3ef5847adf7a834f1be0800581b683b5608e74f86ecbcef8ab91bb85d"},
-    {file = "tzlocal-5.3.1.tar.gz", hash = "sha256:cceffc7edecefea1f595541dbd6e990cb1ea3d19bf01b2809f362a03dd7921fd"},
+    {file = "tzlocal-5.4.4-py3-none-any.whl", hash = "sha256:aae09f0126a8a86fa736be266eb4a471380d26a0de3bc14844e7821fee3e2a15"},
+    {file = "tzlocal-5.4.4.tar.gz", hash = "sha256:8dbb8660838688a7b6ba4fed31d18dedf842afb4d47ca050d6d891c2c15f3be4"},
 ]
 
 [package.dependencies]
 tzdata = {version = "*", markers = "platform_system == \"Windows\""}
 
 [package.extras]
-devenv = ["check-manifest", "pytest (>=4.3)", "pytest-cov", "pytest-mock (>=3.3)", "zest.releaser"]
+devenv = ["zest.releaser"]
+testing = ["check_manifest", "pyroma", "pytest (>=4.3)", "pytest-cov", "pytest-mock (>=3.3)", "ruff"]
 
 [[package]]
 name = "urllib3"
