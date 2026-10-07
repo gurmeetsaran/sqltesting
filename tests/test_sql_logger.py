@@ -1,137 +1,27 @@
-"""Tests for SQL logger functionality.
-
-Note: These tests use a mock SQLLogger to avoid import issues with database adapters.
-The actual SQLLogger functionality is tested through integration tests.
-"""
+"""Tests for the production SQL logger without connecting to database adapters."""
 
 import os
 import tempfile
 from pathlib import Path
-from typing import List, Optional
 from unittest.mock import patch
 
+import pytest
 
-class MockSQLLogger:
-    """Mock implementation of SQLLogger for testing core functionality."""
+from sql_testing_library._sql_logger import SQLLogger
 
-    # Class variables to match the real SQLLogger
-    _run_directory: Optional[Path] = None
-    _run_id: Optional[str] = None
 
-    def __init__(self, log_dir: Optional[str] = None) -> None:
-        """Initialize mock SQL logger."""
-        if log_dir is None:
-            # Check environment variable first
-            env_log_dir = os.environ.get("SQL_TEST_LOG_DIR")
-            if env_log_dir:
-                self.log_dir = Path(env_log_dir)
-            else:
-                # Try to find the project root by looking for specific project files
-                current_path = Path.cwd()
-
-                # Look for definitive project root markers (in order of preference)
-                # These are files that typically only exist at project root
-                root_markers = ["pyproject.toml", "setup.py", "setup.cfg", "tox.ini"]
-
-                # Search up the directory tree for project root
-                project_root = None
-                search_path = current_path
-
-                while search_path != search_path.parent:
-                    # Check for root markers
-                    if any((search_path / marker).exists() for marker in root_markers):
-                        project_root = search_path
-                        break
-
-                    # Also check for .git directory (but not .git file which could be a submodule)
-                    if (search_path / ".git").is_dir():
-                        project_root = search_path
-                        break
-
-                    search_path = search_path.parent
-
-                # If we found a project root, use it; otherwise fall back to current directory
-                if project_root:
-                    self.log_dir = project_root / ".sql_logs"
-                else:
-                    # Fall back to current directory if project root not found
-                    self.log_dir = Path(".sql_logs")
-        else:
-            self.log_dir = Path(log_dir)
-
-        self.log_dir.mkdir(parents=True, exist_ok=True)
-        self._logged_files: List[str] = []
-
-        # Create run directory if not already created for this session
-        if MockSQLLogger._run_directory is None:
-            from datetime import datetime
-
-            timestamp = datetime.now().strftime("%Y%m%dT%H%M%S")
-            MockSQLLogger._run_id = f"runid_{timestamp}"
-            MockSQLLogger._run_directory = self.log_dir / MockSQLLogger._run_id
-            MockSQLLogger._run_directory.mkdir(parents=True, exist_ok=True)
-
-    def should_log(self, log_sql: Optional[bool] = None) -> bool:
-        """Determine if SQL should be logged based on environment and parameters."""
-        # If explicitly set in test case, use that
-        if log_sql is not None:
-            return log_sql
-
-        # Check environment variable
-        return os.environ.get("SQL_TEST_LOG_ALL", "").lower() in ("true", "1", "yes")
-
-    def generate_filename(
-        self,
-        test_name: str,
-        test_class: Optional[str] = None,
-        test_file: Optional[str] = None,
-        failed: bool = False,
-    ) -> str:
-        """Generate a filename for the SQL log."""
-        import re
-        from datetime import datetime
-
-        # Build filename parts
-        parts = []
-
-        # Extract module name from test file if provided
-        if test_file:
-            # Get just the filename without path and extension
-            module_name = Path(test_file).stem
-            parts.append(module_name)
-
-        # Add test class if provided
-        if test_class:
-            parts.append(test_class)
-
-        # Add test name
-        parts.append(test_name)
-
-        # Add failed indicator
-        if failed:
-            parts.append("FAILED")
-
-        # Join parts with double underscore
-        base_name = "__".join(parts)
-
-        # Sanitize filename - remove invalid characters
-        # Updated to include square brackets and angle brackets
-        base_name = re.sub(r'[<>:"/\\|?*\[\]]', "_", base_name)
-
-        # Add timestamp with milliseconds
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")[:-3]
-
-        return f"{base_name}__{timestamp}.sql"
-
-    @classmethod
-    def reset_run_directory(cls) -> None:
-        """Reset the run directory (useful for testing)."""
-        cls._run_directory = None
-        cls._run_id = None
+@pytest.fixture(autouse=True)
+def isolate_logger_state(monkeypatch, tmp_path):
+    """Keep environment settings, log files, and shared run state local to each test."""
+    monkeypatch.delenv("SQL_TEST_LOG_DIR", raising=False)
+    monkeypatch.delenv("SQL_TEST_LOG_ALL", raising=False)
+    monkeypatch.setattr(SQLLogger, "_run_directory", None)
+    monkeypatch.setattr(SQLLogger, "_run_id", None)
+    monkeypatch.chdir(tmp_path)
 
 
 class TestSQLLogger:
-    """Test cases for SQLLogger class using mock implementation."""
+    """Test cases against the production SQLLogger implementation."""
 
     def test_default_log_directory_project_root(self):
         """Test that default log directory finds project root."""
@@ -152,7 +42,7 @@ class TestSQLLogger:
                 os.chdir(subdir)
 
                 # Create logger
-                logger = MockSQLLogger()
+                logger = SQLLogger()
 
                 # Should find project root - use resolve() to handle symlinks
                 assert logger.log_dir.resolve() == (project_root / ".sql_logs").resolve()
@@ -167,20 +57,23 @@ class TestSQLLogger:
             custom_dir = Path(tmpdir) / "my_logs"
 
             with patch.dict(os.environ, {"SQL_TEST_LOG_DIR": str(custom_dir)}):
-                logger = MockSQLLogger()
+                logger = SQLLogger()
 
                 assert logger.log_dir == custom_dir
                 assert logger.log_dir.exists()
 
-    def test_explicit_log_directory(self):
+    def test_explicit_log_directory(self, monkeypatch):
         """Test that explicit log directory parameter works."""
         with tempfile.TemporaryDirectory() as tmpdir:
             custom_dir = Path(tmpdir) / "custom_logs"
+            env_dir = Path(tmpdir) / "env_logs"
+            monkeypatch.setenv("SQL_TEST_LOG_DIR", str(env_dir))
 
-            logger = MockSQLLogger(log_dir=str(custom_dir))
+            logger = SQLLogger(log_dir=str(custom_dir))
 
             assert logger.log_dir == custom_dir
             assert logger.log_dir.exists()
+            assert not env_dir.exists()
 
     def test_fallback_to_current_directory(self):
         """Test fallback when project root cannot be found."""
@@ -192,7 +85,7 @@ class TestSQLLogger:
                 # Change to temp directory with no project markers
                 os.chdir(tmpdir)
 
-                logger = MockSQLLogger()
+                logger = SQLLogger()
 
                 # Should use current directory
                 assert logger.log_dir == Path(".sql_logs")
@@ -203,7 +96,7 @@ class TestSQLLogger:
 
     def test_should_log_with_environment_variable(self):
         """Test should_log respects SQL_TEST_LOG_ALL environment variable."""
-        logger = MockSQLLogger()
+        logger = SQLLogger()
 
         # Test various truthy values
         for value in ["true", "True", "TRUE", "1", "yes", "Yes", "YES"]:
@@ -221,7 +114,7 @@ class TestSQLLogger:
 
     def test_should_log_with_explicit_parameter(self):
         """Test should_log respects explicit parameter."""
-        logger = MockSQLLogger()
+        logger = SQLLogger()
 
         # Explicit True should override environment
         with patch.dict(os.environ, {"SQL_TEST_LOG_ALL": "false"}):
@@ -233,7 +126,7 @@ class TestSQLLogger:
 
     def test_generate_filename_sanitization(self):
         """Test filename generation with special characters."""
-        logger = MockSQLLogger()
+        logger = SQLLogger()
 
         # Test with various special characters
         filename = logger.generate_filename(
@@ -274,7 +167,7 @@ class TestSQLLogger:
                 # Change to subdirectory
                 os.chdir(subdir)
 
-                logger = MockSQLLogger()
+                logger = SQLLogger()
 
                 # Should find project root by .git directory - use resolve()
                 assert logger.log_dir.resolve() == (project_root / ".sql_logs").resolve()
@@ -301,7 +194,7 @@ class TestSQLLogger:
                 # Change to subdirectory
                 os.chdir(subdir)
 
-                logger = MockSQLLogger()
+                logger = SQLLogger()
 
                 # Should find parent project root, not stop at .git file - use resolve()
                 assert logger.log_dir.resolve() == (project_root / ".sql_logs").resolve()
@@ -312,29 +205,33 @@ class TestSQLLogger:
     def test_run_directory_creation(self):
         """Test that run directory is created with timestamp."""
         # Reset run directory for clean test
-        MockSQLLogger.reset_run_directory()
+        SQLLogger.reset_run_directory()
 
         with tempfile.TemporaryDirectory() as tmpdir:
             # Create first logger instance
-            MockSQLLogger(log_dir=tmpdir)
+            logger = SQLLogger(log_dir=tmpdir)
+            assert SQLLogger._run_directory is None
+            assert SQLLogger._run_id is None
+            assert list(Path(tmpdir).iterdir()) == []
+            logger._ensure_run_directory()
 
             # Check run directory was created
-            assert MockSQLLogger._run_directory is not None
-            assert MockSQLLogger._run_id is not None
-            assert MockSQLLogger._run_id.startswith("runid_")
-            assert MockSQLLogger._run_directory.exists()
-            assert MockSQLLogger._run_directory.parent == Path(tmpdir)
+            assert SQLLogger._run_directory is not None
+            assert SQLLogger._run_id is not None
+            assert SQLLogger._run_id.startswith("runid_")
+            assert SQLLogger._run_directory.exists()
+            assert SQLLogger._run_directory.parent == Path(tmpdir)
 
             # Save run directory for comparison
-            first_run_dir = MockSQLLogger._run_directory
-            first_run_id = MockSQLLogger._run_id
+            first_run_dir = SQLLogger._run_directory
+            first_run_id = SQLLogger._run_id
 
             # Create second logger instance (should use same run directory)
-            MockSQLLogger(log_dir=tmpdir)
+            SQLLogger(log_dir=tmpdir)
 
             # Should reuse the same run directory
-            assert MockSQLLogger._run_directory == first_run_dir
-            assert MockSQLLogger._run_id == first_run_id
+            assert SQLLogger._run_directory == first_run_dir
+            assert SQLLogger._run_id == first_run_id
 
         # Clean up
-        MockSQLLogger.reset_run_directory()
+        SQLLogger.reset_run_directory()
