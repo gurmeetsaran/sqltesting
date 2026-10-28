@@ -1206,7 +1206,6 @@ tox
 
 # Test specific Python version
 tox -e py39  # Python 3.9
-tox -e py310 # Python 3.10
 tox -e py311 # Python 3.11
 tox -e py312 # Python 3.12
 ```
