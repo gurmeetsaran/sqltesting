@@ -36,7 +36,7 @@ The workflow only runs when relevant files are modified:
 ### Dependencies
 
 DuckDB integration tests require:
-- Python 3.10+
+- Python 3.11+
 - DuckDB Python package (installed via poetry with `--with dev,duckdb`)
 - No external database server
 
