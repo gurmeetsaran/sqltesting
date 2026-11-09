@@ -892,29 +892,33 @@ class SQLTestFramework:
 
     def _deserialize_results(self, result_df: "pd.DataFrame", result_class: Type[T]) -> List[T]:
         """Deserialize query results to typed objects."""
-        import numpy as np
-
         if result_df.empty:
             return []
 
-        # STEP 1: Convert database-returned NaN values to Python None
+        # STEP 1: Convert database-returned missing values (NaN / NA / NaT) to Python None
         #
         # WHY THIS IS NEEDED:
-        # - SQL databases return NULL values which pandas converts to NaN
-        # - Different database adapters may return NaN for null numeric/float columns
-        # - NaN values break object serialization (dataclass/Pydantic instantiation)
+        # - SQL databases return NULL values which pandas stores as NaN/NA/NaT
+        # - Missing-value sentinels break object serialization (dataclass/Pydantic instantiation)
         # - Python None is the correct representation for nullable/optional fields
+        #
+        # WHY astype(object) + where, AND to_dict() INSTEAD OF iterrows():
+        # - pandas 3 infers its dedicated string dtype for all-string data and stores
+        #   missing values there as NaN, never None. Adapters such as Athena return every
+        #   column as strings, so a plain replace() is undone as soon as iterrows() rebuilds
+        #   each row as a Series and re-infers the string dtype.
+        # - Forcing plain object dtype and iterating dict records keeps None intact.
         #
         # RELATIONSHIP TO mock_table.py NaN HANDLING:
         # - mock_table.py: Handles NaN created during DataFrame dtype conversion (input side)
         # - core.py (here): Handles NaN returned from actual database queries (output side)
         # - Both are needed because NaN can appear at different pipeline stages
-        result_df = result_df.replace([np.nan], [None])
+        result_df = result_df.astype(object).where(result_df.notna(), None)
         # Get type hints from the result class
         type_hints = get_type_hints(result_class)
 
         results: List[T] = []
-        for _, row in result_df.iterrows():
+        for row in result_df.to_dict(orient="records"):
             # Convert row to dictionary with proper types
             converted_row: Dict[str, Any] = {}
             for col_name, value in row.items():
