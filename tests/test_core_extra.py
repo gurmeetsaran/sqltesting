@@ -2,7 +2,9 @@
 
 import contextlib
 import unittest
-from typing import Tuple
+from dataclasses import dataclass
+from datetime import datetime
+from typing import Optional, Tuple
 from unittest.mock import MagicMock, patch
 
 from sql_testing_library._adapters.base import DatabaseAdapter
@@ -207,6 +209,66 @@ class TestSQLTestFrameworkCTEHandling(unittest.TestCase):
 
             result = self.framework.run_test(test_case)
             self.assertEqual(len(result), 1)
+
+
+class TestDeserializeResultsNullHandling(unittest.TestCase):
+    """Regression tests for NULL handling in _deserialize_results under pandas 3."""
+
+    def setUp(self):
+        self.framework = SQLTestFramework(MockAdapter())
+
+    def test_all_string_frame_preserves_none(self):
+        """Athena returns every column as strings; NULLs must become None, not NaN.
+
+        pandas 3 infers its dedicated string dtype for all-string data and stores
+        missing values as NaN. iterrows() re-inferred that dtype per row, which
+        turned None back into NaN after the frame-level replace.
+        """
+        import pandas as pd
+
+        @dataclass
+        class Result:
+            id: int
+            name: str
+            optional_int: Optional[int]
+            optional_string: Optional[str]
+
+        df = pd.DataFrame(
+            [["1", "alice", "42", "x"], ["2", "bob", None, None]],
+            columns=["id", "name", "optional_int", "optional_string"],
+        )
+
+        results = self.framework._deserialize_results(df, Result)
+
+        self.assertEqual(results[0], Result(1, "alice", 42, "x"))
+        self.assertEqual(results[1], Result(2, "bob", None, None))
+
+    def test_typed_frame_preserves_none_for_na_and_nat(self):
+        """Nullable ints (pd.NA), floats (NaN) and timestamps (NaT) all map to None."""
+        import pandas as pd
+
+        @dataclass
+        class Result:
+            id: int
+            optional_int: Optional[int]
+            optional_float: Optional[float]
+            optional_ts: Optional[datetime]
+
+        df = pd.DataFrame(
+            {
+                "id": [1, 2],
+                "optional_int": pd.array([7, None], dtype="Int64"),
+                "optional_float": [1.5, None],
+                "optional_ts": pd.to_datetime(["2024-01-01", None]),
+            }
+        )
+
+        results = self.framework._deserialize_results(df, Result)
+
+        self.assertEqual(results[0].optional_int, 7)
+        self.assertEqual(results[0].optional_float, 1.5)
+        self.assertEqual(results[0].optional_ts, datetime(2024, 1, 1))
+        self.assertEqual(results[1], Result(2, None, None, None))
 
 
 if __name__ == "__main__":
