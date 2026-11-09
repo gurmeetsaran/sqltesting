@@ -27,7 +27,7 @@ try:
 except ImportError:
     __all__ = []
 
-__version__ = "0.23.1"
+__version__ = "0.24.0"
 __all__.extend(
     [
         "SQLTestFramework",
